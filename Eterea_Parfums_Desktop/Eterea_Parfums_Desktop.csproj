@@ -138,6 +138,7 @@
       <HintPath>..\packages\PDFsharp-MigraDoc-GDI.6.1.1\lib\net472\System.Buffers.dll</HintPath>
     </Reference>
     <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Diagnostics.DiagnosticSource, Version=6.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\PDFsharp-MigraDoc-GDI.6.1.1\lib\net472\System.Diagnostics.DiagnosticSource.dll</HintPath>
@@ -245,6 +246,7 @@
     </Compile>
     <Compile Include="DTOs\EmpleadoDTO.cs" />
     <Compile Include="DTOs\HistorialCajaDTO.cs" />
+    <Compile Include="DTOs\UploadImageResult.cs" />
     <Compile Include="FormABM\Cliente\FormCrearCliente.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -450,6 +452,7 @@
     <Compile Include="FormVenta\FormStockPorSucursal.Designer.cs">
       <DependentUpon>FormStockPorSucursal.cs</DependentUpon>
     </Compile>
+    <Compile Include="Helpers\ApiImageUploader.cs" />
     <Compile Include="Helpers\CorreoHelper.cs" />
     <Compile Include="Helpers\GoogleDriveUploader.cs" />
     <Compile Include="Helpers\ModalHelper.cs" />

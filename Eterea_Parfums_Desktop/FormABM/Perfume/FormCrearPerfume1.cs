@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Eterea_Parfums_Desktop
@@ -147,25 +148,44 @@ namespace Eterea_Parfums_Desktop
             combo.Items.Add("No");
         }
 
-        internal void guardarNuevaImg()
+        internal async Task guardarNuevaImg()
         {
-            var uploader = new GoogleDriveUploader();
-            string carpetaDriveId = "1haFolSk8OuUAUGtBykB0DmiC4bne8T9b"; // ID de carpeta de drive
-
-            if (imagen1 != null && !string.IsNullOrEmpty(pathLocalImg1))
+          
+            try
             {
-                saveImagenResources(out nombre_foto_uno, imagen1, "envase");
-                string rutaDestino = Program.Ruta_Base + nombre_foto_uno + ".jpg";
-                File.Copy(pathLocalImg1, rutaDestino, true);
-                urlImagen1Actual = uploader.SubirImagen(rutaDestino, nombre_foto_uno + ".jpg", carpetaDriveId);
+                if (imagen1 != null && !string.IsNullOrEmpty(pathLocalImg1))
+                {
+                    // genera el nombre base (sin extensión) según tu lógica
+                    saveImagenResources(out nombre_foto_uno, imagen1, "envase");
+
+                    // Queremos mantener el formato => *.jpg
+                    string desiredFileName1 = nombre_foto_uno + ".jpg";
+
+                    // Subimos directamente el archivo que eligió el usuario
+                    var result1 = await ApiImageUploader.UploadAsync(pathLocalImg1, desiredFileName1);
+
+                    // Guardar URL para persistir luego en DB
+                    urlImagen1Actual = result1.url;
+                }
+
+                if (imagen2 != null && !string.IsNullOrEmpty(pathLocalImg2))
+                {
+                    saveImagenResources(out nombre_foto_dos, imagen2, "envase y caja");
+
+                    string desiredFileName2 = nombre_foto_dos + ".jpg";
+
+                    var result2 = await ApiImageUploader.UploadAsync(pathLocalImg2, desiredFileName2);
+
+                    urlImagen2Actual = result2.url;
+                }
             }
-
-            if (imagen2 != null && !string.IsNullOrEmpty(pathLocalImg2))
+            catch (Exception ex)
             {
-                saveImagenResources(out nombre_foto_dos, imagen2, "envase y caja");
-                string rutaDestino = Program.Ruta_Base + nombre_foto_dos + ".jpg";
-                File.Copy(pathLocalImg2, rutaDestino, true);
-                urlImagen2Actual = uploader.SubirImagen(rutaDestino, nombre_foto_dos + ".jpg", carpetaDriveId);
+                // Manejo de errores visible al usuario
+                System.Windows.Forms.MessageBox.Show("Error subiendo imagen: " + ex.Message,
+                    "Error", System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Error);
+                throw; // re-lanzar si querés abortar el flujo de guardado del perfume
             }
         }
 
