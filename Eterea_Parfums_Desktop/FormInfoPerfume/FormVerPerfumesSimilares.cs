@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Eterea_Parfums_Desktop
@@ -33,6 +34,8 @@ namespace Eterea_Parfums_Desktop
         private static int last_pag = 0;
         private static int current_pag = 1;
 
+        private bool _inicializando = false;
+
 
         public FormVerPerfumesSimilares(Perfume perfumeSeleccionado)
         {
@@ -41,33 +44,47 @@ namespace Eterea_Parfums_Desktop
             txt_nombre_perfume.Text = perfumeSeleccionado.nombre;
             this.perfume = perfumeSeleccionado;
 
-            string nombreImagen = perfumeSeleccionado.imagen1.ToString();
-            string rutaCompletaImagen = Program.Ruta_Base + nombreImagen + ".jpg";
-            img_perfume.Image = Image.FromFile(rutaCompletaImagen);
+            // Imagen grande del perfume seleccionado (ya tenías ImageLocation)
+            img_perfume.SizeMode = PictureBoxSizeMode.Zoom;
+            img_perfume.ImageLocation = perfumeSeleccionado.imagen1_URL?.ToString();
 
-            // Llamamos a la función que obtiene los perfumes similares
+            // Obtener perfumes similares
             Perfumes_Completo = PerfumeControlador.getPerfumesSimilares(perfumeSeleccionado);
-
-            // Si no hay resultados, mostrar mensaje y cerrar el formulario
             if (Perfumes_Completo.Count == 0)
             {
-                MessageBox.Show("No se encontraron perfumes similares para el perfume seleccionado.", "Sin coincidencias", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                this.Close(); // Cierra la ventana actual
-                return; // Sale del constructor para no seguir ejecutando el código
+                MessageBox.Show("No se encontraron perfumes similares para el perfume seleccionado.",
+                                "Sin coincidencias", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                this.Close();
+                return;
             }
 
+          
 
+          
 
+           
+
+            _inicializando = true;
+            // Cargar combos
+            CargarMarcas();
+            CargarGeneros();
+            _inicializando = false;
+
+            // Paginación
             total = Perfumes_Completo.Count;
             last_pag = (int)Math.Ceiling((double)total / paginador);
             lbl_numero_pagina.Text = current_pag.ToString();
 
-            //Mostrar los perfumes ene
-            paginar(Perfumes_Completo);
-            CargarMarcas();
-            CargarGeneros();
+            // DataGridView: imagen con Zoom
+            if (dataGridViewConsultas.Columns[0] is DataGridViewImageColumn imgCol)
+                imgCol.ImageLayout = DataGridViewImageCellLayout.Zoom;
 
-            //Diseño del combo box
+            // Suscripción única
+            dataGridViewConsultas.CellPainting -= dataGridView1_CellPainting;
+            dataGridViewConsultas.CellPainting += dataGridView1_CellPainting;
+
+
+            // Diseño combos (como ya lo tenías)
             combo_filtro_genero.DrawMode = DrawMode.OwnerDrawFixed;
             combo_filtro_genero.DrawItem += comboBoxdiseño_DrawItem;
             combo_filtro_genero.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -75,11 +92,13 @@ namespace Eterea_Parfums_Desktop
             combo_filtro_marca.DrawMode = DrawMode.OwnerDrawFixed;
             combo_filtro_marca.DrawItem += comboBoxdiseño_DrawItem;
             combo_filtro_marca.DropDownStyle = ComboBoxStyle.DropDownList;
-        }
 
-        public FormVerPerfumesSimilares()
-        {
+        
+            // Primera carga de la grilla
+            paginar(Perfumes_Completo);
         }
+      
+     
 
         private void CargarMarcas()
         {
@@ -108,7 +127,7 @@ namespace Eterea_Parfums_Desktop
         private void paginar(List<Perfume> perfumeMostrar)
         {
             Perfumes_Paginados = perfumeMostrar.Skip(current).Take(paginador).ToList();
-            VisualizarPerfumes(Perfumes_Paginados);
+            VisualizarPerfumesAsync(Perfumes_Paginados);
             lbl_paginacion_Info.Text = "Mostrando: " + (current + 1) + " a " + (current + Perfumes_Paginados.Count) + "  de  " + total;
 
             if (current_pag == 1)
@@ -142,65 +161,36 @@ namespace Eterea_Parfums_Desktop
             this.Close();
         }
 
-        private void VisualizarPerfumes(List<Perfume> perfumeMostrar)
+        private async Task VisualizarPerfumesAsync(List<Perfume> perfumeMostrar)
         {
-            //Ocultas la primera columna de la tabla (es una columna de seleccion de fila)
             dataGridViewConsultas.RowHeadersVisible = false;
-
             dataGridViewConsultas.Rows.Clear();
-            foreach (Perfume perfume in perfumeMostrar)
+
+            var baseUrl = (Program.Ruta_Web ?? "").TrimEnd('/') + "/";
+
+            foreach (var p in perfumeMostrar)
             {
-                if (perfume.activo == true)
-                {
-                    int rowIndex = dataGridViewConsultas.Rows.Add();
+                if (p.activo==false) continue;
 
-                    // Verificar si la imagen existe antes de asignarla
-                    string rutaBase = Program.Ruta_Base.TrimEnd('\\', '/'); // Asegura formato correcto
-                    string nombreArchivo = perfume.imagen1;
+                int rowIndex = dataGridViewConsultas.Rows.Add();
 
-                    // Si el nombre del archivo no tiene extensión, agrégala
-                    if (!Path.HasExtension(nombreArchivo))
-                    {
-                        nombreArchivo += ".jpg";
-                    }
+                string nombreArchivo = Path.GetFileName(p.imagen1 ?? string.Empty);
+                if (!Path.HasExtension(nombreArchivo)) nombreArchivo += ".jpg";
 
-                    // Construir la ruta completa
-                    string imagePath = Path.Combine(rutaBase, nombreArchivo);
+                string imageUrl = baseUrl + nombreArchivo;
+                Image img = await ApiImageUploader.DownloadImageAsync(imageUrl);
 
-                    Console.WriteLine("Ruta generada: " + imagePath);
-
-                    if (File.Exists(imagePath))
-                    {
-                        Console.WriteLine("Imagen encontrada: " + imagePath);
-                        dataGridViewConsultas.Rows[rowIndex].Cells[0].Value = Image.FromFile(imagePath);
-                    }
-                    else
-                    {
-                        Console.WriteLine("Imagen NO encontrada. Usando imagen por defecto.");
-                        dataGridViewConsultas.Rows[rowIndex].Cells["columnaImagen"].Value = Properties.Resources.sinImagen;
-                    }
-
-                    Console.WriteLine("Ruta generada: " + imagePath);
-                    if (File.Exists(imagePath))
-                    {
-                        dataGridViewConsultas.Rows[rowIndex].Cells[0].Value = Image.FromFile(imagePath);
-                    }
-                    else
-                    {
-                        dataGridViewConsultas.Rows[rowIndex].Cells[0].Value = Properties.Resources.sinImagen; // Imagen por defecto
-                    }
-
-                    dataGridViewConsultas.Rows[rowIndex].Cells[1].Value = perfume.nombre.ToString();
-                    dataGridViewConsultas.Rows[rowIndex].Cells[2].Value = (MarcaControlador.getById(perfume.marca.id)).nombre;
-                    dataGridViewConsultas.Rows[rowIndex].Cells[3].Value = (GeneroControlador.getById(perfume.genero.id)).genero;
-                    dataGridViewConsultas.Rows[rowIndex].Cells[4].Value = perfume.precio_en_pesos.ToString("C", CultureInfo.CurrentCulture);
-                    dataGridViewConsultas.Rows[rowIndex].Cells[5].Value = "Ver";
-                }
-                dataGridViewConsultas.ClearSelection();
-
-                dataGridViewConsultas.CellPainting += dataGridView1_CellPainting;
+                dataGridViewConsultas.Rows[rowIndex].Cells[0].Value = img;
+                dataGridViewConsultas.Rows[rowIndex].Cells[1].Value = p.nombre;
+                dataGridViewConsultas.Rows[rowIndex].Cells[2].Value = (MarcaControlador.getById(p.marca.id)).nombre;
+                dataGridViewConsultas.Rows[rowIndex].Cells[3].Value = (GeneroControlador.getById(p.genero.id)).genero;
+                dataGridViewConsultas.Rows[rowIndex].Cells[4].Value = p.precio_en_pesos.ToString("C", CultureInfo.CurrentCulture);
+                dataGridViewConsultas.Rows[rowIndex].Cells[5].Value = "Ver";
             }
+
+            dataGridViewConsultas.ClearSelection();
         }
+
 
         private void dataGridViewConsultas_CellContentClick_1(object sender, DataGridViewCellEventArgs e)
         {
@@ -216,7 +206,7 @@ namespace Eterea_Parfums_Desktop
 
                 this.Close();
             }
-            dataGridViewConsultas.CellPainting += dataGridView1_CellPainting;
+            //dataGridViewConsultas.CellPainting += dataGridView1_CellPainting;
         }
 
 
@@ -225,8 +215,8 @@ namespace Eterea_Parfums_Desktop
         {
             if (current >= paginador)
             {
-                current = current - paginador;
-                current_pag = current_pag - 1;
+                current = paginador;
+                current_pag = 1;
                 lbl_numero_pagina.Text = current_pag.ToString();
                 paginar(Perfumes_Completo);
             }
@@ -245,40 +235,34 @@ namespace Eterea_Parfums_Desktop
 
         private void combo_filtro_marca_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (_inicializando) return;   // ⛔ no filtrar durante carga
+
             if (combo_filtro_marca.SelectedIndex > 0)
             {
-                string marcaSeleccionada = combo_filtro_marca.SelectedItem.ToString();
-                Marca marca = MarcaControlador.getByName(marcaSeleccionada);
-                if (marca != null)
-                {
-                    filtro.marca = marca;
-                    filtrar();
-                }
+                var marca = MarcaControlador.getByName(combo_filtro_marca.SelectedItem.ToString());
+                filtro.marca = marca;
             }
             else
             {
                 filtro.marca = null;
-                filtrar();
             }
+            filtrar();
         }
 
         private void combo_filtro_genero_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (_inicializando) return;   // ⛔ no filtrar durante carga
+
             if (combo_filtro_genero.SelectedIndex > 0)
             {
-                string generoSeleccionado = combo_filtro_genero.SelectedItem.ToString();
-                Genero genero = GeneroControlador.getByName(generoSeleccionado);
-                if (genero != null)
-                {
-                    filtro.genero = genero;
-                    filtrar();
-                }
+                var genero = GeneroControlador.getByName(combo_filtro_genero.SelectedItem.ToString());
+                filtro.genero = genero;
             }
             else
             {
                 filtro.genero = null;
-                filtrar();
             }
+            filtrar();
         }
 
         private void filtrar()

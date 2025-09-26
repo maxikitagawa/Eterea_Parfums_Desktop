@@ -18,9 +18,11 @@ namespace Eterea_Parfums_Desktop
             txt_nombre_perfume.Text = perfumeSeleccionado.nombre;
             this.perfume = perfumeSeleccionado;
 
-            string nombreImagen = perfumeSeleccionado.imagen1.ToString();
-            string rutaCompletaImagen = Program.Ruta_Base + nombreImagen + ".jpg";
-            img_perfume.Image = Image.FromFile(rutaCompletaImagen);
+            string nombreImagen = perfumeSeleccionado.imagen1_URL.ToString();
+            //string rutaCompletaImagen = Program.Ruta_Base + nombreImagen + ".jpg";
+            //img_perfume.Image = Image.FromFile(rutaCompletaImagen);
+            img_perfume.SizeMode = PictureBoxSizeMode.Zoom;
+            img_perfume.ImageLocation = nombreImagen;
 
             /*string nombreImagen2 = perfumeSeleccionado.imagen1.ToString();
             string rutaCompletaImagen2 = Program.Ruta_Base + nombreImagen + ".jpg";

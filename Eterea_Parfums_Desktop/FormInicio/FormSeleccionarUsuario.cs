@@ -13,6 +13,7 @@ namespace Eterea_Parfums_Desktop
             InitializeComponent();
 
             // Cargar nombres de usuarios en el ComboBox
+            comboBoxUsuarios.Items.Add("Servidor");
             comboBoxUsuarios.Items.Add("Adri");
             comboBoxUsuarios.Items.Add("Dami");
             comboBoxUsuarios.Items.Add("Luis");

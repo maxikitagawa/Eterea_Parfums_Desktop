@@ -6,6 +6,9 @@ using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using System.Drawing;
+using System.util;
+using iTextSharp.tool.xml.css.parser.state; // Para Image
 
 public static class ApiImageUploader
 {
@@ -14,6 +17,7 @@ public static class ApiImageUploader
         Timeout = TimeSpan.FromSeconds(120)
     };
 
+    // 🔹 SUBIR IMAGEN
     public static async Task<UploadImageResult> UploadAsync(string localFilePath, string desiredFileName)
     {
         if (!File.Exists(localFilePath))
@@ -29,39 +33,58 @@ public static class ApiImageUploader
         var apiKeyVal = ConfigurationManager.AppSettings["ApiKeyValue"];
 
         using (var form = new MultipartFormDataContent())
+        using (var fileStream = File.OpenRead(localFilePath))
         {
-            // Archivo
-            using (var fileStream = File.OpenRead(localFilePath))
+            var fileContent = new StreamContent(fileStream);
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+            var originalName = Path.GetFileName(localFilePath);
+            form.Add(fileContent, "file", originalName);
+
+            if (!string.IsNullOrWhiteSpace(desiredFileName))
+                form.Add(new StringContent(desiredFileName), "fileName");
+
+            if (!string.IsNullOrWhiteSpace(apiKeyHdr))
             {
-                var fileContent = new StreamContent(fileStream);
-                fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-                var originalName = Path.GetFileName(localFilePath);
-                form.Add(fileContent, "file", originalName);
-
-                // Nombre deseado en el servidor
-                if (!string.IsNullOrWhiteSpace(desiredFileName))
-                    form.Add(new StringContent(desiredFileName), "fileName");
-
-                // Header de autenticación (si se configura)
-                if (!string.IsNullOrWhiteSpace(apiKeyHdr))
-                {
-                    _http.DefaultRequestHeaders.Remove(apiKeyHdr);
-                    if (!string.IsNullOrWhiteSpace(apiKeyVal))
-                        _http.DefaultRequestHeaders.Add(apiKeyHdr, apiKeyVal);
-                }
-
-                var resp = await _http.PostAsync(uploadUri, form);
-                var body = await resp.Content.ReadAsStringAsync();
-
-                if (!resp.IsSuccessStatusCode)
-                    throw new InvalidOperationException($"Error {resp.StatusCode} subiendo imagen: {body}");
-
-                var result = JsonConvert.DeserializeObject<UploadImageResult>(body);
-                if (result == null || string.IsNullOrWhiteSpace(result.url))
-                    throw new InvalidOperationException("La API no devolvió una URL válida.");
-
-                return result;
+                _http.DefaultRequestHeaders.Remove(apiKeyHdr);
+                if (!string.IsNullOrWhiteSpace(apiKeyVal))
+                    _http.DefaultRequestHeaders.Add(apiKeyHdr, apiKeyVal);
             }
+
+            var resp = await _http.PostAsync(uploadUri, form);
+            var body = await resp.Content.ReadAsStringAsync();
+
+            if (!resp.IsSuccessStatusCode)
+                throw new InvalidOperationException($"Error {resp.StatusCode} subiendo imagen: {body}");
+
+            var result = JsonConvert.DeserializeObject<UploadImageResult>(body);
+            if (result == null || string.IsNullOrWhiteSpace(result.url))
+                throw new InvalidOperationException("La API no devolvió una URL válida.");
+
+            return result;
+        }
+    }
+
+    // 🔹 BAJAR IMAGEN (para usar en tu DataGridView)
+    public static async Task<Image> DownloadImageAsync(string url)
+    {
+        try
+        {
+            using (var resp = await _http.GetAsync(url))
+            {
+                if (!resp.IsSuccessStatusCode)
+                    return Eterea_Parfums_Desktop.Properties.Resources.sinImagen;
+
+                var bytes = await resp.Content.ReadAsByteArrayAsync();
+                using (var ms = new MemoryStream(bytes))
+                {
+                    return Image.FromStream(ms);
+                }
+            }
+        }
+        catch
+        {
+            return Eterea_Parfums_Desktop.Properties.Resources.sinImagen;
         }
     }
 }
+

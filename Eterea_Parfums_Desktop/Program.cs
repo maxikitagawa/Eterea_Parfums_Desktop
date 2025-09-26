@@ -1,11 +1,12 @@
 ﻿using Eterea_Parfums_Desktop.Controladores;
 using Eterea_Parfums_Desktop.Modelos;
 using System;
-using System.Windows.Forms;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Windows.Forms;
 
 
 
@@ -98,6 +99,12 @@ namespace Eterea_Parfums_Desktop
         {
             switch (usuario.ToLower())
             {
+                case "servidor":
+                    Ruta_Web = "https://etereaparfums.com.ar/imagenes/";
+                    Ruta_Base = @"C:\Users\intersan\Desktop\TESIS_New\Eterea_Parfums_Desktop\Eterea_Parfums_Desktop\Resources\";
+                    //Ruta_Base_Mini = @"C:\Users\intersan\Desktop\TESIS_New\Eterea_Parfums_Desktop\Eterea_Parfums_Desktop\Resources\Mini\";
+                    //Ruta_Web = @"C:\Users\intersan\source\repos\Eterea_Web\Eterea_Web\Content\ImgPerfumes\";
+                    break;
                 case "escuela":
                     Ruta_Base = @"C:\Users\Alumno\Desktop\Eterea_Parfums\Eterea_Parfums\Resources\";
                     Ruta_Web = @"C:\Users\Alumno\Desktop\Eterea_Web\Eterea_Web\Content\ImgPerfumes\";
@@ -107,9 +114,10 @@ namespace Eterea_Parfums_Desktop
                     Ruta_Web = @"C:\Users\damim\Source\Repos\Eterea_Parfums_Desktop\Eterea_Parfums_Desktop\Resources\";
                     break;
                 case "adri":
+                    Ruta_Web = "https://etereaparfums.com.ar/imagenes/";
                     Ruta_Base = @"C:\Users\intersan\Desktop\TESIS_New\Eterea_Parfums_Desktop\Eterea_Parfums_Desktop\Resources\";
                     //Ruta_Base_Mini = @"C:\Users\intersan\Desktop\TESIS_New\Eterea_Parfums_Desktop\Eterea_Parfums_Desktop\Resources\Mini\";
-                    Ruta_Web = @"C:\Users\intersan\source\repos\Eterea_Web\Eterea_Web\Content\ImgPerfumes\";
+                    //Ruta_Web = @"C:\Users\intersan\source\repos\Eterea_Web\Eterea_Web\Content\ImgPerfumes\";
                     break;
                 case "luis":
                     Ruta_Base = @"C:\Users\josel\source\repos\Eterea_Parfums_Desktop\Eterea_Parfums_Desktop\Resources\";
@@ -128,11 +136,17 @@ namespace Eterea_Parfums_Desktop
                         break;
             }
         }
-    
+
+        public static class Net
+        {
+            public static readonly HttpClient Http = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(10)
+            };
+        }
 
 
 
-   
     }
 
 
