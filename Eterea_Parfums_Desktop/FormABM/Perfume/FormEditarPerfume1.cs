@@ -5,6 +5,8 @@ using Eterea_Parfums_Desktop.Modelos;
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -126,12 +128,63 @@ namespace Eterea_Parfums_Desktop
 
             nombre_foto_uno = perfume.imagen1;
             nombre_foto_dos = perfume.imagen2;
-            cargarImagen(nombre_foto_uno, pictureBoxProducto1);
-            cargarImagen(nombre_foto_dos, pictureBoxProducto2);
+
+            urlImagen1Actual = perfume.imagen1_URL;
+            urlImagen2Actual = perfume.imagen2_URL;
+
+            CargarImagenDesdeUrlOLocal(urlImagen1Actual, nombre_foto_uno, pictureBoxProducto1);
+            CargarImagenDesdeUrlOLocal(urlImagen2Actual, nombre_foto_dos, pictureBoxProducto2);
+
+            //cargarImagen(nombre_foto_uno, pictureBoxProducto1);
+            //cargarImagen(nombre_foto_dos, pictureBoxProducto2);
 
             Console.WriteLine(nombre_foto_dos);
 
         }
+
+        private void CargarImagenDesdeUrlOLocal(string url, string nombreLocalSinExt, PictureBox pictureBox)
+        {
+            // liberá imagen previa para evitar locks
+            if (pictureBox.Image != null)
+            {
+                var old = pictureBox.Image;
+                pictureBox.Image = null;
+                old.Dispose();
+            }
+
+            // 1) Si hay URL válida, intento con LoadAsync (no bloquea la UI)
+            if (!string.IsNullOrWhiteSpace(url) && Uri.IsWellFormedUriString(url, UriKind.Absolute))
+            {
+                try
+                {
+                    pictureBox.LoadAsync(url);
+                    return; // listo
+                }
+                catch
+                {
+                    // sigue al fallback local
+                }
+            }
+
+            // 2) Fallback a archivo local (tu comportamiento anterior)
+            string rutaCompleta = Path.Combine(Program.Ruta_Base, (nombreLocalSinExt ?? "") + ".jpg");
+            if (File.Exists(rutaCompleta))
+            {
+                // usar stream para no dejar el archivo bloqueado
+                using (var fs = new FileStream(rutaCompleta, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                {
+                    pictureBox.Image = Image.FromStream(fs);
+                }
+            }
+            else
+            {
+                // opcional: poné un placeholder o dejá vacío
+                 pictureBox.Image = Properties.Resources.sinImagen;
+                // o mostrás un aviso una sola vez si querés
+                // MessageBox.Show($"No se encontró la imagen: {rutaCompleta}", "Imagen no encontrada", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
 
         private void cargarImagen(string nombreImg, PictureBox pictureBox)
         {
@@ -645,38 +698,51 @@ namespace Eterea_Parfums_Desktop
 
         internal Perfume editar()
         {
-            bool spray = false;
-            if (combo_spray.SelectedItem.ToString() == "Si")
-            {
-                spray = true;
-            }
+            bool spray = (combo_spray.SelectedItem?.ToString() == "Si");
+            bool recargable = (combo_recargable.SelectedItem?.ToString() == "Si");
+            bool activo = (combo_activo.SelectedItem?.ToString() != "No");
 
-            bool recargable = false;
-            if (combo_recargable.SelectedItem.ToString() == "Si")
-            {
-                recargable = true;
-            }
+            Marca marca = MarcaControlador.getByName(combo_marca.Text);
+            TipoDePerfume tipo_de_perfume = TipoDePerfumeControlador.getByName(combo_tipo_de_perfume.Text);
+            Genero genero = GeneroControlador.getByName(combo_genero.Text);
+            Pais pais = PaisControlador.getByName(combo_pais.Text);
 
-            bool activo = true;
-            if (combo_activo.SelectedItem.ToString() == "No")
-            {
-                activo = false;
-            }
+            int presentacionMl = int.Parse(txt_presentacion.Text);
+            int anio = int.Parse(txt_anio_de_lanzamiento.Text);
+            double precio = double.Parse(
+                txt_precio.Text.Replace(",", "."),
+                NumberStyles.Any,
+                CultureInfo.InvariantCulture
+            );
 
+            // 👇 MUY IMPORTANTE: conservar la fecha_baja ya existente (puede ser null)
+            DateTime? fechaBaja = perfume.fecha_baja; // o perfume.FechaBaja según tu propiedad
 
-            Marca marca = MarcaControlador.getByName(combo_marca.SelectedItem.ToString());
-            TipoDePerfume tipo_de_perfume = TipoDePerfumeControlador.getByName(combo_tipo_de_perfume.SelectedItem.ToString());
-            Genero genero = GeneroControlador.getByName(combo_genero.SelectedItem.ToString());
-            Console.WriteLine("Genero: " + genero.id);
-            Pais pais = PaisControlador.getByName(combo_pais.SelectedItem.ToString());
-            Console.WriteLine("Marca: " + marca.nombre);
-            Perfume perfume1 = new Perfume(perfume.id, txt_codigo.Text, marca, txt_nombre.Text, tipo_de_perfume,
-                genero, int.Parse(txt_presentacion.Text), pais, spray, recargable, richTextBox_descripcion.Text,
-                int.Parse(txt_anio_de_lanzamiento.Text), Double.Parse(txt_precio.Text), activo, nombre_foto_uno, nombre_foto_dos, null, null, null);
-
-            return perfume1;
-
+            return new Perfume(
+                perfume.id,                 // id
+                txt_codigo.Text,            // codigo
+                marca,                      // marca
+                txt_nombre.Text,            // nombre
+                tipo_de_perfume,            // tipo_de_perfume
+                genero,                     // genero
+                presentacionMl,             // presentacion_ml
+                pais,                       // pais
+                spray,                      // spray
+                recargable,                 // recargable
+                richTextBox_descripcion.Text, // descripcion
+                anio,                       // anio_de_lanzamiento
+                precio,                     // precio_en_pesos
+                activo,                     // activo
+                nombre_foto_uno,            // imagen1 (legacy local)
+                nombre_foto_dos,            // imagen2 (legacy local)
+                fechaBaja,                  // DateTime? fecha_baja
+                urlImagen1Actual,           // imagen1_URL
+                urlImagen2Actual            // imagen2_URL
+            );
         }
+
+
+
 
         private void btn_x_cerrar_Click(object sender, EventArgs e)
         {
