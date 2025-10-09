@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using System.Net;
 
 
 
@@ -74,7 +75,9 @@ namespace Eterea_Parfums_Desktop
                 // Llamamos a ActualizarEstadoPromociones al inicio del programa
                 PromocionService.ActualizarEstadoPromociones();
 
-
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+                // (Opcional) Ver si necesitamos usar proxies/self-signed:
+                // ServicePointManager.ServerCertificateValidationCallback += (s, cert, chain, sslPolicyErrors) => true;
 
 
                 // Iniciar la aplicación principal

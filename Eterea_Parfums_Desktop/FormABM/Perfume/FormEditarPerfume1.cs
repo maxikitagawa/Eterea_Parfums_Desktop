@@ -8,6 +8,7 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Eterea_Parfums_Desktop
@@ -84,7 +85,7 @@ namespace Eterea_Parfums_Desktop
         }
 
 
-        private void cargarDatos(Perfume perfume)
+        private async void cargarDatos(Perfume perfume)
         {
             txt_codigo.Text = perfume.codigo;
             combo_marca.Text = perfume.marca.nombre;
@@ -132,19 +133,19 @@ namespace Eterea_Parfums_Desktop
             urlImagen1Actual = perfume.imagen1_URL;
             urlImagen2Actual = perfume.imagen2_URL;
 
-            CargarImagenDesdeUrlOLocal(urlImagen1Actual, nombre_foto_uno, pictureBoxProducto1);
-            CargarImagenDesdeUrlOLocal(urlImagen2Actual, nombre_foto_dos, pictureBoxProducto2);
+            await CargarImagenDesdeUrlOLocalAsync(urlImagen1Actual, nombre_foto_uno, pictureBoxProducto1);
+            await CargarImagenDesdeUrlOLocalAsync(urlImagen2Actual, nombre_foto_dos, pictureBoxProducto2);
 
             //cargarImagen(nombre_foto_uno, pictureBoxProducto1);
             //cargarImagen(nombre_foto_dos, pictureBoxProducto2);
 
-            Console.WriteLine(nombre_foto_dos);
+            //Console.WriteLine(nombre_foto_dos);
 
         }
 
-        private void CargarImagenDesdeUrlOLocal(string url, string nombreLocalSinExt, PictureBox pictureBox)
+        private async Task CargarImagenDesdeUrlOLocalAsync(string url, string nombreLocalSinExt, PictureBox pictureBox)
         {
-            // liberá imagen previa para evitar locks
+            // 0) liberar imagen previa
             if (pictureBox.Image != null)
             {
                 var old = pictureBox.Image;
@@ -152,38 +153,45 @@ namespace Eterea_Parfums_Desktop
                 old.Dispose();
             }
 
-            // 1) Si hay URL válida, intento con LoadAsync (no bloquea la UI)
-            if (!string.IsNullOrWhiteSpace(url) && Uri.IsWellFormedUriString(url, UriKind.Absolute))
+            // 1) Si hay URL válida, intentamos vía HttpClient (tu helper)
+            if (!string.IsNullOrWhiteSpace(url))
             {
                 try
                 {
-                    pictureBox.LoadAsync(url);
-                    return; // listo
+                    // ⚠️ si tu API devuelve URL con espacios/acentos y sin encode:
+                    // url = Uri.EscapeUriString(url);
+
+                    var imgRemota = await ApiImageUploader.DownloadImageAsync(url);
+                    if (imgRemota != null)
+                    {
+                        pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
+                        pictureBox.Image = imgRemota;   // si falla, tu helper ya devuelve sinImagen
+                        return;
+                    }
                 }
                 catch
                 {
-                    // sigue al fallback local
+                    // seguimos al fallback local
                 }
             }
 
-            // 2) Fallback a archivo local (tu comportamiento anterior)
+            // 2) Fallback: archivo local legacy (Resources)
             string rutaCompleta = Path.Combine(Program.Ruta_Base, (nombreLocalSinExt ?? "") + ".jpg");
             if (File.Exists(rutaCompleta))
             {
-                // usar stream para no dejar el archivo bloqueado
                 using (var fs = new FileStream(rutaCompleta, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
+                    pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
                     pictureBox.Image = Image.FromStream(fs);
                 }
             }
             else
             {
-                // opcional: poné un placeholder o dejá vacío
-                 pictureBox.Image = Properties.Resources.sinImagen;
-                // o mostrás un aviso una sola vez si querés
-                // MessageBox.Show($"No se encontró la imagen: {rutaCompleta}", "Imagen no encontrada", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
+                pictureBox.Image = Properties.Resources.sinImagen; // placeholder
             }
         }
+
 
 
         private void cargarImagen(string nombreImg, PictureBox pictureBox)

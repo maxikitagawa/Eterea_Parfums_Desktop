@@ -7,8 +7,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Drawing;
-using System.util;
-using iTextSharp.tool.xml.css.parser.state; // Para Image
+
 
 public static class ApiImageUploader
 {
