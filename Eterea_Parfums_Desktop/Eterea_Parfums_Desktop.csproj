@@ -453,6 +453,7 @@
       <DependentUpon>FormStockPorSucursal.cs</DependentUpon>
     </Compile>
     <Compile Include="Helpers\ApiImageUploader.cs" />
+    <Compile Include="Helpers\AsignarNombreImagenHelper.cs" />
     <Compile Include="Helpers\CorreoHelper.cs" />
     <Compile Include="Helpers\GoogleDriveUploader.cs" />
     <Compile Include="Helpers\ModalHelper.cs" />
