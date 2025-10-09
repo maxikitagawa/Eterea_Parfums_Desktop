@@ -155,46 +155,33 @@ namespace Eterea_Parfums_Desktop
                 // IMAGEN 1
                 if (imagen1 != null)
                 {
-                    // 1) Generar nombre (sin guardar local)
-                    buildNombreImagen(out nombre_foto_uno, "envase");
+                    nombre_foto_uno = AsignarNombreImagenHelper.BuildNombreImagen(txt_nombre.Text, "envase");
                     string desiredFileName1 = nombre_foto_uno + ".jpg";
 
-                    // 2) Generar archivo temporal .jpg desde la Image en memoria
                     string temp1 = GuardarComoJpegTemporal(imagen1, desiredFileName1);
-
                     try
                     {
-                        // 3) Subir a la API
                         var result1 = await ApiImageUploader.UploadAsync(temp1, desiredFileName1);
-
-                        // 4) Guardar URL para persistir luego
-                        urlImagen1Actual = result1.url;
+                        urlImagen1Actual = result1.url; // la API te devuelve la URL final
                     }
-                    finally
-                    {
-                        // 5) Borrar temp pase lo que pase
-                        try { System.IO.File.Delete(temp1); } catch { /* ignora */ }
-                    }
+                    finally { try { File.Delete(temp1); } catch { } }
                 }
 
                 // IMAGEN 2
                 if (imagen2 != null)
                 {
-                    buildNombreImagen(out nombre_foto_dos, "envase y caja");
+                    nombre_foto_dos = AsignarNombreImagenHelper.BuildNombreImagen(txt_nombre.Text, "envase y caja");
                     string desiredFileName2 = nombre_foto_dos + ".jpg";
 
                     string temp2 = GuardarComoJpegTemporal(imagen2, desiredFileName2);
-
                     try
                     {
                         var result2 = await ApiImageUploader.UploadAsync(temp2, desiredFileName2);
                         urlImagen2Actual = result2.url;
                     }
-                    finally
-                    {
-                        try { System.IO.File.Delete(temp2); } catch { }
-                    }
+                    finally { try { File.Delete(temp2); } catch { } }
                 }
+
             }
             catch (Exception ex)
             {

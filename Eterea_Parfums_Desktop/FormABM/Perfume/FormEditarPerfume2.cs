@@ -330,7 +330,7 @@ namespace Eterea_Parfums_Desktop
         }
 
 
-        private void btn_finalizar_Click(object sender, EventArgs e)
+        private async void btn_finalizar_Click(object sender, EventArgs e)
         {
             if (checkedListBoxAroma.CheckedItems.Count == 0)
             {
@@ -340,7 +340,7 @@ namespace Eterea_Parfums_Desktop
             }
 
             //Subir imagen si cambió
-            formEditarProducto.SubirImagenesEditadasAsync();
+            await formEditarProducto.SubirSiCambioImagenAsync();
             //Actualizar el perfume con los datos que se han modificado
             perfume = formEditarProducto.editar();
             //Actualizar el perfume
