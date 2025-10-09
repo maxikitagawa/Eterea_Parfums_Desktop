@@ -2,11 +2,13 @@
 using Newtonsoft.Json;
 using System;
 using System.Configuration;
+using System.Diagnostics;
+using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
-using System.Drawing;
 
 
 public static class ApiImageUploader
@@ -68,10 +70,19 @@ public static class ApiImageUploader
     {
         try
         {
+            // opcional: setear User-Agent
+            if (!_http.DefaultRequestHeaders.UserAgent.Any())
+                _http.DefaultRequestHeaders.UserAgent.ParseAdd("EtereaDesktop/1.0");
+
             using (var resp = await _http.GetAsync(url))
             {
                 if (!resp.IsSuccessStatusCode)
+                {
+                    // Logueá por qué falló
+                    var body = await resp.Content.ReadAsStringAsync();
+                    System.Diagnostics.Debug.WriteLine($"GET {url} -> {(int)resp.StatusCode} {resp.StatusCode}. Body: {body}");
                     return Eterea_Parfums_Desktop.Properties.Resources.sinImagen;
+                }
 
                 var bytes = await resp.Content.ReadAsByteArrayAsync();
                 using (var ms = new MemoryStream(bytes))
@@ -80,10 +91,12 @@ public static class ApiImageUploader
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
+            Debug.WriteLine($"Excepción GET {url}: {ex}");
             return Eterea_Parfums_Desktop.Properties.Resources.sinImagen;
         }
     }
+
 }
 

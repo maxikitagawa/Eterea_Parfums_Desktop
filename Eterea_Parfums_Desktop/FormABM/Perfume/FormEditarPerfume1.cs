@@ -39,6 +39,8 @@ namespace Eterea_Parfums_Desktop
         public FormEditarPerfume1(Perfume perfume, Perfumes_UC perfumesUC)
         {
             InitializeComponent();
+
+
             this.perfumesUC = perfumesUC;
             LblErrorSetVisibleFalse();
             this.perfume = perfume;
@@ -50,6 +52,62 @@ namespace Eterea_Parfums_Desktop
             CargarOpciones(combo_recargable);
             CargarOpciones(combo_activo);
             cargarDatos(perfume);
+
+            this.Shown += async (_, __) =>
+            {
+                // Asegurá tener URLs o al menos los nombres
+                if (string.IsNullOrWhiteSpace(perfume.imagen1_URL) || string.IsNullOrWhiteSpace(perfume.imagen2_URL))
+                {
+                    var p = PerfumeControlador.getByID(perfume.id);
+                    if (p != null)
+                    {
+                        perfume.imagen1_URL = perfume.imagen1_URL ?? p.imagen1_URL;
+                        perfume.imagen2_URL = perfume.imagen2_URL ?? p.imagen2_URL;
+                        nombre_foto_uno = nombre_foto_uno ?? p.imagen1;
+                        nombre_foto_dos = nombre_foto_dos ?? p.imagen2;
+                    }
+                }
+
+                // ⬇️ Codificá espacios y backslashes ANTES de cargar
+                string basePublica = "https://etereaparfums.com.ar/imagenes/";
+
+                // URL 1: si no hay URL en BD, la armo con el nombre
+                var url1 = !string.IsNullOrWhiteSpace(perfume.imagen1_URL)
+                    ? perfume.imagen1_URL
+                    : (string.IsNullOrWhiteSpace(nombre_foto_uno) ? null : basePublica + nombre_foto_uno + ".jpg");
+
+                // Normalización mínima para que cargue
+                url1 = url1?
+                    .Trim()
+                    .Replace("\\", "/")
+                    .Replace(" ", "%20");
+
+                pictureBoxProducto1.InitialImage = Properties.Resources.sinImagen;
+                pictureBoxProducto1.ErrorImage = Properties.Resources.sinImagen;
+                pictureBoxProducto1.SizeMode = PictureBoxSizeMode.Zoom;
+                pictureBoxProducto1.ImageLocation = url1;
+                pictureBoxProducto1.LoadAsync();
+
+                // URL 2 (igual lógica)
+                var url2 = !string.IsNullOrWhiteSpace(perfume.imagen2_URL)
+                    ? perfume.imagen2_URL
+                    : (string.IsNullOrWhiteSpace(nombre_foto_dos) ? null : basePublica + nombre_foto_dos + ".jpg");
+
+                url2 = url2?
+                    .Trim()
+                    .Replace("\\", "/")
+                    .Replace(" ", "%20");
+
+                pictureBoxProducto2.InitialImage = Properties.Resources.sinImagen;
+                pictureBoxProducto2.ErrorImage = Properties.Resources.sinImagen;
+                pictureBoxProducto2.SizeMode = PictureBoxSizeMode.Zoom;
+                pictureBoxProducto2.ImageLocation = url2;
+                pictureBoxProducto2.LoadAsync();
+
+                // (Opcional) para ver qué se está intentando cargar:
+                // MessageBox.Show($"URL1: {url1}\nURL2: {url2}");
+            };
+
 
             //Diseño del combo box
             combo_activo.DrawMode = DrawMode.OwnerDrawFixed;
@@ -130,12 +188,14 @@ namespace Eterea_Parfums_Desktop
             nombre_foto_uno = perfume.imagen1;
             nombre_foto_dos = perfume.imagen2;
 
-            urlImagen1Actual = perfume.imagen1_URL;
-            urlImagen2Actual = perfume.imagen2_URL;
+            urlImagen1Actual = perfume.imagen1_URL?.Trim();
+            urlImagen2Actual = perfume.imagen2_URL?.Trim();
 
-            await CargarImagenDesdeUrlOLocalAsync(urlImagen1Actual, nombre_foto_uno, pictureBoxProducto1);
-            await CargarImagenDesdeUrlOLocalAsync(urlImagen2Actual, nombre_foto_dos, pictureBoxProducto2);
+            // LOG para verificar que llegan las URLs
+            Debug.WriteLine("URL1: " + urlImagen1Actual);
+            Debug.WriteLine("URL2: " + urlImagen2Actual);
 
+          
             //cargarImagen(nombre_foto_uno, pictureBoxProducto1);
             //cargarImagen(nombre_foto_dos, pictureBoxProducto2);
 
@@ -143,9 +203,48 @@ namespace Eterea_Parfums_Desktop
 
         }
 
+        private string PrepararUrl(string urlCruda)
+        {
+            if (string.IsNullOrWhiteSpace(urlCruda)) return null;
+
+            // limpiar espacios / comillas accidentales
+            var u = urlCruda.Trim().Trim('"', '\'');
+
+            // si te guardaron la ruta relativa (ej: "/imagenes/archivo.jpg")
+            if (!u.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                !u.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                // base pública configurable (App.config)
+                // <add key="PublicImagesBaseUrl" value="https://etereaparfums.com.ar" />
+                var baseUrl = System.Configuration.ConfigurationManager.AppSettings["PublicImagesBaseUrl"]?.TrimEnd('/');
+                if (!string.IsNullOrWhiteSpace(baseUrl))
+                    u = $"{baseUrl}/{u.TrimStart('/')}";
+            }
+
+            // normalizá segmentos (espacios/acentos/ñ)
+            return NormalizarUrl(u);
+        }
+
+        private void EnsureUrls()
+        {
+            // si vino todo desde BD, no hago nada
+            if (!string.IsNullOrWhiteSpace(perfume.imagen1_URL) || !string.IsNullOrWhiteSpace(perfume.imagen2_URL))
+                return;
+
+            // recargo desde BD por si el objeto vino incompleto (MUY común)
+            var p = PerfumeControlador.getByID(perfume.id);
+            if (p != null)
+            {
+                perfume.imagen1_URL = p.imagen1_URL?.Trim();
+                perfume.imagen2_URL = p.imagen2_URL?.Trim();
+                if (string.IsNullOrWhiteSpace(perfume.imagen1)) perfume.imagen1 = p.imagen1;
+                if (string.IsNullOrWhiteSpace(perfume.imagen2)) perfume.imagen2 = p.imagen2;
+            }
+        }
+
+
         private async Task CargarImagenDesdeUrlOLocalAsync(string url, string nombreLocalSinExt, PictureBox pictureBox)
         {
-            // 0) liberar imagen previa
             if (pictureBox.Image != null)
             {
                 var old = pictureBox.Image;
@@ -153,29 +252,29 @@ namespace Eterea_Parfums_Desktop
                 old.Dispose();
             }
 
-            // 1) Si hay URL válida, intentamos vía HttpClient (tu helper)
-            if (!string.IsNullOrWhiteSpace(url))
+            string urlNormalizada = NormalizarUrl(url);
+
+            bool intentoUrl = false;
+            if (!string.IsNullOrWhiteSpace(urlNormalizada))
             {
+                intentoUrl = true;
                 try
                 {
-                    // ⚠️ si tu API devuelve URL con espacios/acentos y sin encode:
-                    // url = Uri.EscapeUriString(url);
-
-                    var imgRemota = await ApiImageUploader.DownloadImageAsync(url);
-                    if (imgRemota != null)
+                    var img = await ApiImageUploader.DownloadImageAsync(urlNormalizada);
+                    if (img != null && !ReferenceEquals(img, Properties.Resources.sinImagen))
                     {
                         pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
-                        pictureBox.Image = imgRemota;   // si falla, tu helper ya devuelve sinImagen
+                        pictureBox.Image = img;
                         return;
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // seguimos al fallback local
+                    Debug.WriteLine("Fallo descarga URL: " + ex.Message);
                 }
             }
 
-            // 2) Fallback: archivo local legacy (Resources)
+            // Fallback local
             string rutaCompleta = Path.Combine(Program.Ruta_Base, (nombreLocalSinExt ?? "") + ".jpg");
             if (File.Exists(rutaCompleta))
             {
@@ -188,13 +287,57 @@ namespace Eterea_Parfums_Desktop
             else
             {
                 pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
-                pictureBox.Image = Properties.Resources.sinImagen; // placeholder
+                pictureBox.Image = Properties.Resources.sinImagen;
+
+                if (intentoUrl)
+                {
+                    // 👉 te avisa una sola vez por imagen que la URL falló y no existe local
+                    Debug.WriteLine($"No se pudo cargar la URL ni el archivo local. URL normalizada: {urlNormalizada}");
+                    // (Opcional) MessageBox.Show(...) si querés verlo en pantalla
+                }
             }
         }
 
 
+        // Pequeño helper para evitar 404 por espacios/acentos/ñ
 
-        private void cargarImagen(string nombreImg, PictureBox pictureBox)
+        private string NormalizarUrl(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return null;
+
+            // Intento parsear tal cual
+            if (Uri.TryCreate(url, UriKind.Absolute, out var uriOk))
+                return uriOk.AbsoluteUri;
+
+            // Si falla, intento “arreglar” el path codificando cada segmento
+            try
+            {
+                // Ej: https://etereaparfums.com.ar/imagenes/Paco Rabanne - 1234 - envase y caja.jpg
+                var idx = url.IndexOf("://", StringComparison.Ordinal);
+                if (idx < 0) return null;
+
+                var scheme = url.Substring(0, idx);
+                var rest = url.Substring(idx + 3);             // host + path
+                var firstSlash = rest.IndexOf('/');
+                var host = firstSlash >= 0 ? rest.Substring(0, firstSlash) : rest;
+                var path = firstSlash >= 0 ? rest.Substring(firstSlash) : "/";
+
+                // codifico cada segmento del path
+                var encodedSegments = string.Join("/",
+                    path.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(seg => Uri.EscapeDataString(seg))
+                );
+                var normalized = $"{scheme}://{host}/{encodedSegments}";
+
+                return normalized;
+            }
+            catch { return null; }
+        }
+
+
+
+
+        /*private void cargarImagen(string nombreImg, PictureBox pictureBox)
         {
             string rutaCompletaImagen = Program.Ruta_Base + nombreImg + ".jpg";
             if (System.IO.File.Exists(rutaCompletaImagen))
@@ -205,9 +348,9 @@ namespace Eterea_Parfums_Desktop
             {
                 MessageBox.Show("La imagen no se encontró en la ruta especificada: " + rutaCompletaImagen, "Error de carga de imagen", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-        }
+        }*/
 
-        private bool Eliminar_Imagen_Existente(string nombreImg)
+        /*private bool Eliminar_Imagen_Existente(string nombreImg)
         {
             String rutaImagen = Program.Ruta_Base + nombreImg + ".jpg";
             try
@@ -234,9 +377,9 @@ namespace Eterea_Parfums_Desktop
                 Console.WriteLine("Error al eliminar la imagen: " + ex.Message);
             }
             return false;
-        }
+        }*/
 
-        private void LiberarImagen(string rutaImagen)
+        /*private void LiberarImagen(string rutaImagen)
         {
             try
             {
@@ -249,7 +392,7 @@ namespace Eterea_Parfums_Desktop
             {
                 Console.WriteLine("No se pudo liberar la imagen: " + ex.Message);
             }
-        }
+        }*/
 
 
         private void LblErrorSetVisibleFalse()
@@ -639,7 +782,7 @@ namespace Eterea_Parfums_Desktop
         }
 
 
-        internal void eliminarImgExistenteYGuardarNueva()
+        /*internal void eliminarImgExistenteYGuardarNueva()
         {
             if (imagen1 != null)
             {
@@ -652,6 +795,63 @@ namespace Eterea_Parfums_Desktop
                 Eliminar_Imagen_Existente(nombre_foto_dos);
                 saveImagenResources(out nombre_foto_dos, imagen2, "envase y caja");
             }
+        }*/
+        internal async Task SubirImagenesEditadasAsync()
+        {
+            // si el usuario no cambió la imagen, no tocamos nada
+            if (imagen1 != null)
+            {
+                buildNombreImagen(out nombre_foto_uno, "envase");
+                string desired1 = nombre_foto_uno + ".jpg";
+                string temp1 = GuardarComoJpegTemporal(imagen1, desired1);
+                try
+                {
+                    var res1 = await ApiImageUploader.UploadAsync(temp1, desired1);
+                    urlImagen1Actual = res1.url; // guardo para persistir
+                }
+                finally { try { File.Delete(temp1); } catch { } }
+            }
+
+            if (imagen2 != null)
+            {
+                buildNombreImagen(out nombre_foto_dos, "envase y caja");
+                string desired2 = nombre_foto_dos + ".jpg";
+                string temp2 = GuardarComoJpegTemporal(imagen2, desired2);
+                try
+                {
+                    var res2 = await ApiImageUploader.UploadAsync(temp2, desired2);
+                    urlImagen2Actual = res2.url;
+                }
+                finally { try { File.Delete(temp2); } catch { } }
+            }
+
+            // si el usuario no eligió imágenes nuevas, conservo lo que trajo BD
+            if (string.IsNullOrWhiteSpace(urlImagen1Actual))
+                urlImagen1Actual = perfume.imagen1_URL;
+            if (string.IsNullOrWhiteSpace(urlImagen2Actual))
+                urlImagen2Actual = perfume.imagen2_URL;
+        }
+
+
+
+        private void buildNombreImagen(out string nombreArchivoSinExtension, string sufijo)
+        {
+            int numero_aleatorio = numeroAleatorio();
+            string baseNombre = (txt_nombre.Text ?? "").Trim();
+
+            // saneo básico
+            string inval = new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
+            foreach (var c in inval) baseNombre = baseNombre.Replace(c.ToString(), "");
+
+            nombreArchivoSinExtension = $"{baseNombre} - {numero_aleatorio} - {sufijo}";
+        }
+
+        // Guarda la Image en un .jpg temporal y devuelve la ruta
+        private string GuardarComoJpegTemporal(Image imagen, string nombreDeseadoConExtension)
+        {
+            string tempPath = Path.Combine(Path.GetTempPath(), nombreDeseadoConExtension);
+            imagen.Save(tempPath, System.Drawing.Imaging.ImageFormat.Jpeg);
+            return tempPath;
         }
 
 
@@ -682,7 +882,7 @@ namespace Eterea_Parfums_Desktop
 
             }
         }
-        private void saveImagenResources(out string nombreFoto, Image imagen, string sufijo)
+        /*private void saveImagenResources(out string nombreFoto, Image imagen, string sufijo)
         {
             try
             {
@@ -695,7 +895,9 @@ namespace Eterea_Parfums_Desktop
             {
                 throw new Exception(ex.Message);
             }
-        }
+        }*/
+
+
 
 
         private int numeroAleatorio()

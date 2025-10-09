@@ -44,6 +44,12 @@
             this.lbl_paginacion_Info = new System.Windows.Forms.Label();
             this.lbl_numero_pagina = new System.Windows.Forms.Label();
             this.dataGridViewConsultas = new System.Windows.Forms.DataGridView();
+            this.nombre = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Presentacion = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.marca = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.Genero = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.precio = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.agregar = new System.Windows.Forms.DataGridViewButtonColumn();
             this.btn_anterior = new System.Windows.Forms.Button();
             this.btn_posterior = new System.Windows.Forms.Button();
             this.pictureBox4 = new System.Windows.Forms.PictureBox();
@@ -59,12 +65,6 @@
             this.pictureBox6 = new System.Windows.Forms.PictureBox();
             this.btn_escanear = new System.Windows.Forms.Button();
             this.pictureBox17 = new System.Windows.Forms.PictureBox();
-            this.nombre = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Presentacion = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.marca = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.Genero = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.precio = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.agregar = new System.Windows.Forms.DataGridViewButtonColumn();
             ((System.ComponentModel.ISupportInitialize)(this.img_logo)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
@@ -277,6 +277,61 @@
             this.dataGridViewConsultas.TabIndex = 288;
             this.dataGridViewConsultas.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dataGridViewConsultas_CellContentClick);
             // 
+            // nombre
+            // 
+            this.nombre.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
+            this.nombre.FillWeight = 125F;
+            this.nombre.HeaderText = "Nombre del perfume";
+            this.nombre.MinimumWidth = 6;
+            this.nombre.Name = "nombre";
+            this.nombre.ReadOnly = true;
+            this.nombre.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+            this.nombre.Width = 469;
+            // 
+            // Presentacion
+            // 
+            this.Presentacion.HeaderText = "Presentación";
+            this.Presentacion.Name = "Presentacion";
+            this.Presentacion.ReadOnly = true;
+            // 
+            // marca
+            // 
+            this.marca.FillWeight = 125F;
+            this.marca.HeaderText = "Marca";
+            this.marca.MinimumWidth = 6;
+            this.marca.Name = "marca";
+            this.marca.ReadOnly = true;
+            this.marca.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+            // 
+            // Genero
+            // 
+            this.Genero.FillWeight = 50F;
+            this.Genero.HeaderText = "Genero";
+            this.Genero.MinimumWidth = 6;
+            this.Genero.Name = "Genero";
+            this.Genero.ReadOnly = true;
+            this.Genero.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+            // 
+            // precio
+            // 
+            this.precio.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
+            this.precio.FillWeight = 50F;
+            this.precio.HeaderText = "Precio ($)";
+            this.precio.MinimumWidth = 6;
+            this.precio.Name = "precio";
+            this.precio.ReadOnly = true;
+            this.precio.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+            this.precio.Width = 109;
+            // 
+            // agregar
+            // 
+            this.agregar.FillWeight = 50F;
+            this.agregar.HeaderText = "";
+            this.agregar.MinimumWidth = 6;
+            this.agregar.Name = "agregar";
+            this.agregar.ReadOnly = true;
+            this.agregar.Resizable = System.Windows.Forms.DataGridViewTriState.False;
+            // 
             // btn_anterior
             // 
             this.btn_anterior.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(228)))), ((int)(((byte)(137)))), ((int)(((byte)(164)))));
@@ -379,6 +434,7 @@
             this.pictureBox3.Size = new System.Drawing.Size(1246, 69);
             this.pictureBox3.TabIndex = 305;
             this.pictureBox3.TabStop = false;
+          
             // 
             // label2
             // 
@@ -471,61 +527,6 @@
             this.pictureBox17.Size = new System.Drawing.Size(1522, 849);
             this.pictureBox17.TabIndex = 374;
             this.pictureBox17.TabStop = false;
-            // 
-            // nombre
-            // 
-            this.nombre.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
-            this.nombre.FillWeight = 125F;
-            this.nombre.HeaderText = "Nombre del perfume";
-            this.nombre.MinimumWidth = 6;
-            this.nombre.Name = "nombre";
-            this.nombre.ReadOnly = true;
-            this.nombre.Resizable = System.Windows.Forms.DataGridViewTriState.False;
-            this.nombre.Width = 469;
-            // 
-            // Presentacion
-            // 
-            this.Presentacion.HeaderText = "Presentación";
-            this.Presentacion.Name = "Presentacion";
-            this.Presentacion.ReadOnly = true;
-            // 
-            // marca
-            // 
-            this.marca.FillWeight = 125F;
-            this.marca.HeaderText = "Marca";
-            this.marca.MinimumWidth = 6;
-            this.marca.Name = "marca";
-            this.marca.ReadOnly = true;
-            this.marca.Resizable = System.Windows.Forms.DataGridViewTriState.False;
-            // 
-            // Genero
-            // 
-            this.Genero.FillWeight = 50F;
-            this.Genero.HeaderText = "Genero";
-            this.Genero.MinimumWidth = 6;
-            this.Genero.Name = "Genero";
-            this.Genero.ReadOnly = true;
-            this.Genero.Resizable = System.Windows.Forms.DataGridViewTriState.False;
-            // 
-            // precio
-            // 
-            this.precio.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
-            this.precio.FillWeight = 50F;
-            this.precio.HeaderText = "Precio ($)";
-            this.precio.MinimumWidth = 6;
-            this.precio.Name = "precio";
-            this.precio.ReadOnly = true;
-            this.precio.Resizable = System.Windows.Forms.DataGridViewTriState.False;
-            this.precio.Width = 109;
-            // 
-            // agregar
-            // 
-            this.agregar.FillWeight = 50F;
-            this.agregar.HeaderText = "";
-            this.agregar.MinimumWidth = 6;
-            this.agregar.Name = "agregar";
-            this.agregar.ReadOnly = true;
-            this.agregar.Resizable = System.Windows.Forms.DataGridViewTriState.False;
             // 
             // FormInicioAutoconsulta
             // 
