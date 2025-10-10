@@ -258,10 +258,11 @@ namespace Eterea_Parfums_Desktop.Controladores
                 "anio_de_lanzamiento = @anio_de_lanzamiento, " +
                 "precio_en_pesos = @precio_en_pesos, " +
                 "activo = @activo, " +
-                "imagen1 = COALESCE(@imagen1, imagen1), " +       // conserva si @imagen1 es NULL
-                "imagen2 = COALESCE(@imagen2, imagen2), " +       // idem
-                "imagen1_URL = COALESCE(@imagen1_URL, imagen1_URL), " + // 👈 clave: no escribas NULL
-                "imagen2_URL = COALESCE(@imagen2_URL, imagen2_URL)";    // 👈 clave
+                "imagen1 = COALESCE(@imagen1, imagen1), " +       
+                "imagen2 = COALESCE(@imagen2, imagen2), " +       
+
+                "imagen1_URL = COALESCE(@imagen1_URL, imagen1_URL), " + 
+                "imagen2_URL = COALESCE(@imagen2_URL, imagen2_URL)";    
 
             if (actualizarFechaBaja)
             {
@@ -287,16 +288,19 @@ namespace Eterea_Parfums_Desktop.Controladores
                 cmd.Parameters.AddWithValue("@precio_en_pesos", perfume.precio_en_pesos);
                 cmd.Parameters.AddWithValue("@activo", perfume.activo);
 
-                // Si no querés modificar nombre/imagen cuando vengan null, deja que COALESCE haga su trabajo:
-                cmd.Parameters.AddWithValue("@imagen1", (object)perfume.imagen1 ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@imagen2", (object)perfume.imagen2 ?? DBNull.Value);
+                
+                cmd.Parameters.AddWithValue("@imagen1", (object)perfume.imagen1);
+                cmd.Parameters.AddWithValue("@imagen2", (object)perfume.imagen2);
                 cmd.Parameters.AddWithValue("@imagen1_URL", (object)perfume.imagen1_URL ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@imagen2_URL", (object)perfume.imagen2_URL ?? DBNull.Value);
 
                 if (actualizarFechaBaja)
                 {
-                    object fechaBajaValue = (perfume.activo == true) ? (object)DBNull.Value : DateTime.Now;
-                    cmd.Parameters.AddWithValue("@fecha_baja", fechaBajaValue);
+                    // Esta columna admite NULL:
+                    var pFecha = new SqlParameter("@fecha_baja", System.Data.SqlDbType.DateTime);
+                    pFecha.Value = (perfume.activo == true) ? (object)DBNull.Value : DateTime.Now;
+                    cmd.Parameters.Add(pFecha);
+
                 }
 
                 try

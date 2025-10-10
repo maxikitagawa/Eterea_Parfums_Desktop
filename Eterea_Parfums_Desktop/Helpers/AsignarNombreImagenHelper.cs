@@ -24,7 +24,6 @@ namespace Eterea_Parfums_Desktop.Helpers
             if (string.IsNullOrWhiteSpace(input))
                 return "sin-nombre";
 
-            // 1) Normaliza (quita diacríticos: á->a, ñ->n)
             string normalized = input.Normalize(NormalizationForm.FormD);
             var sb = new StringBuilder();
             foreach (var c in normalized)
@@ -35,49 +34,39 @@ namespace Eterea_Parfums_Desktop.Helpers
             }
             normalized = sb.ToString().Normalize(NormalizationForm.FormC);
 
-            // 2) Unifica separadores: guiones/bajos -> espacio
             normalized = normalized.Replace('_', ' ').Replace('-', ' ');
-
-            // 3) Deja solo letras/números/espacios
             normalized = Regex.Replace(normalized, @"[^A-Za-z0-9 ]+", " ");
-
-            // 4) Colapsa espacios y recorta
             normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
 
-            // 5) Espacios -> guiones y minúsculas
-            var slug = normalized.Replace(' ', '-').ToLowerInvariant();
-
-            return string.IsNullOrWhiteSpace(slug) ? "sin-nombre" : slug;
+            return normalized.Replace(' ', '-').ToLowerInvariant();
         }
 
-        /// <summary>
-        /// Arma el nombre "limpio" SIN extensión. Ej: "fame-envase-2697"
-        /// </summary>
-        public static string BuildNombreImagen(string nombrePerfume, string sufijo, int? numeroAleatorio = null)
+        // Versión compacta: igual que Slugify pero sin guiones (p. ej. "envase y caja" -> "envaseycaja")
+        public static string SlugifyCompact(string input)
         {
-            // Sufijo también se “slugifica” (p.ej. "envase y caja" -> "envase-y-caja")
-            var baseNombre = Slugify($"{nombrePerfume} {sufijo}");
-            int n = numeroAleatorio ?? _rnd.Next(1000, 9999);
-            return $"{baseNombre}-{n}";
+            var s = Slugify(input);
+            return s.Replace("-", "");
         }
 
         /// <summary>
-        /// Crea la URL pública a partir de base + nombreSinExt.
+        /// NUEVO: {slug(nombre)}-{n}-{slug(sufijo)}. Si compactSuffix=true, el sufijo queda sin guiones.
         /// </summary>
+        public static string BuildNombreImagen(string nombrePerfume, string sufijo, bool compactSuffix = false, int? numeroAleatorio = null)
+        {
+            var slugNombre = Slugify(nombrePerfume);
+            var slugSufijo = compactSuffix ? SlugifyCompact(sufijo) : Slugify(sufijo);
+            int n = numeroAleatorio ?? _rnd.Next(1000, 9999);
+            return $"{slugNombre}-{n}-{slugSufijo}";
+        }
+
         public static string ToPublicUrl(string basePublica, string nombreSinExtension, string extension = ".jpg")
         {
             if (string.IsNullOrWhiteSpace(nombreSinExtension)) return null;
             var file = nombreSinExtension + extension;
-
-            // escapá el nombre del archivo por si quedó algún char especial
             var encodedFile = Uri.EscapeDataString(file);
             return $"{basePublica?.TrimEnd('/')}/{encodedFile}";
         }
 
-        /// <summary>
-        /// Normalización “liviana” de URL: recorta, / en vez de \, y espacios -> %20
-        /// (útil para datos viejos en BD)
-        /// </summary>
         public static string EncodeLight(string url)
         {
             return string.IsNullOrWhiteSpace(url)

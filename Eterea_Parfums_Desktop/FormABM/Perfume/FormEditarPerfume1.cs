@@ -353,7 +353,7 @@ namespace Eterea_Parfums_Desktop
             // IMAGEN 1: si el usuario cargó una nueva en el form de editar
             if (imagen1 != null)
             {
-                nombre_foto_uno = AsignarNombreImagenHelper.BuildNombreImagen(txt_nombre.Text, "envase");
+                nombre_foto_uno = AsignarNombreImagenHelper.BuildNombreImagen(txt_nombre.Text, "envase", compactSuffix: false);
                 string desiredFileName1 = nombre_foto_uno + ".jpg";
 
                 string temp1 = GuardarComoJpegTemporal(imagen1, desiredFileName1);
@@ -368,7 +368,7 @@ namespace Eterea_Parfums_Desktop
             // IMAGEN 2
             if (imagen2 != null)
             {
-                nombre_foto_dos = AsignarNombreImagenHelper.BuildNombreImagen(txt_nombre.Text, "envase y caja");
+                nombre_foto_dos = AsignarNombreImagenHelper.BuildNombreImagen(txt_nombre.Text, "envase y caja", compactSuffix:false);
                 string desiredFileName2 = nombre_foto_dos + ".jpg";
 
                 string temp2 = GuardarComoJpegTemporal(imagen2, desiredFileName2);
