@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -74,4 +75,34 @@ namespace Eterea_Parfums_Desktop.Helpers
                 : url.Trim().Replace("\\", "/").Replace(" ", "%20");
         }
     }
+
+     public static string BuildPromoName(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return "sin-nombre";
+
+            // a) pasar a minúsculas
+            var lower = input.ToLowerInvariant();
+
+            // b) remover acentos/diacríticos
+            var normalized = lower.Normalize(NormalizationForm.FormD);
+            var withoutDiacritics = new string(
+                normalized.Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark).ToArray()
+            ).Normalize(NormalizationForm.FormC);
+
+            // c) reemplazar espacios por guiones
+            var dashed = Regex.Replace(withoutDiacritics, @"\s+", "-");
+
+            // d) eliminar todo lo que NO sea [a-z0-9-]
+            var safe = Regex.Replace(dashed, @"[^a-z0-9\-]", "");
+
+            // e) colapsar guiones dobles / extremos
+            safe = Regex.Replace(safe, @"-+", "-").Trim('-');
+
+            return string.IsNullOrWhiteSpace(safe) ? "sin-nombre" : safe;
+        }
+
+        public static string BuildPromoFileStem(string nombrePromo)
+            => $"banner-{BuildPromoName(nombrePromo)}"; // <== sin extensión
+    }
+
 }

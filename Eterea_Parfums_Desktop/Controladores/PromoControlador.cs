@@ -16,61 +16,47 @@ namespace Eterea_Parfums_Desktop.Controladores
 
         public static bool crearPromocion(Promocion promo)
         {
-            // Dar de alta una promoción en la base de datos
-            string query = "insert into dbo.promocion values" +
-                            "(@id, " +
-                            "@nombre, " +
-                            "@fecha_inicio, " +
-                            "@fecha_fin, " +
-                           "@descuento, " +
-                           "@activo, " +
-                           "@descripcion, " +
-                           "@banner);";
+            string query = @"
+                           INSERT INTO dbo.promocion
+                               (id, nombre, fecha_inicio, fecha_fin, descuento, activo, descripcion, banner, imagen_URL)
+                           VALUES
+                               (@id, @nombre, @fecha_inicio, @fecha_fin, @descuento, @activo, @descripcion, @banner, @imagen_URL);";
 
-
-            SqlCommand cmd = new SqlCommand(query, DB_Controller.connection);
-
-            cmd.Parameters.AddWithValue("@id", obtenerMaxId() + 1);
-            cmd.Parameters.AddWithValue("@nombre", promo.nombre);
-            cmd.Parameters.AddWithValue("@fecha_inicio", promo.fecha_inicio);
-            cmd.Parameters.AddWithValue("@fecha_fin", promo.fecha_fin);
-            cmd.Parameters.AddWithValue("@descuento", promo.descuento);
-            cmd.Parameters.AddWithValue("@activo", promo.activo);
-            cmd.Parameters.AddWithValue("@descripcion", promo.descripcion);
-            cmd.Parameters.AddWithValue("@banner", promo.banner);
-
-            SqlTransaction transaction = null; // Declarar la transacción
-
-            try
+            using (var cmd = new SqlCommand(query, DB_Controller.connection))
             {
-                DB_Controller.connection.Open();
+                cmd.Parameters.AddWithValue("@id", obtenerMaxId() + 1);
+                cmd.Parameters.AddWithValue("@nombre", promo.nombre);
+                cmd.Parameters.AddWithValue("@fecha_inicio", promo.fecha_inicio);
+                cmd.Parameters.AddWithValue("@fecha_fin", promo.fecha_fin);
+                cmd.Parameters.AddWithValue("@descuento", promo.descuento);
+                cmd.Parameters.AddWithValue("@activo", promo.activo);
+                cmd.Parameters.AddWithValue("@descripcion", promo.descripcion);
+                cmd.Parameters.AddWithValue("@banner", promo.banner);
+                cmd.Parameters.AddWithValue("@imagen_URL", (object)promo.imagen_URL ?? DBNull.Value);
 
-                // Iniciar la transacción
-                transaction = DB_Controller.connection.BeginTransaction();
-
-                // Asignar la transacción al comando
-                cmd.Transaction = transaction;
-
-                // Ejecutar el comando para insertar la promoción
-                cmd.ExecuteNonQuery();
-
-                // Si la inserción fue exitosa, confirmar la transacción
-                transaction.Commit();
-
-                DB_Controller.connection.Close();
-                return true;
-            }
-            catch (Exception e)
-            {
-                // Si ocurre un error, revertir la transacción
-                if (transaction != null)
+                SqlTransaction transaction = null;
+                try
                 {
-                    transaction.Rollback();
-                }
-                DB_Controller.connection.Close(); // Cerrar la conexión también en caso de error
-                throw new Exception("Hay un error en la query: " + e.Message);
-            }
+                    DB_Controller.connection.Open();
+                    transaction = DB_Controller.connection.BeginTransaction();
+                    cmd.Transaction = transaction;
 
+                    cmd.ExecuteNonQuery();
+
+                    transaction.Commit();
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    transaction?.Rollback();
+                    throw new Exception("Hay un error en la query: " + e.Message);
+                }
+                finally
+                {
+                    if (DB_Controller.connection.State == System.Data.ConnectionState.Open)
+                        DB_Controller.connection.Close();
+                }
+            }
         }
 
 
@@ -112,39 +98,42 @@ namespace Eterea_Parfums_Desktop.Controladores
         // GET ALL -  OBTENER TODAS LAS PROMOCIONES DE LA BD
         public static List<Promocion> obtenerTodos()
         {
-            List<Promocion> list = new List<Promocion>();
-            string query = "select * from dbo.promocion ORDER BY nombre ASC;";
+            var list = new List<Promocion>();
+            string query = "SELECT * FROM dbo.promocion ORDER BY nombre ASC;";
 
-            SqlCommand cmd = new SqlCommand(query, DB_Controller.connection);
-
-            try
+            using (var cmd = new SqlCommand(query, DB_Controller.connection))
             {
-                DB_Controller.connection.Open();
-                SqlDataReader r = cmd.ExecuteReader();
-
-                while (r.Read())
+                try
                 {
-                    list.Add(new Promocion(
-                        r.GetInt32(0),
-                        r.GetString(1),
-                        r.GetDateTime(2),
-                        r.GetDateTime(3),
-                        r.GetInt32(4),
-                        r.GetBoolean(5),
-                        r.GetString(6),
-                        r.GetString(7)));
-
+                    DB_Controller.connection.Open();
+                    var r = cmd.ExecuteReader();
+                    while (r.Read())
+                    {
+                        list.Add(new Promocion(
+                            r.GetInt32(0),        // id
+                            r.GetString(1),       // nombre
+                            r.GetDateTime(2),     // fecha_inicio
+                            r.GetDateTime(3),     // fecha_fin
+                            r.GetInt32(4),        // descuento
+                            r.GetBoolean(5),      // activo
+                            r.GetString(6),       // descripcion
+                            r.GetString(7),       // banner
+                            r.IsDBNull(8) ? null : r.GetString(8) // imagen_URL
+                        ));
+                    }
+                    r.Close();
                 }
-                r.Close();
-                DB_Controller.connection.Close();
+                catch (Exception e)
+                {
+                    throw new Exception("Hay un error en la query: " + e.Message);
+                }
+                finally
+                {
+                    if (DB_Controller.connection.State == System.Data.ConnectionState.Open)
+                        DB_Controller.connection.Close();
+                }
             }
-            catch (Exception e)
-            {
-                throw new Exception("Hay un error en la query: " + e.Message);
-            }
-
             return list;
-
         }
 
 
@@ -155,36 +144,45 @@ namespace Eterea_Parfums_Desktop.Controladores
 
         public static Promocion obtenerPorId(int id)
         {
-            Promocion promo = new Promocion();
+            Promocion promo = null;
+            string query = "SELECT * FROM dbo.promocion WHERE id = @id;";
 
-            string query = "select * from dbo.promocion where id = @id;";
-
-            SqlCommand cmd = new SqlCommand(query, DB_Controller.connection);
-            cmd.Parameters.AddWithValue("@id", id);
-
-            try
+            using (var cmd = new SqlCommand(query, DB_Controller.connection))
             {
-                DB_Controller.connection.Open();
-                SqlDataReader r = cmd.ExecuteReader();
-
-                while (r.Read())
+                cmd.Parameters.AddWithValue("@id", id);
+                try
                 {
-
-                    promo = new Promocion(r.GetInt32(0), r.GetString(1), r.GetDateTime(2), r.GetDateTime(3),
-                        r.GetInt32(4), r.GetBoolean(5), r.GetString(6),
-                        r.GetString(7));
+                    DB_Controller.connection.Open();
+                    var r = cmd.ExecuteReader();
+                    if (r.Read())
+                    {
+                        promo = new Promocion(
+                            r.GetInt32(0),
+                            r.GetString(1),
+                            r.GetDateTime(2),
+                            r.GetDateTime(3),
+                            r.GetInt32(4),
+                            r.GetBoolean(5),
+                            r.GetString(6),
+                            r.GetString(7),
+                            r.IsDBNull(8) ? null : r.GetString(8)
+                        );
+                    }
+                    r.Close();
                 }
-                r.Close();
-                DB_Controller.connection.Close();
-
-            }
-            catch (Exception e)
-            {
-                throw new Exception("Hay un error en la query: " + e.Message);
+                catch (Exception e)
+                {
+                    throw new Exception("Hay un error en la query: " + e.Message);
+                }
+                finally
+                {
+                    if (DB_Controller.connection.State == System.Data.ConnectionState.Open)
+                        DB_Controller.connection.Close();
+                }
             }
             return promo;
-
         }
+
 
 
 
@@ -234,64 +232,54 @@ namespace Eterea_Parfums_Desktop.Controladores
         public static bool editarPromo(Promocion promo)
         {
             string query = @"
-                 UPDATE dbo.promocion
-                 SET id = @id_editar,
-                     nombre = @nombre,
-                     fecha_inicio = @fechaInicio,
-                     fecha_fin = @fechaFin,
-                     descuento = @descuento,
-                     activo = @activo,
-                     descripcion = @descripcion,
-                     banner = @banner
-                 WHERE id = @id_editar"
-            ;
+        UPDATE dbo.promocion
+        SET  id = @id_editar,
+             nombre = @nombre,
+             fecha_inicio = @fechaInicio,
+             fecha_fin = @fechaFin,
+             descuento = @descuento,
+             activo = @activo,
+             descripcion = @descripcion,
+             banner = @banner,
+             imagen_URL = @imagen_URL
+        WHERE id = @id_editar;";
 
-            SqlCommand cmd = new SqlCommand(query, DB_Controller.connection);
-            cmd.Parameters.AddWithValue("@id_editar", promo.id);
-            cmd.Parameters.AddWithValue("@nombre", promo.nombre);
-            cmd.Parameters.AddWithValue("@fechaInicio", promo.fecha_inicio);
-            cmd.Parameters.AddWithValue("@fechaFin", promo.fecha_fin);
-            cmd.Parameters.AddWithValue("@descuento", promo.descuento);
-            cmd.Parameters.AddWithValue("@activo", promo.activo);
-            cmd.Parameters.AddWithValue("@descripcion", promo.descripcion);
-            cmd.Parameters.AddWithValue("@banner", promo.banner);
-
-
-            SqlTransaction transaction = null; // Declarar la transacción
-
-            try
+            using (var cmd = new SqlCommand(query, DB_Controller.connection))
             {
-                DB_Controller.connection.Open();
+                cmd.Parameters.AddWithValue("@id_editar", promo.id);
+                cmd.Parameters.AddWithValue("@nombre", promo.nombre);
+                cmd.Parameters.AddWithValue("@fechaInicio", promo.fecha_inicio);
+                cmd.Parameters.AddWithValue("@fechaFin", promo.fecha_fin);
+                cmd.Parameters.AddWithValue("@descuento", promo.descuento);
+                cmd.Parameters.AddWithValue("@activo", promo.activo);
+                cmd.Parameters.AddWithValue("@descripcion", promo.descripcion);
+                cmd.Parameters.AddWithValue("@banner", promo.banner);
+                cmd.Parameters.AddWithValue("@imagen_URL", (object)promo.imagen_URL ?? DBNull.Value);
 
-                // Iniciar la transacción
-                transaction = DB_Controller.connection.BeginTransaction();
-
-                // Asignar la transacción al comando
-                cmd.Transaction = transaction;
-
-                // Ejecutar el comando de actualización
-                cmd.ExecuteNonQuery();
-
-                // Llamar a eliminar registros, pasándole la transacción
-                PerfumeEnPromoControlador.eliminarRegistrosPromoPerfumes(promo.id, transaction);
-
-
-                // Confirmar la transacción si todo fue bien
-                transaction.Commit();
-
-                DB_Controller.connection.Close();
-                return true;
-            }
-            catch (Exception e)
-            {
-                // Revertir la transacción en caso de error
-                if (transaction != null)
+                SqlTransaction transaction = null;
+                try
                 {
-                    transaction.Rollback();
-                }
-                DB_Controller.connection.Close(); // Cerrar la conexión también en caso de error
-                throw new Exception("Hay un error en la query: " + e.Message);
+                    DB_Controller.connection.Open();
+                    transaction = DB_Controller.connection.BeginTransaction();
+                    cmd.Transaction = transaction;
 
+                    cmd.ExecuteNonQuery();
+
+                    PerfumeEnPromoControlador.eliminarRegistrosPromoPerfumes(promo.id, transaction);
+
+                    transaction.Commit();
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    transaction?.Rollback();
+                    throw new Exception("Hay un error en la query: " + e.Message);
+                }
+                finally
+                {
+                    if (DB_Controller.connection.State == System.Data.ConnectionState.Open)
+                        DB_Controller.connection.Close();
+                }
             }
         }
 

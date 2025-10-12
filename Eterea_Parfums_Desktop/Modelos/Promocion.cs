@@ -12,8 +12,9 @@ namespace Eterea_Parfums_Desktop.Modelos
         public bool activo { get; set; }
         public string descripcion { get; set; }
         public string banner { get; set; }
+        public string imagen_URL { get; set; }
 
-        public Promocion(int id, string nombre, DateTime fecha_inicio, DateTime fecha_fin, int descuento, bool activo, string descripcion, string banner)
+        public Promocion(int id, string nombre, DateTime fecha_inicio, DateTime fecha_fin, int descuento, bool activo, string descripcion, string banner, string imagen_URL)
         {
             this.id = id;
             this.nombre = nombre;
@@ -23,7 +24,7 @@ namespace Eterea_Parfums_Desktop.Modelos
             this.activo = activo;
             this.descripcion = descripcion;
             this.banner = banner;
-
+            this.imagen_URL = imagen_URL;
         }
 
         public Promocion()
