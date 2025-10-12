@@ -141,7 +141,7 @@ namespace Eterea_Parfums_Desktop
         }
 
 
-        private async void cargarDatos(Perfume perfume)
+        private void cargarDatos(Perfume perfume)
         {
             txt_codigo.Text = perfume.codigo;
             combo_marca.Text = perfume.marca.nombre;
@@ -200,6 +200,8 @@ namespace Eterea_Parfums_Desktop
             //Console.WriteLine(nombre_foto_dos);
 
         }
+
+
 
         private static string GetPublicImagesBase()
         {

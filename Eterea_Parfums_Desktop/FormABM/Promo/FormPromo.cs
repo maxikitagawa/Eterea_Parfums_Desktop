@@ -1,5 +1,6 @@
 ﻿using Eterea_Parfums_Desktop.Controladores;
 using Eterea_Parfums_Desktop.DTOs;
+using Eterea_Parfums_Desktop.Helpers;
 using Eterea_Parfums_Desktop.Modelos;
 using System;
 using System.Collections.Generic;
@@ -8,9 +9,9 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Eterea_Parfums_Desktop.Helpers;
 
 
 namespace Eterea_Parfums_Desktop
@@ -23,7 +24,7 @@ namespace Eterea_Parfums_Desktop
         int idPromo;
 
         Image banner;
-        int num = 0;
+        //int num = 0;
 
         private string promoBannerStemActual = null; // p.ej. "banner-black-friday"
         private string promoImagenUrlActual = null;  // URL completa devuelta por la API
@@ -603,16 +604,14 @@ namespace Eterea_Parfums_Desktop
             }
 
 
-            //borrado banner
-            nombBanner = PromoControlador.obtenerPorId(idPromo);
+            // Guardar en campos para uso posterior si querés
+            promoBannerStemActual = promo.banner;         // ej. "banner-black-friday"
+            promoImagenUrlActual = promo.imagen_URL;     // ej. "https://.../imagenes/banner-black-friday.jpg"
 
-            string nombreBanner = nombBanner.banner;
-            string rutaCompletaImagen = Program.Ruta_Base + nombreBanner + ".jpg";
-            //pictBox_banner.Image = Image.FromFile(rutaCompletaImagen);
-            CargarImagenPromo(nombreBanner);
+            // Preferí URL; si no hay, caé al archivo local por stem
+            _ = CargarImagenPromoPreferUrlAsync(promoImagenUrlActual, promoBannerStemActual);
 
             situacion = "Edicion";
-
             lbl_crear_promo.Text = "Editar Promoción";
             btn_crear_promo.Text = "Editar Promoción";
 
@@ -933,12 +932,12 @@ namespace Eterea_Parfums_Desktop
 
 
 
-        private int numeroAleatorio()
+        /*private int numeroAleatorio()
         {
             Random rnd = new Random();
             int numero = rnd.Next(1000, 9999);
             return numero;
-        }
+        }*/
 
 
 
@@ -1002,6 +1001,71 @@ namespace Eterea_Parfums_Desktop
             catch (Exception ex)
             {
                 return (false, null, null, ex.Message);
+            }
+        }
+
+        private async Task CargarImagenPromoPreferUrlAsync(string url, string bannerStem)
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(url))
+                {
+                    await CargarImagenDesdeUrlAsync(url);
+                    return;
+                }
+
+                // Fallback: disco por stem
+                CargarImagenDesdeDisco(bannerStem);
+            }
+            catch
+            {
+                pictBox_banner.Image?.Dispose();
+                pictBox_banner.Image = new Bitmap(Properties.Resources.imagen_por_defecto);
+            }
+        }
+
+        private async Task CargarImagenDesdeUrlAsync(string url)
+        {
+            using (var http = new HttpClient())
+            using (var resp = await http.GetAsync(url))
+            {
+                resp.EnsureSuccessStatusCode();
+                var bytes = await resp.Content.ReadAsByteArrayAsync();
+
+                using (var ms = new MemoryStream(bytes))
+                using (var img = Image.FromStream(ms))
+                {
+                    pictBox_banner.Image?.Dispose();
+                    // Clonamos a Bitmap para evitar “error genérico en GDI+”
+                    pictBox_banner.Image = new Bitmap(img);
+                }
+            }
+        }
+
+        private void CargarImagenDesdeDisco(string bannerStem)
+        {
+            try
+            {
+                var ruta = ObtenerRutaImagen(bannerStem); // Program.Ruta_Base + stem + ".jpg"
+                if (File.Exists(ruta))
+                {
+                    using (var fs = new FileStream(ruta, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (var img = Image.FromStream(fs))
+                    {
+                        pictBox_banner.Image?.Dispose();
+                        pictBox_banner.Image = new Bitmap(img);
+                    }
+                }
+                else
+                {
+                    pictBox_banner.Image?.Dispose();
+                    pictBox_banner.Image = new Bitmap(Properties.Resources.imagen_por_defecto);
+                }
+            }
+            catch
+            {
+                pictBox_banner.Image?.Dispose();
+                pictBox_banner.Image = new Bitmap(Properties.Resources.imagen_por_defecto);
             }
         }
 
@@ -1734,9 +1798,11 @@ namespace Eterea_Parfums_Desktop
             );
 
             // Persistir cambios
-            if (PromoControlador.editarPromo(promoEditada))
+            if (PromoControlador.editarPromoYRelaciones(promoEditada, ObtenerIdsPerfumesEnPromo()))
             {
                 this.DialogResult = DialogResult.OK;
+                // (opcional) refrescar preview:
+                _ = CargarImagenPromoPreferUrlAsync(urlNuevaOAnterior, nombreBannerNuevo);
                 return true;
             }
 

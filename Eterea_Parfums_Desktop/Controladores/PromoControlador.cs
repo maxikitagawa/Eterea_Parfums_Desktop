@@ -1,6 +1,7 @@
 ﻿using Eterea_Parfums_Desktop.Modelos;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
@@ -402,6 +403,80 @@ namespace Eterea_Parfums_Desktop.Controladores
                 }
             }
         }
+
+        public static bool editarPromoYRelaciones(Promocion promo, List<int> perfumeIds)
+        {
+            const string updateSql = @"
+        UPDATE dbo.promocion
+        SET nombre=@nombre, fecha_inicio=@fechaInicio, fecha_fin=@fechaFin,
+            descuento=@descuento, activo=@activo, descripcion=@descripcion,
+            banner=@banner, imagen_URL=@imagen_URL
+        WHERE id=@id";
+
+            const string deleteSql = @"DELETE FROM dbo.perfumes_en_promo WHERE promocion_id = @promoId";
+
+            const string insertSql = @"INSERT INTO dbo.perfumes_en_promo (perfume_id, promocion_id)
+                               VALUES (@perfumeId, @promoId)";
+
+            using (var conn = new SqlConnection(DB_Controller.GetConnectionString()))
+            {
+                conn.Open();
+                using (var tx = conn.BeginTransaction())
+                {
+                    try
+                    {
+                        // UPDATE promo
+                        using (var cmd = new SqlCommand(updateSql, conn, tx))
+                        {
+                            cmd.Parameters.AddWithValue("@id", promo.id);
+                            cmd.Parameters.AddWithValue("@nombre", promo.nombre);
+                            cmd.Parameters.AddWithValue("@fechaInicio", promo.fecha_inicio);
+                            cmd.Parameters.AddWithValue("@fechaFin", promo.fecha_fin);
+                            cmd.Parameters.AddWithValue("@descuento", promo.descuento);
+                            cmd.Parameters.AddWithValue("@activo", promo.activo);
+                            cmd.Parameters.AddWithValue("@descripcion", promo.descripcion ?? (object)DBNull.Value);
+                            cmd.Parameters.AddWithValue("@banner", promo.banner ?? (object)DBNull.Value);
+                            cmd.Parameters.AddWithValue("@imagen_URL", (object)promo.imagen_URL ?? DBNull.Value);
+
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // DELETE relaciones actuales
+                        using (var del = new SqlCommand(deleteSql, conn, tx))
+                        {
+                            del.Parameters.AddWithValue("@promoId", promo.id);
+                            del.ExecuteNonQuery();
+                        }
+
+                        // INSERT relaciones nuevas (distintas)
+                        var ids = (perfumeIds ?? new List<int>()).Distinct().ToList();
+                        if (ids.Count > 0)
+                        {
+                            using (var ins = new SqlCommand(insertSql, conn, tx))
+                            {
+                                ins.Parameters.Add("@perfumeId", SqlDbType.Int);
+                                ins.Parameters.Add("@promoId", SqlDbType.Int).Value = promo.id;
+
+                                foreach (var pid in ids)
+                                {
+                                    ins.Parameters["@perfumeId"].Value = pid;
+                                    ins.ExecuteNonQuery();
+                                }
+                            }
+                        }
+
+                        tx.Commit();
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        tx.Rollback();
+                        throw new Exception("Hay un error en la query: " + ex.Message, ex);
+                    }
+                }
+            }
+        }
+
 
 
 

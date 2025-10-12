@@ -83,6 +83,25 @@ namespace Eterea_Parfums_Desktop
             }
         }
 
+
+        private string GetPromoImageUrl(Promocion promo)
+        {
+            // 1) Preferir URL pública guardada en BD
+            var url = (promo.imagen_URL ?? "").Trim();
+            if (!string.IsNullOrWhiteSpace(url))
+                return url;
+
+            // 2) Fallback por nombre de archivo (banner) en /imagenes/
+            var baseUrl = ((Program.Ruta_Web ?? string.Empty).TrimEnd('/')) + "/imagenes/";
+            var file = (promo.banner ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(file)) return null;
+            if (!System.IO.Path.HasExtension(file)) file += ".jpg";
+
+            return baseUrl + System.IO.Path.GetFileName(file);
+        }
+
+
+
         private void dataGridViewpromociones_CellContentClick(object sender, DataGridViewCellEventArgs e)
         {
             // Verifica que no se haga clic en el encabezado de la columna
@@ -119,27 +138,35 @@ namespace Eterea_Parfums_Desktop
                     txt_fecha_fin.Text = promocionSeleccionada.fecha_fin.ToShortDateString();
                     richTextBox_descripcion.Text = promocionSeleccionada.descripcion;
 
+                    var urlPromo = GetPromoImageUrl(promocionSeleccionada);
+
+
                     pictureBox9.Visible = false;
 
                     // Cargar imagen de la promoción en foto_promo
-                    if (!string.IsNullOrEmpty(promocionSeleccionada.banner))
+                    if (foto_promo.ImageLocation != null)
                     {
-                        string rutaCompletaBanner = Program.Ruta_Base + promocionSeleccionada.banner + ".jpg";
+                        foto_promo.ImageLocation = null;
+                    }
+                    if (foto_promo.Image != null)
+                    {
+                        var old = foto_promo.Image;
+                        foto_promo.Image = null;
+                        old.Dispose();
+                    }
 
-                        if (System.IO.File.Exists(rutaCompletaBanner))
-                        {
-                            foto_promo.Image = Image.FromFile(rutaCompletaBanner);
-                            foto_promo.Visible = true;
-                        }
-                        else
-                        {
-                            foto_promo.Image = null;
-                            MessageBox.Show("La imagen del banner no se encontró.", "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        }
+                    foto_promo.Visible = true;
+                    foto_promo.SizeMode = PictureBoxSizeMode.Zoom;
+
+                    if (!string.IsNullOrWhiteSpace(urlPromo))
+                    {
+                        // Carga no bloqueante (evita GDI+ locks y bloqueos de UI)
+                        foto_promo.LoadAsync(urlPromo);
                     }
                     else
                     {
-                        foto_promo.Image = null;
+                        // Si no hay URL ni banner, quedate con el placeholder
+                        foto_promo.Image = Properties.Resources.imagen_por_defecto;
                     }
                 }
             }
