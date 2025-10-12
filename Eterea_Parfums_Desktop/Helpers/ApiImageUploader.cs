@@ -65,38 +65,92 @@ public static class ApiImageUploader
         }
     }
 
-    // 🔹 BAJAR IMAGEN (para usar en tu DataGridView)
-    public static async Task<Image> DownloadImageAsync(string url)
+
+    /// <summary>
+    /// Elimina un archivo del servidor por nombre exacto (con extensión).
+    /// Ej.: "banner-black-friday.jpg"
+    /// </summary>
+    public static async Task<bool> DeleteAsync(string fileName)
     {
-        try
+        if (string.IsNullOrWhiteSpace(fileName))
+            throw new ArgumentException("fileName requerido (con extensión).", nameof(fileName));
+
+        var baseUrl = ConfigurationManager.AppSettings["ApiBaseUrl"]?.TrimEnd('/');
+        var uri = $"{baseUrl}/api/imagenes/{Uri.EscapeDataString(fileName)}";
+
+        using (var req = new HttpRequestMessage(HttpMethod.Delete, uri))
         {
-            // opcional: setear User-Agent
-            if (!_http.DefaultRequestHeaders.UserAgent.Any())
-                _http.DefaultRequestHeaders.UserAgent.ParseAdd("EtereaDesktop/1.0");
+            // (opcional) API key
+            var apiKeyHdr = ConfigurationManager.AppSettings["ApiKeyHeaderName"];
+            var apiKeyVal = ConfigurationManager.AppSettings["ApiKeyValue"];
+            if (!string.IsNullOrWhiteSpace(apiKeyHdr) && !string.IsNullOrWhiteSpace(apiKeyVal))
+                req.Headers.TryAddWithoutValidation(apiKeyHdr, apiKeyVal);
 
-            using (var resp = await _http.GetAsync(url))
+            using (var resp = await _http.SendAsync(req))
             {
-                if (!resp.IsSuccessStatusCode)
-                {
-                    // Logueá por qué falló
-                    var body = await resp.Content.ReadAsStringAsync();
-                    System.Diagnostics.Debug.WriteLine($"GET {url} -> {(int)resp.StatusCode} {resp.StatusCode}. Body: {body}");
-                    return Eterea_Parfums_Desktop.Properties.Resources.sinImagen;
-                }
+                // 204 NoContent = ok; 404 NotFound = ya no existe (lo consideramos ok)
+                if ((int)resp.StatusCode == 204 || (int)resp.StatusCode == 404 || resp.IsSuccessStatusCode)
+                    return true;
 
-                var bytes = await resp.Content.ReadAsByteArrayAsync();
-                using (var ms = new MemoryStream(bytes))
-                {
-                    return Image.FromStream(ms);
-                }
+                var body = await resp.Content.ReadAsStringAsync();
+                throw new Exception($"DeleteAsync falló ({(int)resp.StatusCode}): {body}");
             }
         }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Excepción GET {url}: {ex}");
-            return Eterea_Parfums_Desktop.Properties.Resources.sinImagen;
-        }
     }
+
+    /// <summary>
+    /// Conveniencia: elimina a partir de la URL pública.
+    /// Extrae el fileName de la URL (lo que sigue a '/imagenes/').
+    /// </summary>
+    public static async Task<bool> DeleteByUrlAsync(string publicUrl)
+    {
+        if (string.IsNullOrWhiteSpace(publicUrl))
+            throw new ArgumentException("publicUrl requerido.", nameof(publicUrl));
+
+        // intenta detectar el segmento final (fileName)
+        var uri = new Uri(publicUrl, UriKind.Absolute);
+        var fileName = Path.GetFileName(uri.LocalPath); // ej: "banner-black-friday.jpg"
+
+        if (string.IsNullOrWhiteSpace(fileName) || fileName == "/" || fileName.Contains("?"))
+            throw new Exception("No se pudo inferir el nombre de archivo desde la URL.");
+
+        return await DeleteAsync(fileName);
+    }
+
+
+
+    // 🔹 BAJAR IMAGEN (para usar en tu DataGridView)
+    public static async Task<Image> DownloadImageAsync(string url)
+        {
+            try
+            {
+                // opcional: setear User-Agent
+                if (!_http.DefaultRequestHeaders.UserAgent.Any())
+                    _http.DefaultRequestHeaders.UserAgent.ParseAdd("EtereaDesktop/1.0");
+
+                using (var resp = await _http.GetAsync(url))
+                {
+                    if (!resp.IsSuccessStatusCode)
+                    {
+                        // Logueá por qué falló
+                        var body = await resp.Content.ReadAsStringAsync();
+                        System.Diagnostics.Debug.WriteLine($"GET {url} -> {(int)resp.StatusCode} {resp.StatusCode}. Body: {body}");
+                        return Eterea_Parfums_Desktop.Properties.Resources.sinImagen;
+                    }
+
+                    var bytes = await resp.Content.ReadAsByteArrayAsync();
+                    using (var ms = new MemoryStream(bytes))
+                    {
+                        return Image.FromStream(ms);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Excepción GET {url}: {ex}");
+                return Eterea_Parfums_Desktop.Properties.Resources.sinImagen;
+            }
+        }
 
 }
 

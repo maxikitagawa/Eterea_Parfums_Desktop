@@ -74,7 +74,8 @@ namespace Eterea_Parfums_Desktop.Helpers
                 ? null
                 : url.Trim().Replace("\\", "/").Replace(" ", "%20");
         }
-    }
+    
+
 
      public static string BuildPromoName(string input)
         {

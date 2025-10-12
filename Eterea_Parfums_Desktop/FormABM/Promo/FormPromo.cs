@@ -969,43 +969,34 @@ namespace Eterea_Parfums_Desktop
         //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
         //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-        private async Task<(bool ok, string stem, string publicUrl, string error)> SubirBannerPromoAsync(Image imagen, string nombrePromo)
+        private async Task<(bool ok, string stem, string publicUrl, string error)>
+    SubirBannerPromoAsync(Image imagen, string nombrePromo)
         {
             try
             {
                 if (imagen == null) return (false, null, null, "No hay imagen para subir.");
 
-                // 1) construir nombre base sin extensión: banner-<slug>
-                string stem = AsignarNombreImagenHelper.BuildPromoFileStem(nombrePromo); // ej: banner-black-friday
-                string fileName = stem + ".jpg";                          // ej: banner-black-friday.jpg
-
-                // 2) guardar a un archivo temporal JPG
+                string stem = AsignarNombreImagenHelper.BuildPromoFileStem(nombrePromo); // "banner-<slug>"
+                string fileName = stem + ".jpg";
                 string tempPath = Path.Combine(Path.GetTempPath(), fileName);
-                imagen.Save(tempPath, ImageFormat.Jpeg);
+
+                // GUARDAR SIEMPRE UN CLON (evita locks/problemas con streams)
+                using (var bmp = new Bitmap(imagen))
+                {
+                    bmp.Save(tempPath, ImageFormat.Jpeg);
+                }
 
                 try
                 {
-                    // 3) subir usando tu helper (mismo que perfumes)
-                    //    Asumo que UploadAsync devuelve un UploadImageResult con PublicUrl y FileName
-                    UploadImageResult result = await ApiImageUploader.UploadAsync(tempPath, fileName);
+                    var result = await ApiImageUploader.UploadAsync(tempPath, fileName);
+                    if (result == null || string.IsNullOrWhiteSpace(result.url))
+                        return (false, null, null, "La API no devolvió 'url'.");
 
-                    if (result == null)
-                        return (false, null, null, "La API no devolvió resultado.");
-
-                    // adapta si tu DTO se llama distinto: PublicUrl / Url / Location, etc.
-                    if (!string.IsNullOrWhiteSpace(result.Error))
-                        return (false, null, null, result.Error);
-
-                    if (string.IsNullOrWhiteSpace(result.PublicUrl))
-                        return (false, null, null, "La API no devolvió PublicUrl.");
-
-                    return (true, stem, result.PublicUrl, null);
+                    return (true, stem, result.url, null);
                 }
                 finally
                 {
-                    // 4) borrar archivo temporal
-                    if (System.IO.File.Exists(tempPath))
-                        System.IO.File.Delete(tempPath);
+                    if (File.Exists(tempPath)) File.Delete(tempPath);
                 }
             }
             catch (Exception ex)
@@ -1013,6 +1004,7 @@ namespace Eterea_Parfums_Desktop
                 return (false, null, null, ex.Message);
             }
         }
+
 
         //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
         //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -1210,7 +1202,7 @@ namespace Eterea_Parfums_Desktop
 
         //Método que ejecuta las acciones para crear la promoción (llama a PromoControlador.crearPromo(promoEditada))
 
-        private void crearPromo()
+        /*private void crearPromo()
         {
             // Obtener datos del formulario
             Promocion nuevaPromo = ObtenerDatosPromo();
@@ -1228,7 +1220,7 @@ namespace Eterea_Parfums_Desktop
                 this.DialogResult = DialogResult.OK;
                 MessageBox.Show("La promoción se creó exitosamente.", "Promoción creada", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-        }
+        }*/
 
 
 
@@ -1236,7 +1228,7 @@ namespace Eterea_Parfums_Desktop
 
         //Método editarPromo
 
-        private bool editarPromo()
+        /*private bool editarPromo()
         {
             if (!ConfirmarEdicion()) return false;
 
@@ -1284,7 +1276,7 @@ namespace Eterea_Parfums_Desktop
             }
 
             return false;
-        }
+        }*/
 
 
 
@@ -1562,7 +1554,7 @@ namespace Eterea_Parfums_Desktop
         //Acción del botón crear/editar
 
         // Acción del botón crear/editar
-        private void btn_crear_promo_Click(object sender, EventArgs e)
+        private async void btn_crear_promo_Click(object sender, EventArgs e)
         {
             bool esCreacion = (situacion == "Creacion");
 
@@ -1577,31 +1569,40 @@ namespace Eterea_Parfums_Desktop
             }
             else
             {
-                editarPromoAsync();
+                await editarPromoAsync();
             }
         }
 
         // ✅ Método para validar la promoción y verificar si el nombre ya existe
+        // Reemplazá tu método por este
         private bool ValidarYVerificarPromo(out string errorMsg, bool esCreacion)
         {
             bool promoValidada = validarPromo(out errorMsg);
-
-            if (!promoValidada)
-            {
-                return false;
-            }
+            if (!promoValidada) return false;
 
             string nombrePromo = txt_nomb_promo.Text.Trim();
 
-            // ✅ Verificar si el nombre de la promoción ya existe **solo en creación**
-            if (esCreacion && PromoControlador.ExisteNombrePromo(nombrePromo))
+            if (esCreacion)
             {
-                MessageBox.Show("Ya existe una promoción con este nombre. Elija otro.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return false;
+                if (PromoControlador.ExisteNombrePromo(nombrePromo))
+                {
+                    MessageBox.Show("Ya existe una promoción con este nombre. Elija otro.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
+            }
+            else
+            {
+                // <<— evita conflicto contra sí misma
+                if (PromoControlador.ExisteNombrePromo(nombrePromo, idPromo))
+                {
+                    MessageBox.Show("Ya existe otra promoción con este nombre. Elija otro.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
             }
 
             return true;
         }
+
 
 
         // ✅ Método para procesar la creación de una promoción
@@ -1621,7 +1622,7 @@ namespace Eterea_Parfums_Desktop
                 // 2) Armar el objeto Promocion con banner y URL
                 var nuevaPromo = ObtenerDatosPromo();
                 nuevaPromo.banner = stem;           // ej: "banner-black-friday"
-                nuevaPromo.imagen_URL = publicUrl;  // URL completa devuelta por API
+                nuevaPromo.imagen_URL = publicUrl;  // URL pública devuelta por API
 
                 // 3) Crear en BD
                 if (!PromoControlador.crearPromocion(nuevaPromo))
@@ -1650,66 +1651,98 @@ namespace Eterea_Parfums_Desktop
         {
             if (!ConfirmarEdicion()) return false;
 
-            // datos actuales en BD
-            Promocion promoActual = PromoControlador.obtenerPorId(idPromo);
-            string bannerAnterior = promoActual.banner;
-            string urlAnterior = promoActual.imagen_URL;
+            // Promo actual desde BD
+            var promoActual = PromoControlador.obtenerPorId(idPromo);
+            string bannerAnterior = promoActual.banner;          // p.ej. "banner-black-friday"
+            string urlAnterior = promoActual.imagen_URL;      // p.ej. https://.../imagenes/banner-black-friday.jpg
 
-            // armar objeto con nuevos datos básicos
+            // Valores por defecto (si no cambia nada)
+            string nombreBannerNuevo = bannerAnterior;
+            string urlNuevaOAnterior = urlAnterior;
+
+            // ¿cambió el nombre?
+            string nombreNuevo = txt_nomb_promo.Text.Trim();
+            bool cambioNombre = !string.Equals(
+                promoActual.nombre?.Trim(),
+                nombreNuevo,
+                StringComparison.Ordinal
+            );
+
+            // CASO 1: Se cargó una NUEVA imagen en el formulario
+            if (nuevaImagenCargada && pictBox_banner.Image != null)
+            {
+                // Borrar archivo anterior del server para evitar sufijos -1, -2, ...
+                try { await ApiImageUploader.DeleteAsync(bannerAnterior + ".jpg"); } catch { /* opcional: log/warn */ }
+
+                // Subir la nueva imagen con el NUEVO stem (derivado del nombre actual del form)
+                var (ok, stem, publicUrl, error) = await SubirBannerPromoAsync(pictBox_banner.Image, nombreNuevo);
+                if (!ok)
+                {
+                    MessageBox.Show(error, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return false;
+                }
+
+                nombreBannerNuevo = stem;      // ej: "banner-nuevo-slug"
+                urlNuevaOAnterior = publicUrl; // ej: https://.../imagenes/banner-nuevo-slug.jpg
+            }
+            // CASO 2: NO se cargó imagen nueva, pero SÍ cambió el NOMBRE de la promo
+            else if (cambioNombre)
+            {
+                // Necesitamos re-subir la MISMA imagen que se ve en el PictureBox con el NUEVO nombre (stem),
+                // y luego borrar el archivo viejo del servidor para mantener consistencia.
+                if (pictBox_banner.Image == null)
+                {
+                    MessageBox.Show(
+                        "No hay imagen cargada en el banner para re-nombrar. Cargue la imagen o cancele el cambio de nombre.",
+                        "Atención",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning
+                    );
+                    return false;
+                }
+
+                // Subimos la MISMA imagen (del PictureBox) pero con el NUEVO stem (derivado del nombre nuevo)
+                var (ok, stem, publicUrl, error) = await SubirBannerPromoAsync(pictBox_banner.Image, nombreNuevo);
+                if (!ok)
+                {
+                    MessageBox.Show(error, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return false;
+                }
+
+                // Si subió bien con el nuevo nombre, borramos el archivo anterior del server
+                try { await ApiImageUploader.DeleteAsync(bannerAnterior + ".jpg"); } catch { /* opcional: log/warn */ }
+
+                nombreBannerNuevo = stem;      // ej: "banner-nuevo-slug"
+                urlNuevaOAnterior = publicUrl; // ej: https://.../imagenes/banner-nuevo-slug.jpg
+            }
+            // CASO 3: Ni imagen nueva ni cambio de nombre => se conservan banner/URL anteriores.
+
+            // Descuento seleccionado
             var seleccionTipoPromo = (KeyValuePair<int, string>)combo_tipo_promo.SelectedItem;
+
+            // Armar objeto actualizado
             var promoEditada = new Promocion(
                 idPromo,
-                txt_nomb_promo.Text.Trim(),
+                nombreNuevo,
                 dateTime_inicio_promo.Value,
                 dateTime_fin_promo.Value,
                 seleccionTipoPromo.Key,
-                combo_activo_promo.SelectedIndex == 0,
+                (combo_activo_promo.SelectedIndex == 0),
                 txt_descripcion_promo.Text.Trim(),
-                bannerAnterior, // se puede cambiar abajo
-                urlAnterior     // se puede cambiar abajo
+                nombreBannerNuevo,
+                urlNuevaOAnterior
             );
 
-            try
+            // Persistir cambios
+            if (PromoControlador.editarPromo(promoEditada))
             {
-                if (nuevaImagenCargada && pictBox_banner.Image != null)
-                {
-                    // Se sube con el nombre nuevo (si cambió el nombre de la promo, el slug será distinto)
-                    var (ok, stem, publicUrl, error) = await SubirBannerPromoAsync(pictBox_banner.Image, promoEditada.nombre);
-                    if (!ok)
-                    {
-                        MessageBox.Show("No se pudo subir el nuevo banner: " + error, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return false;
-                    }
-
-                    promoEditada.banner = stem;          // ej: banner-nuevo-nombre
-                    promoEditada.imagen_URL = publicUrl; // URL nueva
-                }
-                else
-                {
-                    // No cargaron imagen nueva. Para evitar inconsistencias, conservamos nombre de archivo y URL.
-                    // (Si más adelante creás endpoint de rename/delete en la API, acá lo podemos usar.)
-                    promoEditada.banner = bannerAnterior;
-                    promoEditada.imagen_URL = urlAnterior;
-                }
-
-                if (PromoControlador.editarPromo(promoEditada))
-                {
-                    this.DialogResult = DialogResult.OK;
-                    CargarImagenPromo(promoEditada.banner); // si seguís mostrando desde disco local, ajustalo; si ahora es URL, podrías mostrar desde URL
-                    return true;
-                }
-
-                MessageBox.Show("No se pudo actualizar la promoción en la base de datos.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return false;
+                this.DialogResult = DialogResult.OK;
+                return true;
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error al editar la promoción: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return false;
-            }
+
+            MessageBox.Show("No se pudo actualizar la promoción en BD.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return false;
         }
-
-
 
 
 
@@ -1737,15 +1770,23 @@ namespace Eterea_Parfums_Desktop
         //Acción del botón "Seleccionar imagen"
         private void btn_selec_banner_Click(object sender, EventArgs e)
         {
-            OpenFileDialog ofd = new OpenFileDialog();
-            ofd.Filter = "JPG(*.JPG)|*.JPG";
-            if (ofd.ShowDialog() == DialogResult.OK)
+            using (var ofd = new OpenFileDialog { Filter = "Imágenes|*.jpg;*.jpeg;*.png;*.webp" })
             {
-                banner = Image.FromFile(ofd.FileName);
-                pictBox_banner.Image = banner;
+                if (ofd.ShowDialog() == DialogResult.OK)
+                {
+                    // soltar anteriores
+                    banner?.Dispose();
+                    pictBox_banner.Image?.Dispose();
 
+                    using (var tmp = Image.FromFile(ofd.FileName)) // FromFile bloquea: clonamos
+                    {
+                        banner = new Bitmap(tmp);                   // banner “independiente”
+                    }
+                    pictBox_banner.Image = new Bitmap(banner);       // y clon para el PictureBox
+
+                    nuevaImagenCargada = true;
+                }
             }
-            nuevaImagenCargada = true;
         }
 
 
@@ -1760,26 +1801,34 @@ namespace Eterea_Parfums_Desktop
 
                 if (File.Exists(rutaImagen))
                 {
-                    using (FileStream fs = new FileStream(rutaImagen, FileMode.Open, FileAccess.Read))
+                    using (var fs = new FileStream(rutaImagen, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (var imgTemp = Image.FromStream(fs))
                     {
-                        pictBox_banner.Image = Image.FromStream(fs);
+                        // liberar la anterior si existía
+                        pictBox_banner.Image?.Dispose();
+                        // clonar a Bitmap para que NO dependa del stream
+                        pictBox_banner.Image = new Bitmap(imgTemp);
                     }
                     return true;
                 }
                 else
                 {
-                    MessageBox.Show("No se encontró la imagen: " + nombreImagen + ". Se cargará una imagen por defecto.",
-                                    "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show(
+                        "No se encontró la imagen: " + nombreImagen + ". Se cargará una imagen por defecto.",
+                        "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
-                    // Cargar la imagen desde Resources
-                    pictBox_banner.Image = Properties.Resources.imagen_por_defecto; // Asegúrate de usar el nombre correcto
+                    pictBox_banner.Image?.Dispose();
+                    pictBox_banner.Image = new Bitmap(Properties.Resources.imagen_por_defecto);
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error al cargar la imagen: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                pictBox_banner.Image = Properties.Resources.imagen_por_defecto; // Usar imagen por defecto en caso de error
+                MessageBox.Show("Error al cargar la imagen: " + ex.Message, "Error",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                pictBox_banner.Image?.Dispose();
+                pictBox_banner.Image = new Bitmap(Properties.Resources.imagen_por_defecto);
                 return false;
             }
         }
