@@ -456,12 +456,12 @@ namespace Eterea_Parfums_Desktop.Controladores
             List<Perfume> list = new List<Perfume>();
 
             string query = @"
-    SELECT p.*, tp.tipo_de_perfume, g.genero
-    FROM dbo.Perfume p
-    JOIN dbo.tipo_de_perfume tp ON p.tipo_de_perfume_id = tp.id
-    JOIN dbo.genero g ON p.genero_id = g.id
-    WHERE p.nombre = @nombre;
-";
+                                SELECT p.*, tp.tipo_de_perfume, g.genero
+                                FROM dbo.Perfume p
+                                JOIN dbo.tipo_de_perfume tp ON p.tipo_de_perfume_id = tp.id
+                                JOIN dbo.genero g ON p.genero_id = g.id
+                                WHERE p.nombre = @nombre;
+                            ";
 
             using (SqlConnection connection = new SqlConnection(DB_Controller.GetConnectionString()))
             {
@@ -722,22 +722,22 @@ namespace Eterea_Parfums_Desktop.Controladores
             Dictionary<int, int> stocks = StockControlador.ObtenerTodosLosStocksPorSucursal(idSucursal);
 
             string query = @"
-        SELECT 
-            p.id,
-            p.codigo,
-            p.nombre AS nombre_perfume,
-            p.presentacion_ml,
-            p.precio_en_pesos,
-            p.activo,
-            p.fecha_baja,
-            m.nombre AS marca,
-            tp.tipo_de_perfume AS tipo,
-            g.genero AS genero
-        FROM perfume p
-        JOIN marca m ON p.marca_id = m.id
-        JOIN tipo_de_perfume tp ON p.tipo_de_perfume_id = tp.id
-        JOIN genero g ON p.genero_id = g.id
-    ";
+                                SELECT 
+                                    p.id,
+                                    p.codigo,
+                                    p.nombre AS nombre_perfume,
+                                    p.presentacion_ml,
+                                    p.precio_en_pesos,
+                                    p.activo,
+                                    p.fecha_baja,
+                                    m.nombre AS marca,
+                                    tp.tipo_de_perfume AS tipo,
+                                    g.genero AS genero
+                                FROM perfume p
+                                JOIN marca m ON p.marca_id = m.id
+                                JOIN tipo_de_perfume tp ON p.tipo_de_perfume_id = tp.id
+                                JOIN genero g ON p.genero_id = g.id
+                            ";
 
             DataTable resultTable = new DataTable();
             resultTable.Columns.Add("codigo");
