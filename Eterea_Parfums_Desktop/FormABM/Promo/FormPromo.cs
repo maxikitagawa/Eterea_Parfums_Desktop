@@ -67,7 +67,7 @@ namespace Eterea_Parfums_Desktop
             lbl_error_banner.Visible = false;
 
             //Ocultar el boton para borrar el texto ingresado en la busqueda de promo por nombre
-            //lbl_borrar_texto.Visible = false;
+            lbl_borrar_texto.Visible = false;
 
             // Inicializar y configurar el ToolTip
             toolTipBorrar = new ToolTip();
