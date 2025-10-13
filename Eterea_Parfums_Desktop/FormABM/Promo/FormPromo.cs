@@ -29,6 +29,7 @@ namespace Eterea_Parfums_Desktop
         private string promoBannerStemActual = null; // p.ej. "banner-black-friday"
         private string promoImagenUrlActual = null;  // URL completa devuelta por la API
 
+        private bool _eventosPinturaSuscriptos = false;
 
 
         Dictionary<int, string> textosDescuento = new Dictionary<int, string>
@@ -104,6 +105,18 @@ namespace Eterea_Parfums_Desktop
             combo_buscar_generoP.DrawMode = DrawMode.OwnerDrawFixed;
             combo_buscar_generoP.DrawItem += comboBoxdiseño_DrawItem;
             combo_buscar_generoP.DropDownStyle = ComboBoxStyle.DropDownList;
+
+            //Inicia ataGrid_resultado_busqueda_perfumes sin marcar
+            dataGrid_resultado_busqueda_perfumes.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dataGrid_resultado_busqueda_perfumes.MultiSelect = false;
+
+            dataGrid_resultado_busqueda_perfumes.RowsAdded += (s, e) =>
+            {
+                dataGrid_resultado_busqueda_perfumes.ClearSelection();
+                dataGrid_resultado_busqueda_perfumes.CurrentCell = null;
+            };
+
+
         }
 
 
@@ -292,47 +305,45 @@ namespace Eterea_Parfums_Desktop
         {
             List<Perfume> perfumes = PerfumeControlador.getAll();
 
-            //Se oculta la primera columna de la tabla (es una columna de seleccion de fila)
+            // Ocultar headers
             dataGrid_resultado_busqueda_perfumes.RowHeadersVisible = false;
-
-            //Se oculta la primera columna de la tabla (es una columna de seleccion de fila)
             dataGrid_perfumes_agregados_a_promo.RowHeadersVisible = false;
 
+            // Evitar filas duplicadas en recargas
             dataGrid_resultado_busqueda_perfumes.Rows.Clear();
 
             foreach (Perfume perfume in perfumes)
             {
-                // Aplica los filtros dinámicamente
-
                 bool coincideMarca = filtroMarcaP == 0 || perfume.marca.id == filtroMarcaP;
-
                 bool coincideNombre = string.IsNullOrEmpty(filtroNombreP) ||
-                            perfume.nombre.IndexOf(filtroNombreP, StringComparison.OrdinalIgnoreCase) >= 0;
-
-
+                                      perfume.nombre.IndexOf(filtroNombreP, StringComparison.OrdinalIgnoreCase) >= 0;
                 bool coincideGenero = filtroGeneroP == 0 || perfume.genero.id == filtroGeneroP;
 
                 if (coincideNombre && coincideMarca && coincideGenero)
-
                 {
                     int rowIndex = dataGrid_resultado_busqueda_perfumes.Rows.Add();
 
                     dataGrid_resultado_busqueda_perfumes.Rows[rowIndex].Cells[0].Value = (MarcaControlador.getById(perfume.marca.id)).nombre;
-                    dataGrid_resultado_busqueda_perfumes.Rows[rowIndex].Cells[1].Value = perfume.nombre.ToString();
+                    dataGrid_resultado_busqueda_perfumes.Rows[rowIndex].Cells[1].Value = perfume.nombre;
                     dataGrid_resultado_busqueda_perfumes.Rows[rowIndex].Cells[2].Value = perfume.presentacion_ml.ToString();
                     dataGrid_resultado_busqueda_perfumes.Rows[rowIndex].Cells[3].Value = (GeneroControlador.getById(perfume.genero.id)).genero;
                     dataGrid_resultado_busqueda_perfumes.Rows[rowIndex].Cells[4].Value = "Agregar";
                     dataGrid_resultado_busqueda_perfumes.Rows[rowIndex].Cells[5].Value = perfume.id.ToString();
                 }
-
-
-                dataGrid_resultado_busqueda_perfumes.CellPainting += dataGridViewConsultas_CellPainting;
-
-                dataGrid_perfumes_agregados_a_promo.CellPainting += dataGridViewConsultas1_CellPainting;
             }
 
-        }
+            // Suscribir eventos de pintado solo una vez
+            if (!_eventosPinturaSuscriptos)
+            {
+                dataGrid_resultado_busqueda_perfumes.CellPainting += dataGridViewConsultas_CellPainting;
+                dataGrid_perfumes_agregados_a_promo.CellPainting += dataGridViewConsultas1_CellPainting;
+                _eventosPinturaSuscriptos = true;
+            }
 
+            // 👉 Dejá la grilla sin selección ni celda activa
+            dataGrid_resultado_busqueda_perfumes.ClearSelection();
+            dataGrid_resultado_busqueda_perfumes.CurrentCell = null;
+        }
 
 
         //Método para aplicar el filtro por marca a la busqueda de perfumes cada vez que se detecte un cambio en el combo_box
