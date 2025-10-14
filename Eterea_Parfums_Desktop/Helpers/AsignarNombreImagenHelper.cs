@@ -104,6 +104,40 @@ namespace Eterea_Parfums_Desktop.Helpers
 
         public static string BuildPromoFileStem(string nombrePromo)
             => $"banner-{BuildPromoName(nombrePromo)}"; // <== sin extensión
+
+
+        // ======================= PERFUMES con número aleatorio =======================
+        private static readonly Regex _rxRandom4 = new Regex(@"\-(\d{4})\-", RegexOptions.Compiled);
+
+        /// Extrae el token aleatorio (4 dígitos) del "stem" si existe. Ej: "bleu-1234-envase" -> 1234
+        public static int? TryExtractRandomToken(string stemOrFileNameWithoutExt)
+        {
+            if (string.IsNullOrWhiteSpace(stemOrFileNameWithoutExt)) return null;
+            var m = _rxRandom4.Match(stemOrFileNameWithoutExt);
+            if (!m.Success) return null;
+            if (int.TryParse(m.Groups[1].Value, out var n)) return n;
+            return null;
+        }
+
+        /// Construye el "stem" con random PRESERVADO: perfume-{slug-nombre}-{random}-{sufijoCompacto}
+        public static string BuildPerfumeStemWithRandom(string nombrePerfume, string variante, int random4digits)
+        {
+            var slugNombre = Slugify(nombrePerfume);
+            var slugVar = SlugifyCompact(variante); // "envase" / "envaseycaja"
+            return $"perfume-{slugNombre}-{random4digits}-{slugVar}";
+        }
+
+        /// Construye fileName con .jpg manteniendo random
+        public static string BuildPerfumeFileNameWithRandom(string nombrePerfume, string variante, int random4digits, string ext = ".jpg")
+            => BuildPerfumeStemWithRandom(nombrePerfume, variante, random4digits) + ext;
+
+        /// Construye un random por defecto si no existía antes (1000-9999)
+        public static int NewRandom4() => new Random().Next(1000, 9999);
+
+
+
     }
+
+
 
 }

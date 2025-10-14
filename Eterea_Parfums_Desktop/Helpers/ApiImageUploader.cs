@@ -159,11 +159,18 @@ public static class ApiImageUploader
     }
 
     // (Overload opcional por si te resulta más cómodo el orden: localPath, newName, oldName)
-    public static Task<UploadImageResult> ReplaceAsync(string localFilePath, string newNameOnServer, string oldNameOnServerOrNull, bool overload)
+    /*public static Task<UploadImageResult> ReplaceAsync(string localFilePath, string newNameOnServer, string oldNameOnServerOrNull, bool overload)
     {
         // 'overload' no se usa; es para diferenciar firma.
         return ReplaceAsync(localFilePath, oldNameOnServerOrNull, newNameOnServer);
-    }
+    }*/
+
+    public static Task<UploadImageResult> ReplaceAsync(
+    string localFilePath,
+    string newNameOnServer,
+    string oldNameOnServerOrNull,
+    bool _ // flag opcional 
+    ) => ReplaceAsync(localFilePath, oldNameOnServerOrNull, newNameOnServer);
 
     // =========================
     // RENOMBRAR (sin subir archivo)

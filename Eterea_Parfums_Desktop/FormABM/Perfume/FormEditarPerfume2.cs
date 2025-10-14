@@ -411,7 +411,7 @@ namespace Eterea_Parfums_Desktop
 
         private void checkedListBoxAroma_ItemCheck(object sender, ItemCheckEventArgs e)
         {
-            // (opcional) feedback visual si querés
+            // (opcional) feedback visual
         }
 
         private void checkedListBoxAroma_DrawItem(object sender, DrawItemEventArgs e)

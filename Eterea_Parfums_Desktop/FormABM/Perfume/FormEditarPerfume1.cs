@@ -31,6 +31,9 @@ namespace Eterea_Parfums_Desktop
         private static readonly Random rnd = new Random();
         private Perfumes_UC perfumesUC;
 
+        private const string SufijoImg1 = "envase";
+        private const string SufijoImg2 = "envaseycaja";
+
         public FormEditarPerfume1()
         {
             InitializeComponent();
@@ -174,7 +177,7 @@ namespace Eterea_Parfums_Desktop
 
         // ========================= NUEVO: helpers de imagen/nombre =========================
 
-        private static string ExtraerNombreArchivoDesdeUrl(string urlCompleta)
+        /*private static string ExtraerNombreArchivoDesdeUrl(string urlCompleta)
         {
             if (string.IsNullOrWhiteSpace(urlCompleta)) return null;
             try { return Path.GetFileName(new Uri(urlCompleta).AbsolutePath); }
@@ -190,7 +193,7 @@ namespace Eterea_Parfums_Desktop
             string tempPath = Path.Combine(Path.GetTempPath(), nombreDeseadoConExtension);
             imagen.Save(tempPath, System.Drawing.Imaging.ImageFormat.Jpeg);
             return tempPath;
-        }
+        }*/
 
         // ======================= FIN helpers =======================
 
@@ -503,54 +506,115 @@ namespace Eterea_Parfums_Desktop
         {
             try
             {
-                // --- Imagen 1 ---
+                // ------------ IMAGEN 1 ------------
+                string oldName1 = FileNameFromUrl(perfume.imagen1_URL);          // ej "212-vip-black-5555-envase.jpg"
+                string oldStem1 = string.IsNullOrWhiteSpace(perfume.imagen1)
+                                    ? NombreSinExtFromUrl(perfume.imagen1_URL)
+                                    : perfume.imagen1;                            // ej "212-vip-black-5555-envase"
+
+                // ¿cambió el nombre del perfume? => comparar bases (sin número ni sufijo)
+                var oldBase1 = ExtraerBaseSlug(oldStem1, SufijoImg1);            // ej "212-vip-black"
+                var newBase = AsignarNombreImagenHelper.Slugify(txt_nombre.Text);
+                bool nombreCambio = !string.Equals(oldBase1, newBase, StringComparison.OrdinalIgnoreCase);
+
+                // si cambió el nombre, forzamos número NUEVO
+                string newStem1 = BuildNombrePerfumeConNumero(txt_nombre.Text, SufijoImg1, oldStem1,
+                                                              forceNewRandom: nombreCambio);
+                string newFile1 = newStem1 + ".jpg";
+
                 if (imagen1 != null)
                 {
-                    string oldName1 = ExtraerNombreArchivoDesdeUrl(perfume.imagen1_URL);
-                    string desired1 = GetNombreFinalImg1(); // perfume-{id}-envase.jpg
-
-                    // Genero un JPG temporal desde la Image actual
-                    string temp1 = GuardarComoJpegTemporal(imagen1, desired1);
+                    string temp1 = GuardarComoJpegTemporal(imagen1, newFile1);
                     try
                     {
-                        var r1 = await ApiImageUploader.ReplaceAsync(temp1, desired1, oldName1);
-                        urlImagen1Actual = r1.url; // URL nueva devuelta por la API
-                        nombre_foto_uno = Path.GetFileNameWithoutExtension(desired1);
+                        var r1 = await ApiImageUploader.ReplaceAsync(
+                            localFilePath: temp1,
+                            newNameOnServer: newFile1,      // nombre deseado
+                            oldNameOnServerOrNull: oldName1,
+                            _: true
+                        );
+                        urlImagen1Actual = r1.url;
+                        nombre_foto_uno = newStem1;       // sin extensión
                     }
                     finally { try { System.IO.File.Delete(temp1); } catch { } }
                 }
                 else
                 {
-                    // No cambió archivo: conservo la URL anterior
-                    urlImagen1Actual = perfume.imagen1_URL;
+                    // No cambió el archivo, pero si cambió el nombre/slug o el número (porque lo forzamos),
+                    // hacemos RENAME igualmente para que el archivo del server quede con el nuevo nombre.
+                    if (!string.IsNullOrWhiteSpace(oldName1) &&
+                        !string.Equals(oldStem1, newStem1, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var (returnedName, returnedUrl) = await ApiImageUploader.RenameAsync(
+                            oldNameOnServer: oldName1,
+                            newNameOnServer: newFile1
+                        );
+                        urlImagen1Actual = returnedUrl;
+                        nombre_foto_uno = Path.GetFileNameWithoutExtension(returnedName);
+                    }
+                    else
+                    {
+                        urlImagen1Actual = perfume.imagen1_URL;
+                        nombre_foto_uno = string.IsNullOrWhiteSpace(perfume.imagen1) ? newStem1 : perfume.imagen1;
+                    }
                 }
 
-                // --- Imagen 2 ---
+                // ------------ IMAGEN 2 ------------
+                string oldName2 = FileNameFromUrl(perfume.imagen2_URL);
+                string oldStem2 = string.IsNullOrWhiteSpace(perfume.imagen2)
+                                    ? NombreSinExtFromUrl(perfume.imagen2_URL)
+                                    : perfume.imagen2;
+
+                var oldBase2 = ExtraerBaseSlug(oldStem2, SufijoImg2);
+                bool nombreCambio2 = !string.Equals(oldBase2, newBase, StringComparison.OrdinalIgnoreCase);
+
+                string newStem2 = BuildNombrePerfumeConNumero(txt_nombre.Text, SufijoImg2, oldStem2,
+                                                              forceNewRandom: nombreCambio2);
+                string newFile2 = newStem2 + ".jpg";
+
                 if (imagen2 != null)
                 {
-                    string oldName2 = ExtraerNombreArchivoDesdeUrl(perfume.imagen2_URL);
-                    string desired2 = GetNombreFinalImg2(); // perfume-{id}-envase-y-caja.jpg
-
-                    string temp2 = GuardarComoJpegTemporal(imagen2, desired2);
+                    string temp2 = GuardarComoJpegTemporal(imagen2, newFile2);
                     try
                     {
-                        var r2 = await ApiImageUploader.ReplaceAsync(temp2, desired2, oldName2);
+                        var r2 = await ApiImageUploader.ReplaceAsync(
+                            localFilePath: temp2,
+                            newNameOnServer: newFile2,
+                            oldNameOnServerOrNull: oldName2,
+                            _: true
+                        );
                         urlImagen2Actual = r2.url;
-                        nombre_foto_dos = Path.GetFileNameWithoutExtension(desired2);
+                        nombre_foto_dos = newStem2;
                     }
                     finally { try { System.IO.File.Delete(temp2); } catch { } }
                 }
                 else
                 {
-                    urlImagen2Actual = perfume.imagen2_URL;
+                    if (!string.IsNullOrWhiteSpace(oldName2) &&
+                        !string.Equals(oldStem2, newStem2, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var (returnedName, returnedUrl) = await ApiImageUploader.RenameAsync(
+                            oldNameOnServer: oldName2,
+                            newNameOnServer: newFile2
+                        );
+                        urlImagen2Actual = returnedUrl;
+                        nombre_foto_dos = Path.GetFileNameWithoutExtension(returnedName);
+                    }
+                    else
+                    {
+                        urlImagen2Actual = perfume.imagen2_URL;
+                        nombre_foto_dos = string.IsNullOrWhiteSpace(perfume.imagen2) ? newStem2 : perfume.imagen2;
+                    }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error subiendo imagen: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Error subiendo/renombrando imágenes: " + ex.Message, "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
                 throw;
             }
         }
+
         // ========================================================================================
 
         private int numeroAleatorio()
@@ -665,5 +729,91 @@ namespace Eterea_Parfums_Desktop
             TextRenderer.DrawText(e.Graphics, text, e.Font, e.Bounds, textColor, TextFormatFlags.Left);
             e.DrawFocusRectangle();
         }
+
+        //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+        // Devuelve fileName (con extensión) desde una URL pública
+        private static string FileNameFromUrl(string urlCompleta)
+         {
+             if (string.IsNullOrWhiteSpace(urlCompleta)) return null;
+             try { return Path.GetFileName(new Uri(urlCompleta).AbsolutePath); }
+             catch { return Path.GetFileName(urlCompleta); }
+         }
+
+         // Devuelve nombre sin extensión desde URL (o null)
+         private static string NombreSinExtFromUrl(string urlCompleta)
+         {
+             var fn = FileNameFromUrl(urlCompleta);
+             return string.IsNullOrWhiteSpace(fn) ? null : Path.GetFileNameWithoutExtension(fn);
+         }
+
+         // Extrae el NÚMERO aleatorio si el nombre tiene patrón slug-####-sufijo
+         // Ej: "212-vip-black-5555-envase" -> 5555
+         private static int? TryGetRandomFromNombre(string nombreSinExtension)
+         {
+             if (string.IsNullOrWhiteSpace(nombreSinExtension)) return null;
+             // buscamos "-####-" en el medio
+             var match = System.Text.RegularExpressions.Regex.Match(nombreSinExtension, @"-(\d{3,6})-");
+             if (match.Success && int.TryParse(match.Groups[1].Value, out int n)) return n;
+             return null;
+         }
+
+         // Construye el nombre final respetando tu formato y conservando el N° si existe
+         // Si nombreAnteriorSinExt trae un número aleatorio, se conserva. Si no, genera uno nuevo.
+         private string BuildNombrePerfumeConNumero(string nombrePerfumeActual, string sufijo, string nombreAnteriorSinExt)
+         {
+             var slug = Eterea_Parfums_Desktop.Helpers.AsignarNombreImagenHelper.Slugify(nombrePerfumeActual);
+             int num = TryGetRandomFromNombre(nombreAnteriorSinExt) ?? new Random().Next(1000, 9999);
+             return $"{slug}-{num}-{sufijo}";
+         }
+
+         // Guarda la Image a JPG temporal y devuelve la ruta
+         private string GuardarComoJpegTemporal(Image imagen, string nombreDeseadoConExtension)
+         {
+             string tempPath = Path.Combine(Path.GetTempPath(), nombreDeseadoConExtension);
+             imagen.Save(tempPath, System.Drawing.Imaging.ImageFormat.Jpeg);
+             return tempPath;
+         }
+
+        // Extrae el slug base (sin número ni sufijo) del stem actual.
+        // Ej: "212-vip-black-5555-envase" + "envase" -> "212-vip-black"
+        private static string ExtraerBaseSlug(string stem, string sufijo)
+        {
+            if (string.IsNullOrWhiteSpace(stem)) return null;
+            var rx = new System.Text.RegularExpressions.Regex(
+                @"^(?<base>.+)-\d{3,6}-" + System.Text.RegularExpressions.Regex.Escape(sufijo) + "$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var m = rx.Match(stem);
+            return m.Success ? m.Groups["base"].Value : null;
+        }
+
+        // Construye el nombre final respetando formato y permite forzar NUEVO número.
+        // - Si forceNewRandom = true => SIEMPRE genera número nuevo.
+        // - Si false, intenta conservar el número si el stem anterior lo tenía.
+        private string BuildNombrePerfumeConNumero(string nombrePerfumeActual, string sufijo,
+                                                   string nombreAnteriorSinExt, bool forceNewRandom)
+        {
+            var slug = Eterea_Parfums_Desktop.Helpers.AsignarNombreImagenHelper.Slugify(nombrePerfumeActual);
+
+            int num;
+            if (!forceNewRandom)
+            {
+                // Intentar conservar número previo
+                var match = System.Text.RegularExpressions.Regex.Match(
+                    nombreAnteriorSinExt ?? "", @"-(\d{3,6})-");
+                num = (match.Success && int.TryParse(match.Groups[1].Value, out var n)) ? n
+                                                                                        : new Random().Next(1000, 9999);
+            }
+            else
+            {
+                // Forzar nuevo
+                num = new Random().Next(1000, 9999);
+            }
+
+            return $"{slug}-{num}-{sufijo}";
+        }
+
+
     }
 }
