@@ -18,6 +18,7 @@ namespace Eterea_Parfums_Desktop
     {
         private Image imagen1;
         private Image imagen2;
+
         private string nombre_foto_uno;
         private string nombre_foto_dos;
 
@@ -507,7 +508,7 @@ namespace Eterea_Parfums_Desktop
             try
             {
                 // ------------ IMAGEN 1 ------------
-                string oldName1 = FileNameFromUrl(perfume.imagen1_URL);          // ej "212-vip-black-5555-envase.jpg"
+                string oldName1 = nombre_foto_uno;
                 string oldStem1 = string.IsNullOrWhiteSpace(perfume.imagen1)
                                     ? NombreSinExtFromUrl(perfume.imagen1_URL)
                                     : perfume.imagen1;                            // ej "212-vip-black-5555-envase"
@@ -761,12 +762,12 @@ namespace Eterea_Parfums_Desktop
 
          // Construye el nombre final respetando tu formato y conservando el N° si existe
          // Si nombreAnteriorSinExt trae un número aleatorio, se conserva. Si no, genera uno nuevo.
-         private string BuildNombrePerfumeConNumero(string nombrePerfumeActual, string sufijo, string nombreAnteriorSinExt)
+         /*private string BuildNombrePerfumeConNumero(string nombrePerfumeActual, string sufijo, string nombreAnteriorSinExt)
          {
              var slug = Eterea_Parfums_Desktop.Helpers.AsignarNombreImagenHelper.Slugify(nombrePerfumeActual);
              int num = TryGetRandomFromNombre(nombreAnteriorSinExt) ?? new Random().Next(1000, 9999);
              return $"{slug}-{num}-{sufijo}";
-         }
+         }*/
 
          // Guarda la Image a JPG temporal y devuelve la ruta
          private string GuardarComoJpegTemporal(Image imagen, string nombreDeseadoConExtension)

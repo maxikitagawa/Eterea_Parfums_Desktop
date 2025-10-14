@@ -615,11 +615,11 @@ namespace Eterea_Parfums_Desktop
             }
 
 
-            // Guardar en campos para uso posterior si querés
+            // Guardar en campos para uso posterior
             promoBannerStemActual = promo.banner;         // ej. "banner-black-friday"
             promoImagenUrlActual = promo.imagen_URL;     // ej. "https://.../imagenes/banner-black-friday.jpg"
 
-            // Preferí URL; si no hay, caé al archivo local por stem
+            // Preferí URL; si no hay, se busca el archivo local por stem
             _ = CargarImagenPromoPreferUrlAsync(promoImagenUrlActual, promoBannerStemActual);
 
             situacion = "Edicion";
