@@ -110,9 +110,11 @@ namespace Eterea_Parfums_Desktop
             combo_descuento.Items.Add("20");
             combo_descuento.SelectedIndex = 0;
 
-            string nombreImagen = perfumeSeleccionado.imagen1.ToString();
-            string rutaCompletaImagen = Program.Ruta_Base + nombreImagen + ".jpg";
-            img_perfume.Image = Image.FromFile(rutaCompletaImagen);
+            string nombreImagen = perfumeSeleccionado.imagen1_URL.ToString();
+            //string rutaCompletaImagen = Program.Ruta_Base + nombreImagen + ".jpg";
+            //img_perfume.Image = Image.FromFile(rutaCompletaImagen);
+            img_perfume.SizeMode = PictureBoxSizeMode.Zoom;
+            img_perfume.ImageLocation = nombreImagen; 
 
             this.perfume = perfumeSeleccionado;
 

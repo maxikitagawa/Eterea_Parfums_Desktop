@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration.Provider;
 using System.Data.SqlClient;
 using System.Diagnostics;
 
@@ -21,9 +22,12 @@ namespace Eterea_Parfums_Desktop.Controladores
 
             switch (usuario)
             {
+                case "servidor":
+                    connectionString = "Data Source=SQL8010.site4now.net;Initial Catalog=db_abe44c_eterea;User ID=db_abe44c_eterea_admin;Password=Davinci-1999";
+                    break;
                 case "adri":
                     //connectionString = "Data Source=(localdb)\\Local;Initial Catalog=eterea;Integrated Security=True;";
-                    connectionString = "Data Source=DESKTOP-12IG1S9\\MSSQLSERVER2025;Initial Catalog=eterea;User ID=sa;Password=Melona88";
+                    connectionString = "Data Source=DESKTOP-12IG1S9\\MSSQLSERVER2025;Initial Catalog=eterea;User ID=sa;Password=Melona88.";
                     //connectionString = "Data Source=DESKTOP-12IG1S9\\MSSQLSERVER2025;Initial Catalog=eterea;Integrated Security=True;";
                     break;
                 case "dami":

@@ -244,7 +244,7 @@ namespace Eterea_Parfums_Desktop
         }
 
 
-        private void btn_finalizar_Click(object sender, EventArgs e)
+        private async void btn_finalizar_Click(object sender, EventArgs e)
         {
 
             if (checkedListBoxAroma.CheckedItems.Count == 0)
@@ -254,7 +254,7 @@ namespace Eterea_Parfums_Desktop
                 return;
             }
             //Guardo la nueva imagen
-            formProducto.guardarNuevaImg();
+            await formProducto.guardarNuevaImg();
             //Actualizar el perfume con los datos que se han modificado
             perfume = formProducto.crear();
             perfume.imagen1_URL = formProducto.urlImagen1Actual;

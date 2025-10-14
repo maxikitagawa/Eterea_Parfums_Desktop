@@ -838,5 +838,7 @@ namespace Eterea_Parfums_Desktop
             txt_scan.Visible = false;     // Ocultar txt_scan
             lbl_codigoBarras.Visible = false;  // Ocultar lbl_codigoBarras
         }
+
+  
     }
 }

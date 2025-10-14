@@ -226,28 +226,25 @@ namespace Eterea_Parfums_Desktop.Controladores
         {
             bool result = false;
 
-            // Paso 1: Obtener el valor actual de "activo" en la base
+            // 1) Leer "activo" original
             bool? activoOriginal = null;
-
-            string querySelect = "SELECT activo FROM dbo.perfume WHERE id = @id;";
-            using (SqlCommand cmdSelect = new SqlCommand(querySelect, DB_Controller.connection))
+            const string querySelect = "SELECT activo FROM dbo.perfume WHERE id = @id;";
+            using (var cmdSelect = new SqlCommand(querySelect, DB_Controller.connection))
             {
                 cmdSelect.Parameters.AddWithValue("@id", perfume.id);
                 DB_Controller.connection.Open();
                 var valor = cmdSelect.ExecuteScalar();
                 DB_Controller.connection.Close();
-
                 if (valor != null && valor != DBNull.Value)
-                {
                     activoOriginal = Convert.ToBoolean(valor);
-                }
             }
 
-            // Paso 2: Determinar si se debe actualizar fecha_baja
+            // 2) ¿Actualizar fecha_baja?
             bool actualizarFechaBaja = (activoOriginal != null && perfume.activo != null && activoOriginal != perfume.activo);
 
-            // Paso 3: Armar la query con lógica condicional
-            string query = "UPDATE dbo.perfume SET " +
+            // 3) UPDATE: incluye URLs y conserva valor si llegan NULL
+            string query =
+                "UPDATE dbo.perfume SET " +
                 "codigo = @codigo, " +
                 "marca_id = @marca, " +
                 "nombre = @nombre, " +
@@ -261,8 +258,11 @@ namespace Eterea_Parfums_Desktop.Controladores
                 "anio_de_lanzamiento = @anio_de_lanzamiento, " +
                 "precio_en_pesos = @precio_en_pesos, " +
                 "activo = @activo, " +
-                "imagen1 = @imagen1, " +
-                "imagen2 = @imagen2";
+                "imagen1 = COALESCE(@imagen1, imagen1), " +       
+                "imagen2 = COALESCE(@imagen2, imagen2), " +       
+
+                "imagen1_URL = COALESCE(@imagen1_URL, imagen1_URL), " + 
+                "imagen2_URL = COALESCE(@imagen2_URL, imagen2_URL)";    
 
             if (actualizarFechaBaja)
             {
@@ -271,51 +271,58 @@ namespace Eterea_Parfums_Desktop.Controladores
 
             query += " WHERE id = @id;";
 
-            SqlCommand cmd = new SqlCommand(query, DB_Controller.connection);
-            cmd.Parameters.AddWithValue("@id", perfume.id);
-            cmd.Parameters.AddWithValue("@codigo", perfume.codigo);
-            cmd.Parameters.AddWithValue("@marca", perfume.marca.id);
-            cmd.Parameters.AddWithValue("@nombre", perfume.nombre);
-            cmd.Parameters.AddWithValue("@tipo_de_perfume", perfume.tipo_de_perfume.id);
-            cmd.Parameters.AddWithValue("@genero", perfume.genero.id);
-            cmd.Parameters.AddWithValue("@presentacion_ml", perfume.presentacion_ml);
-            cmd.Parameters.AddWithValue("@pais", perfume.pais.id);
-            cmd.Parameters.AddWithValue("@spray", perfume.spray);
-            cmd.Parameters.AddWithValue("@recargable", perfume.recargable);
-            cmd.Parameters.AddWithValue("@descripcion", perfume.descripcion);
-            cmd.Parameters.AddWithValue("@anio_de_lanzamiento", perfume.anio_de_lanzamiento);
-            cmd.Parameters.AddWithValue("@precio_en_pesos", perfume.precio_en_pesos);
-            cmd.Parameters.AddWithValue("@activo", perfume.activo);
-            cmd.Parameters.AddWithValue("@imagen1", perfume.imagen1);
-            cmd.Parameters.AddWithValue("@imagen2", perfume.imagen2);
+            using (var cmd = new SqlCommand(query, DB_Controller.connection))
+            {
+                cmd.Parameters.AddWithValue("@id", perfume.id);
+                cmd.Parameters.AddWithValue("@codigo", perfume.codigo);
+                cmd.Parameters.AddWithValue("@marca", perfume.marca.id);
+                cmd.Parameters.AddWithValue("@nombre", perfume.nombre);
+                cmd.Parameters.AddWithValue("@tipo_de_perfume", perfume.tipo_de_perfume.id);
+                cmd.Parameters.AddWithValue("@genero", perfume.genero.id);
+                cmd.Parameters.AddWithValue("@presentacion_ml", perfume.presentacion_ml);
+                cmd.Parameters.AddWithValue("@pais", perfume.pais.id);
+                cmd.Parameters.AddWithValue("@spray", perfume.spray);
+                cmd.Parameters.AddWithValue("@recargable", perfume.recargable);
+                cmd.Parameters.AddWithValue("@descripcion", perfume.descripcion);
+                cmd.Parameters.AddWithValue("@anio_de_lanzamiento", perfume.anio_de_lanzamiento);
+                cmd.Parameters.AddWithValue("@precio_en_pesos", perfume.precio_en_pesos);
+                cmd.Parameters.AddWithValue("@activo", perfume.activo);
 
-            if (actualizarFechaBaja)
-            {
-                // Si lo estoy activando, la fecha_baja debe ir como NULL
-                if (perfume.activo == true)
-                    cmd.Parameters.AddWithValue("@fecha_baja", DBNull.Value);
-                else
-                    cmd.Parameters.AddWithValue("@fecha_baja", DateTime.Now);
-            }
+                
+                cmd.Parameters.AddWithValue("@imagen1", (object)perfume.imagen1);
+                cmd.Parameters.AddWithValue("@imagen2", (object)perfume.imagen2);
+                cmd.Parameters.AddWithValue("@imagen1_URL", (object)perfume.imagen1_URL ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@imagen2_URL", (object)perfume.imagen2_URL ?? DBNull.Value);
 
-            try
-            {
-                DB_Controller.connection.Open();
-                cmd.ExecuteNonQuery();
-                result = true;
-            }
-            catch (Exception e)
-            {
-                throw new Exception("Hay un error en la query: " + e.Message);
-            }
-            finally
-            {
-                cmd.Parameters.Clear();
-                DB_Controller.connection.Close();
+                if (actualizarFechaBaja)
+                {
+                    // Esta columna admite NULL:
+                    var pFecha = new SqlParameter("@fecha_baja", System.Data.SqlDbType.DateTime);
+                    pFecha.Value = (perfume.activo == true) ? (object)DBNull.Value : DateTime.Now;
+                    cmd.Parameters.Add(pFecha);
+
+                }
+
+                try
+                {
+                    DB_Controller.connection.Open();
+                    cmd.ExecuteNonQuery();
+                    result = true;
+                }
+                catch (Exception e)
+                {
+                    throw new Exception("Hay un error en la query: " + e.Message);
+                }
+                finally
+                {
+                    DB_Controller.connection.Close();
+                }
             }
 
             return result;
         }
+
+
 
 
         /* public static bool delete(int id)
@@ -449,12 +456,12 @@ namespace Eterea_Parfums_Desktop.Controladores
             List<Perfume> list = new List<Perfume>();
 
             string query = @"
-    SELECT p.*, tp.tipo_de_perfume, g.genero
-    FROM dbo.Perfume p
-    JOIN dbo.tipo_de_perfume tp ON p.tipo_de_perfume_id = tp.id
-    JOIN dbo.genero g ON p.genero_id = g.id
-    WHERE p.nombre = @nombre;
-";
+                                SELECT p.*, tp.tipo_de_perfume, g.genero
+                                FROM dbo.Perfume p
+                                JOIN dbo.tipo_de_perfume tp ON p.tipo_de_perfume_id = tp.id
+                                JOIN dbo.genero g ON p.genero_id = g.id
+                                WHERE p.nombre = @nombre;
+                            ";
 
             using (SqlConnection connection = new SqlConnection(DB_Controller.GetConnectionString()))
             {
@@ -715,22 +722,22 @@ namespace Eterea_Parfums_Desktop.Controladores
             Dictionary<int, int> stocks = StockControlador.ObtenerTodosLosStocksPorSucursal(idSucursal);
 
             string query = @"
-        SELECT 
-            p.id,
-            p.codigo,
-            p.nombre AS nombre_perfume,
-            p.presentacion_ml,
-            p.precio_en_pesos,
-            p.activo,
-            p.fecha_baja,
-            m.nombre AS marca,
-            tp.tipo_de_perfume AS tipo,
-            g.genero AS genero
-        FROM perfume p
-        JOIN marca m ON p.marca_id = m.id
-        JOIN tipo_de_perfume tp ON p.tipo_de_perfume_id = tp.id
-        JOIN genero g ON p.genero_id = g.id
-    ";
+                                SELECT 
+                                    p.id,
+                                    p.codigo,
+                                    p.nombre AS nombre_perfume,
+                                    p.presentacion_ml,
+                                    p.precio_en_pesos,
+                                    p.activo,
+                                    p.fecha_baja,
+                                    m.nombre AS marca,
+                                    tp.tipo_de_perfume AS tipo,
+                                    g.genero AS genero
+                                FROM perfume p
+                                JOIN marca m ON p.marca_id = m.id
+                                JOIN tipo_de_perfume tp ON p.tipo_de_perfume_id = tp.id
+                                JOIN genero g ON p.genero_id = g.id
+                            ";
 
             DataTable resultTable = new DataTable();
             resultTable.Columns.Add("codigo");

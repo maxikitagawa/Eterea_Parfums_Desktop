@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Eterea_Parfums_Desktop
@@ -147,28 +148,48 @@ namespace Eterea_Parfums_Desktop
             combo.Items.Add("No");
         }
 
-        internal void guardarNuevaImg()
+        internal async Task guardarNuevaImg()
         {
-            var uploader = new GoogleDriveUploader();
-            string carpetaDriveId = "1haFolSk8OuUAUGtBykB0DmiC4bne8T9b"; // ID de carpeta de drive
-
-            if (imagen1 != null && !string.IsNullOrEmpty(pathLocalImg1))
+            try
             {
-                saveImagenResources(out nombre_foto_uno, imagen1, "envase");
-                string rutaDestino = Program.Ruta_Base + nombre_foto_uno + ".jpg";
-                File.Copy(pathLocalImg1, rutaDestino, true);
-                urlImagen1Actual = uploader.SubirImagen(rutaDestino, nombre_foto_uno + ".jpg", carpetaDriveId);
+                // IMAGEN 1
+                if (imagen1 != null)
+                {
+                    nombre_foto_uno = AsignarNombreImagenHelper.BuildNombreImagen(txt_nombre.Text, "envase", compactSuffix: false);
+                    string desiredFileName1 = nombre_foto_uno + ".jpg";
+
+                    string temp1 = GuardarComoJpegTemporal(imagen1, desiredFileName1);
+                    try
+                    {
+                        var result1 = await ApiImageUploader.UploadAsync(temp1, desiredFileName1);
+                        urlImagen1Actual = result1.url; // la API te devuelve la URL final
+                    }
+                    finally { try { File.Delete(temp1); } catch { } }
+                }
+
+                // IMAGEN 2
+                if (imagen2 != null)
+                {
+                    nombre_foto_dos = AsignarNombreImagenHelper.BuildNombreImagen(txt_nombre.Text, "envase y caja", compactSuffix: false);
+                    string desiredFileName2 = nombre_foto_dos + ".jpg";
+
+                    string temp2 = GuardarComoJpegTemporal(imagen2, desiredFileName2);
+                    try
+                    {
+                        var result2 = await ApiImageUploader.UploadAsync(temp2, desiredFileName2);
+                        urlImagen2Actual = result2.url;
+                    }
+                    finally { try { File.Delete(temp2); } catch { } }
+                }
+
             }
-
-            if (imagen2 != null && !string.IsNullOrEmpty(pathLocalImg2))
+            catch (Exception ex)
             {
-                saveImagenResources(out nombre_foto_dos, imagen2, "envase y caja");
-                string rutaDestino = Program.Ruta_Base + nombre_foto_dos + ".jpg";
-                File.Copy(pathLocalImg2, rutaDestino, true);
-                urlImagen2Actual = uploader.SubirImagen(rutaDestino, nombre_foto_dos + ".jpg", carpetaDriveId);
+                MessageBox.Show("Error subiendo imagen: " + ex.Message, "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                throw; // si querés abortar el guardado del perfume
             }
         }
-
 
 
         private void btn_siguiente_Click(object sender, EventArgs e)
@@ -197,7 +218,7 @@ namespace Eterea_Parfums_Desktop
 
         }
 
-        private void saveImagenResources(out string nombreFoto, Image imagen, string sufijo)
+        /*private void saveImagenResources(out string nombreFoto, Image imagen, string sufijo)
         {
             try
             {
@@ -210,6 +231,29 @@ namespace Eterea_Parfums_Desktop
             {
                 throw new Exception(ex.Message);
             }
+        }*/
+        private void buildNombreImagen(out string nombreArchivoSinExtension, string sufijo)
+        {
+            int numero_aleatorio = numeroAleatorio();
+            string baseNombre = (txt_nombre.Text ?? "").Trim();
+
+            // Sanitizar (quitar caracteres inválidos de nombre de archivo)
+            string inval = new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
+            foreach (var c in inval) baseNombre = baseNombre.Replace(c.ToString(), "");
+
+            nombreArchivoSinExtension = $"{baseNombre} - {numero_aleatorio} - {sufijo}";
+        }
+
+
+        // Guarda la imagen como JPEG a un archivo temporal y devuelve la ruta
+        private string GuardarComoJpegTemporal(Image imagen, string nombreDeseadoConExtension)
+        {
+            string tempPath = Path.Combine(Path.GetTempPath(), nombreDeseadoConExtension);
+
+            // Si querés controlar calidad JPEG, podés usar ImageCodecInfo; aquí simple:
+            imagen.Save(tempPath, System.Drawing.Imaging.ImageFormat.Jpeg);
+
+            return tempPath;
         }
 
 

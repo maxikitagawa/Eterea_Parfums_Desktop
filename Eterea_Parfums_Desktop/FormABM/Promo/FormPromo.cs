@@ -1,5 +1,6 @@
 ﻿using Eterea_Parfums_Desktop.Controladores;
 using Eterea_Parfums_Desktop.DTOs;
+using Eterea_Parfums_Desktop.Helpers;
 using Eterea_Parfums_Desktop.Modelos;
 using System;
 using System.Collections.Generic;
@@ -8,8 +9,9 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
 using System.Windows.Forms;
-
 
 
 namespace Eterea_Parfums_Desktop
@@ -22,8 +24,12 @@ namespace Eterea_Parfums_Desktop
         int idPromo;
 
         Image banner;
-        int num = 0;
+        //int num = 0;
 
+        private string promoBannerStemActual = null; // p.ej. "banner-black-friday"
+        private string promoImagenUrlActual = null;  // URL completa devuelta por la API
+
+        private bool _eventosPinturaSuscriptos = false;
 
 
         Dictionary<int, string> textosDescuento = new Dictionary<int, string>
@@ -99,6 +105,18 @@ namespace Eterea_Parfums_Desktop
             combo_buscar_generoP.DrawMode = DrawMode.OwnerDrawFixed;
             combo_buscar_generoP.DrawItem += comboBoxdiseño_DrawItem;
             combo_buscar_generoP.DropDownStyle = ComboBoxStyle.DropDownList;
+
+            //Inicia ataGrid_resultado_busqueda_perfumes sin marcar
+            dataGrid_resultado_busqueda_perfumes.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dataGrid_resultado_busqueda_perfumes.MultiSelect = false;
+
+            dataGrid_resultado_busqueda_perfumes.RowsAdded += (s, e) =>
+            {
+                dataGrid_resultado_busqueda_perfumes.ClearSelection();
+                dataGrid_resultado_busqueda_perfumes.CurrentCell = null;
+            };
+
+
         }
 
 
@@ -287,47 +305,45 @@ namespace Eterea_Parfums_Desktop
         {
             List<Perfume> perfumes = PerfumeControlador.getAll();
 
-            //Se oculta la primera columna de la tabla (es una columna de seleccion de fila)
+            // Ocultar headers
             dataGrid_resultado_busqueda_perfumes.RowHeadersVisible = false;
-
-            //Se oculta la primera columna de la tabla (es una columna de seleccion de fila)
             dataGrid_perfumes_agregados_a_promo.RowHeadersVisible = false;
 
+            // Evitar filas duplicadas en recargas
             dataGrid_resultado_busqueda_perfumes.Rows.Clear();
 
             foreach (Perfume perfume in perfumes)
             {
-                // Aplica los filtros dinámicamente
-
                 bool coincideMarca = filtroMarcaP == 0 || perfume.marca.id == filtroMarcaP;
-
                 bool coincideNombre = string.IsNullOrEmpty(filtroNombreP) ||
-                            perfume.nombre.IndexOf(filtroNombreP, StringComparison.OrdinalIgnoreCase) >= 0;
-
-
+                                      perfume.nombre.IndexOf(filtroNombreP, StringComparison.OrdinalIgnoreCase) >= 0;
                 bool coincideGenero = filtroGeneroP == 0 || perfume.genero.id == filtroGeneroP;
 
                 if (coincideNombre && coincideMarca && coincideGenero)
-
                 {
                     int rowIndex = dataGrid_resultado_busqueda_perfumes.Rows.Add();
 
                     dataGrid_resultado_busqueda_perfumes.Rows[rowIndex].Cells[0].Value = (MarcaControlador.getById(perfume.marca.id)).nombre;
-                    dataGrid_resultado_busqueda_perfumes.Rows[rowIndex].Cells[1].Value = perfume.nombre.ToString();
+                    dataGrid_resultado_busqueda_perfumes.Rows[rowIndex].Cells[1].Value = perfume.nombre;
                     dataGrid_resultado_busqueda_perfumes.Rows[rowIndex].Cells[2].Value = perfume.presentacion_ml.ToString();
                     dataGrid_resultado_busqueda_perfumes.Rows[rowIndex].Cells[3].Value = (GeneroControlador.getById(perfume.genero.id)).genero;
                     dataGrid_resultado_busqueda_perfumes.Rows[rowIndex].Cells[4].Value = "Agregar";
                     dataGrid_resultado_busqueda_perfumes.Rows[rowIndex].Cells[5].Value = perfume.id.ToString();
                 }
-
-
-                dataGrid_resultado_busqueda_perfumes.CellPainting += dataGridViewConsultas_CellPainting;
-
-                dataGrid_perfumes_agregados_a_promo.CellPainting += dataGridViewConsultas1_CellPainting;
             }
 
-        }
+            // Suscribir eventos de pintado solo una vez
+            if (!_eventosPinturaSuscriptos)
+            {
+                dataGrid_resultado_busqueda_perfumes.CellPainting += dataGridViewConsultas_CellPainting;
+                dataGrid_perfumes_agregados_a_promo.CellPainting += dataGridViewConsultas1_CellPainting;
+                _eventosPinturaSuscriptos = true;
+            }
 
+            // 👉 Dejá la grilla sin selección ni celda activa
+            dataGrid_resultado_busqueda_perfumes.ClearSelection();
+            dataGrid_resultado_busqueda_perfumes.CurrentCell = null;
+        }
 
 
         //Método para aplicar el filtro por marca a la busqueda de perfumes cada vez que se detecte un cambio en el combo_box
@@ -599,16 +615,14 @@ namespace Eterea_Parfums_Desktop
             }
 
 
-            //borrado banner
-            nombBanner = PromoControlador.obtenerPorId(idPromo);
+            // Guardar en campos para uso posterior
+            promoBannerStemActual = promo.banner;         // ej. "banner-black-friday"
+            promoImagenUrlActual = promo.imagen_URL;     // ej. "https://.../imagenes/banner-black-friday.jpg"
 
-            string nombreBanner = nombBanner.banner;
-            string rutaCompletaImagen = Program.Ruta_Base + nombreBanner + ".jpg";
-            //pictBox_banner.Image = Image.FromFile(rutaCompletaImagen);
-            CargarImagenPromo(nombreBanner);
+            // Preferí URL; si no hay, se busca el archivo local por stem
+            _ = CargarImagenPromoPreferUrlAsync(promoImagenUrlActual, promoBannerStemActual);
 
             situacion = "Edicion";
-
             lbl_crear_promo.Text = "Editar Promoción";
             btn_crear_promo.Text = "Editar Promoción";
 
@@ -929,12 +943,12 @@ namespace Eterea_Parfums_Desktop
 
 
 
-        private int numeroAleatorio()
+        /*private int numeroAleatorio()
         {
             Random rnd = new Random();
             int numero = rnd.Next(1000, 9999);
             return numero;
-        }
+        }*/
 
 
 
@@ -954,7 +968,7 @@ namespace Eterea_Parfums_Desktop
                 fecha_fin = dateTime_fin_promo.Value,
                 activo = combo_activo_promo.SelectedIndex == 0,
                 descripcion = txt_descripcion_promo.Text,
-                banner = $"{txt_nomb_promo.Text}-{num}-banner"
+                //banner = $"{txt_nomb_promo.Text}-{num}-banner"
             };
         }
 
@@ -962,32 +976,142 @@ namespace Eterea_Parfums_Desktop
 
 
 
+        //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+        // ===========================================================
+        // 🔹 SUBIR, CARGAR Y ACTUALIZAR BANNER DE PROMOCIÓN
+        // ===========================================================
+
+        private async Task<(bool ok, string stem, string publicUrl, string error)> SubirBannerPromoAsync(Image imagen, string nombrePromo)
+        {
+            try
+            {
+                if (imagen == null)
+                    return Tuple.Create(false, (string)null, (string)null, "No hay imagen para subir.").ToValueTuple();
+
+                string stem = AsignarNombreImagenHelper.BuildPromoFileStem(nombrePromo); // "banner-<slug>"
+                string fileName = stem + ".jpg";
+                string tempPath = Path.Combine(Path.GetTempPath(), fileName);
+
+                // Guardar temporalmente el banner como JPG
+                using (var bmp = new Bitmap(imagen))
+                {
+                    bmp.Save(tempPath, ImageFormat.Jpeg);
+                }
+
+                try
+                {
+                    var result = await ApiImageUploader.UploadAsync(tempPath, fileName);
+                    if (result == null || string.IsNullOrWhiteSpace(result.url))
+                        return Tuple.Create(false, (string)null, (string)null, "La API no devolvió 'url'.").ToValueTuple();
+
+                    return Tuple.Create(true, stem, result.url, (string)null).ToValueTuple();
+                }
+                finally
+                {
+                    if (File.Exists(tempPath)) File.Delete(tempPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                return Tuple.Create(false, (string)null, (string)null, ex.Message).ToValueTuple();
+            }
+        }
+
+        private async Task CargarImagenPromoPreferUrlAsync(string url, string bannerStem)
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(url))
+                {
+                    await CargarImagenDesdeUrlAsync(url);
+                    return;
+                }
+
+                // Fallback a disco
+                CargarImagenDesdeDisco(bannerStem);
+            }
+            catch
+            {
+                pictBox_banner.Image?.Dispose();
+                pictBox_banner.Image = new Bitmap(Properties.Resources.imagen_por_defecto);
+            }
+        }
+
+        private async Task CargarImagenDesdeUrlAsync(string url)
+        {
+            using (var http = new HttpClient())
+            {
+                var resp = await http.GetAsync(url);
+                resp.EnsureSuccessStatusCode();
+                var bytes = await resp.Content.ReadAsByteArrayAsync();
+
+                using (var ms = new MemoryStream(bytes))
+                {
+                    using (var img = Image.FromStream(ms))
+                    {
+                        pictBox_banner.Image?.Dispose();
+                        pictBox_banner.Image = new Bitmap(img);
+                    }
+                }
+            }
+        }
+
+        private void CargarImagenDesdeDisco(string bannerStem)
+        {
+            try
+            {
+                var ruta = ObtenerRutaImagen(bannerStem);
+                if (File.Exists(ruta))
+                {
+                    using (var fs = new FileStream(ruta, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (var img = Image.FromStream(fs))
+                    {
+                        pictBox_banner.Image?.Dispose();
+                        pictBox_banner.Image = new Bitmap(img);
+                    }
+                }
+                else
+                {
+                    pictBox_banner.Image?.Dispose();
+                    pictBox_banner.Image = new Bitmap(Properties.Resources.imagen_por_defecto);
+                }
+            }
+            catch
+            {
+                pictBox_banner.Image?.Dispose();
+                pictBox_banner.Image = new Bitmap(Properties.Resources.imagen_por_defecto);
+            }
+        }
 
 
+        //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 
         //Método para guardar la imagen de la promoción
 
-        private string GuardarImagenPromo(string nombrePromoSanitizado)
-        {
-            if (nuevaImagenCargada && pictBox_banner.Image != null)
-            {
-                try
-                {
-                    num = numeroAleatorio();
-                    string nuevaRuta = Path.Combine(Program.Ruta_Base, $"{nombrePromoSanitizado}-{num}-banner.jpg");
+        /* private string GuardarImagenPromo(string nombrePromoSanitizado)
+         {
+             if (nuevaImagenCargada && pictBox_banner.Image != null)
+             {
+                 try
+                 {
+                     num = numeroAleatorio();
+                     string nuevaRuta = Path.Combine(Program.Ruta_Base, $"{nombrePromoSanitizado}-{num}-banner.jpg");
 
-                    pictBox_banner.Image.Save(nuevaRuta, ImageFormat.Jpeg);
-                    return $"{nombrePromoSanitizado}-{num}-banner";
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("No se pudo guardar la nueva foto: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-            return null;
-        }
-
+                     pictBox_banner.Image.Save(nuevaRuta, ImageFormat.Jpeg);
+                     return $"{nombrePromoSanitizado}-{num}-banner";
+                 }
+                 catch (Exception ex)
+                 {
+                     MessageBox.Show("No se pudo guardar la nueva foto: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                 }
+             }
+             return null;
+         }
+        */
 
 
 
@@ -1158,7 +1282,7 @@ namespace Eterea_Parfums_Desktop
 
         //Método que ejecuta las acciones para crear la promoción (llama a PromoControlador.crearPromo(promoEditada))
 
-        private void crearPromo()
+        /*private void crearPromo()
         {
             // Obtener datos del formulario
             Promocion nuevaPromo = ObtenerDatosPromo();
@@ -1176,7 +1300,7 @@ namespace Eterea_Parfums_Desktop
                 this.DialogResult = DialogResult.OK;
                 MessageBox.Show("La promoción se creó exitosamente.", "Promoción creada", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-        }
+        }*/
 
 
 
@@ -1184,7 +1308,7 @@ namespace Eterea_Parfums_Desktop
 
         //Método editarPromo
 
-        private bool editarPromo()
+        /*private bool editarPromo()
         {
             if (!ConfirmarEdicion()) return false;
 
@@ -1232,7 +1356,7 @@ namespace Eterea_Parfums_Desktop
             }
 
             return false;
-        }
+        }*/
 
 
 
@@ -1510,7 +1634,7 @@ namespace Eterea_Parfums_Desktop
         //Acción del botón crear/editar
 
         // Acción del botón crear/editar
-        private void btn_crear_promo_Click(object sender, EventArgs e)
+        private async void btn_crear_promo_Click(object sender, EventArgs e)
         {
             bool esCreacion = (situacion == "Creacion");
 
@@ -1525,79 +1649,165 @@ namespace Eterea_Parfums_Desktop
             }
             else
             {
-                ProcesarEdicionPromo();
+                await editarPromoAsync();
             }
         }
 
         // ✅ Método para validar la promoción y verificar si el nombre ya existe
+        // Reemplazá tu método por este
         private bool ValidarYVerificarPromo(out string errorMsg, bool esCreacion)
         {
             bool promoValidada = validarPromo(out errorMsg);
-
-            if (!promoValidada)
-            {
-                return false;
-            }
+            if (!promoValidada) return false;
 
             string nombrePromo = txt_nomb_promo.Text.Trim();
 
-            // ✅ Verificar si el nombre de la promoción ya existe **solo en creación**
-            if (esCreacion && PromoControlador.ExisteNombrePromo(nombrePromo))
+            if (esCreacion)
             {
-                MessageBox.Show("Ya existe una promoción con este nombre. Elija otro.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return false;
+                if (PromoControlador.ExisteNombrePromo(nombrePromo))
+                {
+                    MessageBox.Show("Ya existe una promoción con este nombre. Elija otro.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
+            }
+            else
+            {
+                // <<— evita conflicto contra sí misma
+                if (PromoControlador.ExisteNombrePromo(nombrePromo, idPromo))
+                {
+                    MessageBox.Show("Ya existe otra promoción con este nombre. Elija otro.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
             }
 
             return true;
         }
 
 
+
         // ✅ Método para procesar la creación de una promoción
-        private void ProcesarCreacionPromo()
+        private async void ProcesarCreacionPromo()
         {
             try
             {
-                num = numeroAleatorio();
-                string bannerNombre = $"{txt_nomb_promo.Text.Trim()}-{num}-banner.jpg";
+                // 1) Subir la imagen a la API con nombre fijo banner-<slug>.jpg
+                var (ok, stem, publicUrl, error) = await SubirBannerPromoAsync(pictBox_banner.Image, txt_nomb_promo.Text.Trim());
 
-                // Guardar imagen del banner
-                banner.Save(Program.Ruta_Base + bannerNombre, System.Drawing.Imaging.ImageFormat.Jpeg);
+                if (!ok)
+                {
+                    MessageBox.Show("No se pudo subir el banner: " + error, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // 2) Armar el objeto Promocion con banner y URL
+                var nuevaPromo = ObtenerDatosPromo();
+                nuevaPromo.banner = stem;           // ej: "banner-black-friday"
+                nuevaPromo.imagen_URL = publicUrl;  // URL pública devuelta por API
+
+                // 3) Crear en BD
+                if (!PromoControlador.crearPromocion(nuevaPromo))
+                {
+                    MessageBox.Show("No se pudo crear la promoción en la base de datos.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // 4) Asignar perfumes a la promo creada
+                int idPromoCreada = PromoControlador.obtenerMaxId();
+                asignarPerfumesAPromo(idPromoCreada);
+
+                this.DialogResult = DialogResult.OK;
+                MessageBox.Show("La promoción se creó exitosamente.", "Promoción creada", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                this.Close();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("No se pudo guardar la imagen: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
+                MessageBox.Show("Error al crear la promoción: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-
-            // Crear la promoción
-            crearPromo();
-
-            // Obtener el ID de la nueva promoción y asignarle perfumes
-            int idPromoCreada = PromoControlador.obtenerMaxId();
-            asignarPerfumesAPromo(idPromoCreada);
         }
+
 
         // ✅ Método para procesar la edición de una promoción
-        private void ProcesarEdicionPromo()
+        // ===========================================================
+        // 🔹 EDICIÓN DE PROMOCIÓN (elimina imagen vieja si cambia)
+        // ===========================================================
+
+        private async Task<bool> editarPromoAsync()
         {
-            if (editarPromo()) // Solo continúa si la edición fue confirmada
+            if (!ConfirmarEdicion()) return false;
+
+            var promoActual = PromoControlador.obtenerPorId(idPromo);
+            var bannerAnterior = promoActual.banner;       // ej. "banner-black-friday" (stem)
+            var urlAnterior = promoActual.imagen_URL;   // ej. https://.../imagenes/banner-black-friday.jpg
+
+            string nombreNuevo = txt_nomb_promo.Text.Trim();
+            string nuevoStem = AsignarNombreImagenHelper.BuildPromoFileStem(nombreNuevo); // ej. "banner-nuevo-slug"
+            string oldFile = bannerAnterior + ".jpg";
+            string newFile = nuevoStem + ".jpg";
+
+            string nombreBannerFinal = bannerAnterior; // por defecto
+            string urlFinal = urlAnterior;
+
+            try
             {
-                asignarPerfumesAPromo(idPromo);
+                // CASO A: se subió NUEVA imagen -> REPLACE (guarda nueva y borra vieja si corresponde)
+                if (nuevaImagenCargada && pictBox_banner.Image != null)
+                {
+                    // guardo la imagen del picturebox a un temp
+                    string temp = Path.Combine(Path.GetTempPath(), newFile);
+                    using (var bmp = new Bitmap(pictBox_banner.Image))
+                        bmp.Save(temp, System.Drawing.Imaging.ImageFormat.Jpeg);
 
-                // 🔹 Mostrar mensaje de éxito
-                MessageBox.Show("La promoción se ha editada correctamente.", "Edición exitosa", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    try
+                    {
+                        var res = await ApiImageUploader.ReplaceAsync(temp, oldFile, newFile);
+                        nombreBannerFinal = Path.GetFileNameWithoutExtension(res.fileName); // debería ser nuevoStem
+                        urlFinal = res.url;
+                    }
+                    finally { try { File.Delete(temp); } catch { } }
+                }
+                // CASO B: NO se subió imagen nueva, pero cambió SOLO el NOMBRE -> RENAME (mueve archivo, desaparece el viejo)
+                else if (!string.Equals(bannerAnterior, nuevoStem, StringComparison.Ordinal))
+                {
+                    var res = await ApiImageUploader.RenameAsync(oldFile, newFile);
+                    nombreBannerFinal = Path.GetFileNameWithoutExtension(res.fileName ?? newFile);
+                    urlFinal = res.url;
+                }
+                // CASO C: ni imagen nueva ni cambio de nombre -> nada que tocar
+                else
+                {
+                    nombreBannerFinal = bannerAnterior;
+                    urlFinal = urlAnterior;
+                }
 
-                // 🔹 Cerrar el formulario después de la edición
-                this.DialogResult = DialogResult.OK;
-                this.Close();
+                // Actualizo en BD (nombre, fechas, activo, desc, banner, url, y perfumes)
+                var seleccionTipoPromo = (KeyValuePair<int, string>)combo_tipo_promo.SelectedItem;
+                var promoEditada = new Promocion(
+                    idPromo,
+                    nombreNuevo,
+                    dateTime_inicio_promo.Value,
+                    dateTime_fin_promo.Value,
+                    seleccionTipoPromo.Key,
+                    (combo_activo_promo.SelectedIndex == 0),
+                    txt_descripcion_promo.Text.Trim(),
+                    nombreBannerFinal,  // <- stem final
+                    urlFinal            // <- url pública final
+                );
+
+                if (PromoControlador.editarPromoYRelaciones(promoEditada, ObtenerIdsPerfumesEnPromo()))
+                {
+                    this.DialogResult = DialogResult.OK;
+                    return true;
+                }
+
+                MessageBox.Show("No se pudo actualizar la promoción en BD.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
             }
-            else
+            catch (Exception ex)
             {
-                MessageBox.Show("Edición cancelada. No se asignarán perfumes a la promoción.", "Información", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Error al editar la promoción: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
             }
         }
-
-
 
 
 
@@ -1624,15 +1834,23 @@ namespace Eterea_Parfums_Desktop
         //Acción del botón "Seleccionar imagen"
         private void btn_selec_banner_Click(object sender, EventArgs e)
         {
-            OpenFileDialog ofd = new OpenFileDialog();
-            ofd.Filter = "JPG(*.JPG)|*.JPG";
-            if (ofd.ShowDialog() == DialogResult.OK)
+            using (var ofd = new OpenFileDialog { Filter = "Imágenes|*.jpg;*.jpeg;*.png;*.webp" })
             {
-                banner = Image.FromFile(ofd.FileName);
-                pictBox_banner.Image = banner;
+                if (ofd.ShowDialog() == DialogResult.OK)
+                {
+                    // soltar anteriores
+                    banner?.Dispose();
+                    pictBox_banner.Image?.Dispose();
 
+                    using (var tmp = Image.FromFile(ofd.FileName)) // FromFile bloquea: clonamos
+                    {
+                        banner = new Bitmap(tmp);                   // banner “independiente”
+                    }
+                    pictBox_banner.Image = new Bitmap(banner);       // y clon para el PictureBox
+
+                    nuevaImagenCargada = true;
+                }
             }
-            nuevaImagenCargada = true;
         }
 
 
@@ -1647,26 +1865,34 @@ namespace Eterea_Parfums_Desktop
 
                 if (File.Exists(rutaImagen))
                 {
-                    using (FileStream fs = new FileStream(rutaImagen, FileMode.Open, FileAccess.Read))
+                    using (var fs = new FileStream(rutaImagen, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (var imgTemp = Image.FromStream(fs))
                     {
-                        pictBox_banner.Image = Image.FromStream(fs);
+                        // liberar la anterior si existía
+                        pictBox_banner.Image?.Dispose();
+                        // clonar a Bitmap para que NO dependa del stream
+                        pictBox_banner.Image = new Bitmap(imgTemp);
                     }
                     return true;
                 }
                 else
                 {
-                    MessageBox.Show("No se encontró la imagen: " + nombreImagen + ". Se cargará una imagen por defecto.",
-                                    "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show(
+                        "No se encontró la imagen: " + nombreImagen + ". Se cargará una imagen por defecto.",
+                        "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
-                    // Cargar la imagen desde Resources
-                    pictBox_banner.Image = Properties.Resources.imagen_por_defecto; // Asegúrate de usar el nombre correcto
+                    pictBox_banner.Image?.Dispose();
+                    pictBox_banner.Image = new Bitmap(Properties.Resources.imagen_por_defecto);
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error al cargar la imagen: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                pictBox_banner.Image = Properties.Resources.imagen_por_defecto; // Usar imagen por defecto en caso de error
+                MessageBox.Show("Error al cargar la imagen: " + ex.Message, "Error",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                pictBox_banner.Image?.Dispose();
+                pictBox_banner.Image = new Bitmap(Properties.Resources.imagen_por_defecto);
                 return false;
             }
         }

@@ -2,19 +2,23 @@
 using Eterea_Parfums_Desktop.ControlesDeUsuario;
 using Eterea_Parfums_Desktop.Helpers;
 using Eterea_Parfums_Desktop.Modelos;
+using System.Configuration;
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Eterea_Parfums_Desktop
 {
     public partial class FormEditarPerfume1 : Form
     {
-
         private Image imagen1;
         private Image imagen2;
+
         private string nombre_foto_uno;
         private string nombre_foto_dos;
 
@@ -27,15 +31,19 @@ namespace Eterea_Parfums_Desktop
         private Perfume perfume;
         private static readonly Random rnd = new Random();
         private Perfumes_UC perfumesUC;
+
+        private const string SufijoImg1 = "envase";
+        private const string SufijoImg2 = "envaseycaja";
+
         public FormEditarPerfume1()
         {
             InitializeComponent();
         }
 
-
         public FormEditarPerfume1(Perfume perfume, Perfumes_UC perfumesUC)
         {
             InitializeComponent();
+
             this.perfumesUC = perfumesUC;
             LblErrorSetVisibleFalse();
             this.perfume = perfume;
@@ -48,7 +56,52 @@ namespace Eterea_Parfums_Desktop
             CargarOpciones(combo_activo);
             cargarDatos(perfume);
 
-            //Diseño del combo box
+            this.Shown += (_, __) =>
+            {
+                // Asegura datos consistentes (por si vino incompleto)
+                if (string.IsNullOrWhiteSpace(perfume.imagen1_URL) || string.IsNullOrWhiteSpace(perfume.imagen2_URL)
+                    || string.IsNullOrWhiteSpace(nombre_foto_uno) || string.IsNullOrWhiteSpace(nombre_foto_dos))
+                {
+                    var p = PerfumeControlador.getByID(perfume.id);
+                    if (p != null)
+                    {
+                        perfume.imagen1_URL = string.IsNullOrWhiteSpace(perfume.imagen1_URL) ? p.imagen1_URL : perfume.imagen1_URL;
+                        perfume.imagen2_URL = string.IsNullOrWhiteSpace(perfume.imagen2_URL) ? p.imagen2_URL : perfume.imagen2_URL;
+                        nombre_foto_uno = string.IsNullOrWhiteSpace(nombre_foto_uno) ? p.imagen1 : nombre_foto_uno;
+                        nombre_foto_dos = string.IsNullOrWhiteSpace(nombre_foto_dos) ? p.imagen2 : nombre_foto_dos;
+                    }
+                }
+
+                var basePublica = GetPublicImagesBase();
+
+                // --- URL 1 ---
+                var url1 = !string.IsNullOrWhiteSpace(perfume.imagen1_URL)
+                    ? AsignarNombreImagenHelper.EncodeLight(perfume.imagen1_URL)
+                    : (string.IsNullOrWhiteSpace(nombre_foto_uno) || string.IsNullOrWhiteSpace(basePublica)
+                        ? null
+                        : AsignarNombreImagenHelper.ToPublicUrl(basePublica, nombre_foto_uno));
+
+                pictureBoxProducto1.InitialImage = Properties.Resources.sinImagen;
+                pictureBoxProducto1.ErrorImage = Properties.Resources.sinImagen;
+                pictureBoxProducto1.SizeMode = PictureBoxSizeMode.Zoom;
+                pictureBoxProducto1.ImageLocation = url1;
+                pictureBoxProducto1.LoadAsync();
+
+                // --- URL 2 ---
+                var url2 = !string.IsNullOrWhiteSpace(perfume.imagen2_URL)
+                    ? AsignarNombreImagenHelper.EncodeLight(perfume.imagen2_URL)
+                    : (string.IsNullOrWhiteSpace(nombre_foto_dos) || string.IsNullOrWhiteSpace(basePublica)
+                        ? null
+                        : AsignarNombreImagenHelper.ToPublicUrl(basePublica, nombre_foto_dos));
+
+                pictureBoxProducto2.InitialImage = Properties.Resources.sinImagen;
+                pictureBoxProducto2.ErrorImage = Properties.Resources.sinImagen;
+                pictureBoxProducto2.SizeMode = PictureBoxSizeMode.Zoom;
+                pictureBoxProducto2.ImageLocation = url2;
+                pictureBoxProducto2.LoadAsync();
+            };
+
+            // Diseño combos
             combo_activo.DrawMode = DrawMode.OwnerDrawFixed;
             combo_activo.DrawItem += comboBoxdiseño_DrawItem;
             combo_activo.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -77,119 +130,73 @@ namespace Eterea_Parfums_Desktop
             combo_pais.DrawItem += comboBoxdiseño_DrawItem;
             combo_pais.DropDownStyle = ComboBoxStyle.DropDownList;
 
-            //Limito la cantidad de digitos que se pueden ingresar en el txt_codigo
             txt_codigo.MaxLength = 13;
         }
-
 
         private void cargarDatos(Perfume perfume)
         {
             txt_codigo.Text = perfume.codigo;
             combo_marca.Text = perfume.marca.nombre;
-            Console.WriteLine(perfume.marca.nombre);
             txt_nombre.Text = perfume.nombre;
             combo_tipo_de_perfume.Text = perfume.tipo_de_perfume.tipo_de_perfume;
             combo_genero.SelectedItem = perfume.genero.genero;
             txt_presentacion.Text = perfume.presentacion_ml.ToString();
             combo_pais.Text = perfume.pais.nombre;
-            combo_spray.Text = perfume.spray.ToString();
-            if (perfume.spray == true)
-            {
-                combo_spray.SelectedItem = "Si";
-            }
-            else
-            {
-                combo_spray.SelectedItem = "No";
-            }
-            combo_recargable.Text = perfume.recargable.ToString();
-            if (perfume.recargable == true)
-            {
-                combo_recargable.SelectedItem = "Si";
-            }
-            else
-            {
-                combo_recargable.SelectedItem = "No";
-            }
+
+            combo_spray.Text = perfume.spray ? "Si" : "No";
+            combo_recargable.Text = perfume.recargable ? "Si" : "No";
+
             richTextBox_descripcion.Text = perfume.descripcion;
             txt_anio_de_lanzamiento.Text = perfume.anio_de_lanzamiento.ToString();
             txt_precio.Text = perfume.precio_en_pesos.ToString();
 
             if (perfume.activo.HasValue)
-            {
                 combo_activo.SelectedItem = perfume.activo.Value ? "Si" : "No";
-            }
             else
-            {
-                combo_activo.SelectedItem = "No especificado"; // O dejalo vacío si preferís
-            }
-
+                combo_activo.SelectedItem = "No especificado";
 
             nombre_foto_uno = perfume.imagen1;
             nombre_foto_dos = perfume.imagen2;
-            cargarImagen(nombre_foto_uno, pictureBoxProducto1);
-            cargarImagen(nombre_foto_dos, pictureBoxProducto2);
 
-            Console.WriteLine(nombre_foto_dos);
+            urlImagen1Actual = perfume.imagen1_URL?.Trim();
+            urlImagen2Actual = perfume.imagen2_URL?.Trim();
 
+            Debug.WriteLine("URL1: " + urlImagen1Actual);
+            Debug.WriteLine("URL2: " + urlImagen2Actual);
         }
 
-        private void cargarImagen(string nombreImg, PictureBox pictureBox)
+        private static string GetPublicImagesBase()
         {
-            string rutaCompletaImagen = Program.Ruta_Base + nombreImg + ".jpg";
-            if (System.IO.File.Exists(rutaCompletaImagen))
-            {
-                pictureBox.Image = Image.FromFile(rutaCompletaImagen);
-            }
-            else
-            {
-                MessageBox.Show("La imagen no se encontró en la ruta especificada: " + rutaCompletaImagen, "Error de carga de imagen", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            var baseUrl = (ConfigurationManager.AppSettings["PublicImagesBaseUrl"]
+                           ?? ConfigurationManager.AppSettings["ApiBaseUrl"])
+                          ?.TrimEnd('/');
+            var folder = ConfigurationManager.AppSettings["PublicImagesFolder"] ?? "/imagenes";
+            var folderClean = folder.Trim().Trim('/');
+
+            return string.IsNullOrWhiteSpace(baseUrl) ? null : $"{baseUrl}/{folderClean}";
         }
 
-        private bool Eliminar_Imagen_Existente(string nombreImg)
+        // ========================= NUEVO: helpers de imagen/nombre =========================
+
+        /*private static string ExtraerNombreArchivoDesdeUrl(string urlCompleta)
         {
-            String rutaImagen = Program.Ruta_Base + nombreImg + ".jpg";
-            try
-            {
-                if (System.IO.File.Exists(rutaImagen) && nombreImg != "imagen1.jpg" && nombreImg != "imagen2.jpg")
-                {
-                    // Intentar liberar el archivo si está en uso
-                    LiberarImagen(rutaImagen);
-                    // Esperar a que el sistema libere el archivo
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
-                    System.IO.File.Delete(rutaImagen);
-                    Console.WriteLine("Imagen eliminada correctamente.");
-                    return true;
-                }
-                else
-                {
-                    Console.WriteLine("La imagen no existe en la ruta especificada o no tiene permisos para eliminarlo.");
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error al eliminar la imagen: " + ex.Message);
-            }
-            return false;
+            if (string.IsNullOrWhiteSpace(urlCompleta)) return null;
+            try { return Path.GetFileName(new Uri(urlCompleta).AbsolutePath); }
+            catch { return Path.GetFileName(urlCompleta); }
         }
 
-        private void LiberarImagen(string rutaImagen)
+        private string GetNombreFinalImg1() => $"perfume-{perfume.id}-envase.jpg";
+        private string GetNombreFinalImg2() => $"perfume-{perfume.id}-envase-y-caja.jpg";
+
+        // Guarda la Image en un .jpg temporal y devuelve la ruta
+        private string GuardarComoJpegTemporal(Image imagen, string nombreDeseadoConExtension)
         {
-            try
-            {
-                using (Image img = Image.FromFile(rutaImagen))
-                {
-                    img.Dispose();
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("No se pudo liberar la imagen: " + ex.Message);
-            }
-        }
+            string tempPath = Path.Combine(Path.GetTempPath(), nombreDeseadoConExtension);
+            imagen.Save(tempPath, System.Drawing.Imaging.ImageFormat.Jpeg);
+            return tempPath;
+        }*/
 
+        // ======================= FIN helpers =======================
 
         private void LblErrorSetVisibleFalse()
         {
@@ -208,7 +215,6 @@ namespace Eterea_Parfums_Desktop
             lbl_error_activo.Visible = false;
             lbl_error_img1.Visible = false;
             lbl_error_img2.Visible = false;
-
         }
 
         private void CargarMarcas()
@@ -216,9 +222,7 @@ namespace Eterea_Parfums_Desktop
             var marcas = MarcaControlador.getAll();
             combo_marca.Items.Clear();
             foreach (Marca marca in marcas)
-            {
                 combo_marca.Items.Add(marca.nombre.ToString());
-            }
         }
 
         private void CargarTiposDePerfume()
@@ -226,9 +230,7 @@ namespace Eterea_Parfums_Desktop
             var tiposDePerfume = TipoDePerfumeControlador.getAll();
             combo_tipo_de_perfume.Items.Clear();
             foreach (TipoDePerfume tipo in tiposDePerfume)
-            {
                 combo_tipo_de_perfume.Items.Add(tipo.tipo_de_perfume.ToString());
-            }
         }
 
         private void CargarGeneros()
@@ -236,9 +238,7 @@ namespace Eterea_Parfums_Desktop
             var generos = GeneroControlador.getAll();
             combo_genero.Items.Clear();
             foreach (Genero genero in generos)
-            {
                 combo_genero.Items.Add(genero.genero.ToString());
-            }
         }
 
         private void CargarPaises()
@@ -246,10 +246,7 @@ namespace Eterea_Parfums_Desktop
             var paises = PaisControlador.getAll();
             combo_pais.Items.Clear();
             foreach (Pais pais in paises)
-            {
-                if (pais.id != 1)
-                    combo_pais.Items.Add(pais.nombre.ToString());
-            }
+                if (pais.id != 1) combo_pais.Items.Add(pais.nombre.ToString());
         }
 
         private void CargarOpciones(ComboBox combo)
@@ -268,8 +265,7 @@ namespace Eterea_Parfums_Desktop
             {
                 imagen1 = Image.FromFile(ofd.FileName);
                 pictureBoxProducto1.Image = imagen1;
-                pathLocalImg1 = ofd.FileName; // ✅ se guarda la ruta
-
+                pathLocalImg1 = ofd.FileName; // ruta local
             }
         }
 
@@ -282,12 +278,9 @@ namespace Eterea_Parfums_Desktop
             {
                 imagen2 = Image.FromFile(ofd.FileName);
                 pictureBoxProducto2.Image = imagen2;
-                pathLocalImg2 = ofd.FileName; // ✅ se guarda la ruta
-
+                pathLocalImg2 = ofd.FileName; // ruta local
             }
         }
-
-
 
         private string ValidarCodigoDeBarra()
         {
@@ -321,9 +314,8 @@ namespace Eterea_Parfums_Desktop
             }
 
             lbl_error_codigo.Visible = false;
-            return string.Empty; // No hay error
+            return string.Empty;
         }
-
 
         private bool ValidarEAN13(string codigo)
         {
@@ -335,7 +327,6 @@ namespace Eterea_Parfums_Desktop
             }
             int digitoControlEsperado = (10 - (suma % 10)) % 10;
             int digitoControlReal = codigo[12] - '0';
-
             return digitoControlEsperado == digitoControlReal;
         }
 
@@ -347,19 +338,12 @@ namespace Eterea_Parfums_Desktop
 
         private bool ValidarPerfume()
         {
-
             string errorMsg = "";
             string errorCodigo = ValidarCodigoDeBarra();
             if (!string.IsNullOrEmpty(errorCodigo))
-            {
                 errorMsg += errorCodigo + Environment.NewLine;
-            }
             else
-            {
                 lbl_error_codigo.Visible = false;
-            }
-            
-
 
             if (combo_genero.SelectedItem == null || string.IsNullOrEmpty(combo_marca.Text))
             {
@@ -367,18 +351,13 @@ namespace Eterea_Parfums_Desktop
                 lbl_error_marca.Text = "Debes seleccionar la marca del perfume";
                 lbl_error_marca.Show();
             }
-            else
-            {
-                lbl_error_marca.Visible = false;
-            }
-
+            else lbl_error_marca.Visible = false;
 
             if (string.IsNullOrEmpty(txt_nombre.Text))
             {
                 errorMsg += "Debes ingresar el nombre del perfume" + Environment.NewLine;
                 lbl_error_nombre.Text = "Debes ingresar el nombre del perfume";
                 lbl_error_nombre.Show();
-
             }
             else if (txt_nombre.Text.Length > 80)
             {
@@ -386,12 +365,7 @@ namespace Eterea_Parfums_Desktop
                 lbl_error_nombre.Text = "El nombre no puede exceder los 80 caracteres";
                 lbl_error_nombre.Show();
             }
-            else
-            {
-
-                lbl_error_nombre.Visible = false;
-
-            }
+            else lbl_error_nombre.Visible = false;
 
             if (combo_tipo_de_perfume.SelectedItem == null || string.IsNullOrEmpty(combo_tipo_de_perfume.Text))
             {
@@ -399,10 +373,7 @@ namespace Eterea_Parfums_Desktop
                 lbl_error_tipo.Text = "Debes seleccionar un tipo de perfume";
                 lbl_error_tipo.Show();
             }
-            else
-            {
-                lbl_error_tipo.Visible = false;
-            }
+            else lbl_error_tipo.Visible = false;
 
             if (combo_genero.SelectedItem == null || string.IsNullOrEmpty(combo_genero.Text))
             {
@@ -410,31 +381,23 @@ namespace Eterea_Parfums_Desktop
                 lbl_error_genero.Text = "Debes seleccionar un género";
                 lbl_error_genero.Show();
             }
-            else
-            {
-                lbl_error_genero.Visible = false;
-            }
+            else lbl_error_genero.Visible = false;
 
             if (string.IsNullOrEmpty(txt_presentacion.Text))
             {
                 errorMsg += "Debes ingresar los ml en numero" + Environment.NewLine;
                 lbl_error_presentacion.Text = "Debes ingresar los ml en numero";
                 lbl_error_presentacion.Show();
-
             }
             else
             {
-                if (!int.TryParse(txt_presentacion.Text, out int result))
-
+                if (!int.TryParse(txt_presentacion.Text, out int _))
                 {
                     errorMsg += "Debes ingresar un número entero. Sólo números" + Environment.NewLine;
                     lbl_error_presentacion.Text = "Debes ingresar un número entero. Sólo números";
                     lbl_error_presentacion.Show();
                 }
-                else
-                {
-                    lbl_error_presentacion.Visible = false;
-                }
+                else lbl_error_presentacion.Visible = false;
             }
 
             if (combo_pais.SelectedItem == null || string.IsNullOrEmpty(combo_pais.Text))
@@ -443,10 +406,7 @@ namespace Eterea_Parfums_Desktop
                 lbl_error_pais.Text = "Debes ingresar el nombre del perfume";
                 lbl_error_pais.Show();
             }
-            else
-            {
-                lbl_error_pais.Visible = false;
-            }
+            else lbl_error_pais.Visible = false;
 
             if (combo_spray.SelectedItem == null || string.IsNullOrEmpty(combo_spray.Text))
             {
@@ -454,10 +414,7 @@ namespace Eterea_Parfums_Desktop
                 lbl_error_spray.Text = "Debes indicar si viene en formato spray o no";
                 lbl_error_spray.Show();
             }
-            else
-            {
-                lbl_error_spray.Visible = false;
-            }
+            else lbl_error_spray.Visible = false;
 
             if (combo_recargable.SelectedItem == null || string.IsNullOrEmpty(combo_recargable.Text))
             {
@@ -465,17 +422,13 @@ namespace Eterea_Parfums_Desktop
                 lbl_error_recargable.Text = "Debes indicar si es o no recargable";
                 lbl_error_recargable.Show();
             }
-            else
-            {
-                lbl_error_recargable.Visible = false;
-            }
+            else lbl_error_recargable.Visible = false;
 
             if (string.IsNullOrEmpty(richTextBox_descripcion.Text))
             {
                 errorMsg += "Debes ingresar la descripción del perfume" + Environment.NewLine;
                 lbl_error_descripcion.Text = "Debes ingresar la descripción del perfume";
                 lbl_error_descripcion.Show();
-
             }
             else if (richTextBox_descripcion.Text.Length > 1100)
             {
@@ -483,19 +436,13 @@ namespace Eterea_Parfums_Desktop
                 lbl_error_descripcion.Text = "La descripción del perfume no puede exceder los 1100 caracteres";
                 lbl_error_descripcion.Show();
             }
-            else
-            {
-                {
-                    lbl_error_descripcion.Visible = false;
-                }
-            }
+            else lbl_error_descripcion.Visible = false;
 
             if (string.IsNullOrEmpty(txt_anio_de_lanzamiento.Text))
             {
                 errorMsg += "Debes ingresar el año de lanzamiento del perfume" + Environment.NewLine;
                 lbl_error_anio.Text = "Debes ingresar el año de lanzamiento del perfume";
                 lbl_error_anio.Show();
-
             }
             else
             {
@@ -505,30 +452,24 @@ namespace Eterea_Parfums_Desktop
                     lbl_error_anio.Text = "Debes ingresar un año válido";
                     lbl_error_anio.Show();
                 }
-                else
-                {
-                    lbl_error_anio.Visible = false;
-                }
+                else lbl_error_anio.Visible = false;
             }
+
             if (string.IsNullOrEmpty(txt_precio.Text))
             {
                 errorMsg += "Debes ingresar un precio" + Environment.NewLine;
                 lbl_error_precio.Text = "Debes ingresar un precio";
                 lbl_error_precio.Show();
-
             }
             else
             {
-                if (!double.TryParse(txt_precio.Text.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double price) || price < 0)
+                if (!double.TryParse(txt_precio.Text.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out double price) || price < 0)
                 {
                     errorMsg += "Debes ingresar un precio válido" + Environment.NewLine;
                     lbl_error_precio.Text = "Debes ingresar un precio válido";
                     lbl_error_precio.Show();
                 }
-                else
-                {
-                    lbl_error_precio.Visible = false;
-                }
+                else lbl_error_precio.Visible = false;
             }
 
             if (combo_activo.SelectedItem == null || string.IsNullOrEmpty(combo_activo.Text))
@@ -537,153 +478,221 @@ namespace Eterea_Parfums_Desktop
                 lbl_error_activo.Text = "Debes indicar si el producto ingresa como activo o no";
                 lbl_error_activo.Show();
             }
-            else
-            {
-                lbl_error_activo.Visible = false;
-            }
+            else lbl_error_activo.Visible = false;
 
             if (pictureBoxProducto1.Image == null)
             {
                 errorMsg += "Debes cargar una Imagen" + Environment.NewLine;
                 lbl_error_img1.Text = "Debes cargar una Imagen 1";
                 lbl_error_img1.Show();
-
             }
-            else
-            {
-
-                lbl_error_img1.Visible = false;
-
-            }
+            else lbl_error_img1.Visible = false;
 
             if (pictureBoxProducto2.Image == null)
             {
                 errorMsg += "Debes cargar una Imagen" + Environment.NewLine;
                 lbl_error_img2.Text = "Debes cargar una Imagen 2";
                 lbl_error_img2.Show();
-
             }
-            else
-            {
-                lbl_error_img2.Visible = false;
-            }
-
+            else lbl_error_img2.Visible = false;
 
             if (string.IsNullOrEmpty(errorMsg))
-            {
                 LblErrorSetVisibleFalse();
-            }
 
             return string.IsNullOrEmpty(errorMsg);
         }
 
-
-        internal void eliminarImgExistenteYGuardarNueva()
-        {
-            if (imagen1 != null)
-            {
-                Eliminar_Imagen_Existente(nombre_foto_uno);
-                saveImagenResources(out nombre_foto_uno, imagen1, "envase");
-            }
-
-            if (imagen2 != null)
-            {
-                Eliminar_Imagen_Existente(nombre_foto_dos);
-                saveImagenResources(out nombre_foto_dos, imagen2, "envase y caja");
-            }
-        }
-
-
-        private void btn_siguiente_Click(object sender, EventArgs e)
-        {
-            //Validar datos del perfume
-            bool validacionDatosPerfume = ValidarPerfume();
-            if (validacionDatosPerfume)
-            {
-                Perfume perfume = editar();
-
-                // Obtener la instancia del FormStart..
-                //Form formStart = Application.OpenForms["FormStart"];
-                FormEditarPerfume2 editarAromaNota = new FormEditarPerfume2(perfume, this, perfumesUC);
-
-                DialogResult dr = editarAromaNota.ShowDialog(this);
-
-                if (dr == DialogResult.OK)
-                {
-                    Trace.WriteLine("OK");
-
-                }
-                // Retrasamos la llamada a Hide() para evitar el salto
-                //this.BeginInvoke(new Action(() => this.Hide()));
-
-                // Crear el formulario a mostrar y pasarle, como owner, el formStart
-                //editarAromaNota.ShowDialog(formStart);
-
-            }
-        }
-        private void saveImagenResources(out string nombreFoto, Image imagen, string sufijo)
+        // ========================= ACTUALIZADO: usa REPLACE para editar =========================
+        internal async Task SubirSiCambioImagenAsync()
         {
             try
             {
-                int numero_aleatorio = numeroAleatorio();
-                Console.WriteLine(numero_aleatorio);
-                nombreFoto = txt_nombre.Text + " - " + numero_aleatorio + " - " + sufijo;
-                imagen.Save(Program.Ruta_Base + nombreFoto + ".jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
+                // ------------ IMAGEN 1 ------------
+                string oldName1 = FileNameFromUrl(perfume.imagen1_URL) ?? (string.IsNullOrWhiteSpace(perfume.imagen1) ? null : perfume.imagen1 + ".jpg");
+                string oldStem1 = string.IsNullOrWhiteSpace(perfume.imagen1)
+                                    ? NombreSinExtFromUrl(perfume.imagen1_URL)
+                                    : perfume.imagen1;                            // ej "212-vip-black-5555-envase"
+
+                // ¿cambió el nombre del perfume? => comparar bases (sin número ni sufijo)
+                var oldBase1 = ExtraerBaseSlug(oldStem1, SufijoImg1);            // ej "212-vip-black"
+                var newBase = AsignarNombreImagenHelper.Slugify(txt_nombre.Text);
+                bool nombreCambio = !string.Equals(oldBase1, newBase, StringComparison.OrdinalIgnoreCase);
+
+                // si cambió el nombre, forzamos número NUEVO
+                string newStem1 = BuildNombrePerfumeConNumero(txt_nombre.Text, SufijoImg1, oldStem1,
+                                                              forceNewRandom: nombreCambio);
+                string newFile1 = newStem1 + ".jpg";
+                if (imagen1 != null) // CASO A: subió archivo nuevo
+                {
+                    var temp1 = GuardarComoJpegTemporal(imagen1, newFile1);
+                    try
+                    {
+                        var r = await ApiImageUploader.ReplaceAsync(
+                            localFilePath: temp1,
+                            oldNameOnServerOrNull: oldName1,
+                            newNameOnServer: newFile1,
+                            _: true
+                        );
+                        urlImagen1Actual = r.url;
+                        nombre_foto_uno = newStem1;
+                    }
+                    finally { try { File.Delete(temp1); } catch { } }
+                }
+                else // CASO B/C: no subió archivo
+                {
+                    if (!string.IsNullOrWhiteSpace(oldName1) &&
+                        !string.Equals(oldStem1, newStem1, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // B: cambió nombre: renombrá archivo físico y URL
+                        var (returnedName, returnedUrl) = await ApiImageUploader.RenameAsync(oldName1, newFile1);
+                        urlImagen1Actual = returnedUrl;
+                        nombre_foto_uno = Path.GetFileNameWithoutExtension(returnedName);
+                    }
+                    else
+                    {
+                        // C: no cambió nada
+                        urlImagen1Actual = perfume.imagen1_URL;
+                        nombre_foto_uno = string.IsNullOrWhiteSpace(perfume.imagen1) ? newStem1 : perfume.imagen1;
+                    }
+                }
+
+                // ------------ IMAGEN 2 ------------
+                string oldName2 = FileNameFromUrl(perfume.imagen2_URL) ?? (string.IsNullOrWhiteSpace(perfume.imagen2) ? null : perfume.imagen2 + ".jpg"); ;
+                string oldStem2 = string.IsNullOrWhiteSpace(perfume.imagen2)
+                                    ? NombreSinExtFromUrl(perfume.imagen2_URL)
+                                    : perfume.imagen2;
+
+                var oldBase2 = ExtraerBaseSlug(oldStem2, SufijoImg2);
+                bool nombreCambio2 = !string.Equals(oldBase2, newBase, StringComparison.OrdinalIgnoreCase);
+
+                string newStem2 = BuildNombrePerfumeConNumero(txt_nombre.Text, SufijoImg2, oldStem2,
+                                                              forceNewRandom: nombreCambio2);
+                string newFile2 = newStem2 + ".jpg";
+
+                if (imagen2 != null) // CASO A: subió archivo nuevo
+                {
+                    var temp2 = GuardarComoJpegTemporal(imagen2, newFile2);
+                    try
+                    {
+                        var r = await ApiImageUploader.ReplaceAsync(
+                            localFilePath: temp2,
+                            oldNameOnServerOrNull: oldName2,
+                            newNameOnServer: newFile2,
+                            _: true
+                        );
+                        urlImagen2Actual = r.url;
+                        nombre_foto_dos = newStem2;
+                    }
+                    finally { try { File.Delete(temp2); } catch { } }
+                }
+                else // CASO B/C: no subió archivo
+                {
+                    if (!string.IsNullOrWhiteSpace(oldName2) &&
+                        !string.Equals(oldStem2, newStem2, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // B: cambió nombre: renombrá archivo físico y URL
+                        var (returnedName, returnedUrl) = await ApiImageUploader.RenameAsync(oldName2, newFile2);
+                        urlImagen2Actual = returnedUrl;
+                        nombre_foto_dos = Path.GetFileNameWithoutExtension(returnedName);
+                    }
+                    else
+                    {
+                        // C: no cambió nada
+                        urlImagen2Actual = perfume.imagen2_URL;
+                        nombre_foto_dos = string.IsNullOrWhiteSpace(perfume.imagen2) ? newStem2 : perfume.imagen2;
+                    }
+                }
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message);
+                MessageBox.Show("Error subiendo/renombrando imágenes: " + ex.Message, "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                throw;
             }
         }
 
+        // ========================================================================================
 
         private int numeroAleatorio()
         {
             return rnd.Next(1000, 9999);
         }
 
-
         internal Perfume editar()
         {
-            bool spray = false;
-            if (combo_spray.SelectedItem.ToString() == "Si")
+            bool spray = (combo_spray.SelectedItem?.ToString() == "Si");
+            bool recargable = (combo_recargable.SelectedItem?.ToString() == "Si");
+            bool activo = (combo_activo.SelectedItem?.ToString() != "No");
+
+            Marca marca = MarcaControlador.getByName(combo_marca.Text);
+            TipoDePerfume tipo_de_perfume = TipoDePerfumeControlador.getByName(combo_tipo_de_perfume.Text);
+            Genero genero = GeneroControlador.getByName(combo_genero.Text);
+            Pais pais = PaisControlador.getByName(combo_pais.Text);
+
+            int presentacionMl = int.Parse(txt_presentacion.Text);
+            int anio = int.Parse(txt_anio_de_lanzamiento.Text);
+            double precio = double.Parse(
+                txt_precio.Text.Replace(",", "."),
+                NumberStyles.Any,
+                CultureInfo.InvariantCulture
+            );
+
+            DateTime? fechaBaja = perfume.fecha_baja;
+
+            // Si no se cambiaron las imágenes, aseguramos no pisar con null
+            var finalUrl1 = string.IsNullOrWhiteSpace(urlImagen1Actual) ? perfume.imagen1_URL : urlImagen1Actual;
+            var finalUrl2 = string.IsNullOrWhiteSpace(urlImagen2Actual) ? perfume.imagen2_URL : urlImagen2Actual;
+
+            // También mantenemos nombre_foto_* si no se generó (para compatibilidad)
+            if (string.IsNullOrWhiteSpace(nombre_foto_uno))
+                nombre_foto_uno = perfume.imagen1;
+            if (string.IsNullOrWhiteSpace(nombre_foto_dos))
+                nombre_foto_dos = perfume.imagen2;
+
+            return new Perfume(
+                perfume.id,
+                txt_codigo.Text,
+                marca,
+                txt_nombre.Text,
+                tipo_de_perfume,
+                genero,
+                presentacionMl,
+                pais,
+                spray,
+                recargable,
+                richTextBox_descripcion.Text,
+                anio,
+                precio,
+                activo,
+                nombre_foto_uno,
+                nombre_foto_dos,
+                fechaBaja,
+                finalUrl1,
+                finalUrl2
+            );
+        }
+
+        private void btn_siguiente_Click(object sender, EventArgs e)
+        {
+            bool validacionDatosPerfume = ValidarPerfume();
+            if (validacionDatosPerfume)
             {
-                spray = true;
+                Perfume perfume = editar();
+
+                var editarAromaNota = new FormEditarPerfume2(perfume, this, perfumesUC);
+                DialogResult dr = editarAromaNota.ShowDialog(this);
+
+                if (dr == DialogResult.OK)
+                {
+                    Trace.WriteLine("OK");
+                }
             }
-
-            bool recargable = false;
-            if (combo_recargable.SelectedItem.ToString() == "Si")
-            {
-                recargable = true;
-            }
-
-            bool activo = true;
-            if (combo_activo.SelectedItem.ToString() == "No")
-            {
-                activo = false;
-            }
-
-
-            Marca marca = MarcaControlador.getByName(combo_marca.SelectedItem.ToString());
-            TipoDePerfume tipo_de_perfume = TipoDePerfumeControlador.getByName(combo_tipo_de_perfume.SelectedItem.ToString());
-            Genero genero = GeneroControlador.getByName(combo_genero.SelectedItem.ToString());
-            Console.WriteLine("Genero: " + genero.id);
-            Pais pais = PaisControlador.getByName(combo_pais.SelectedItem.ToString());
-            Console.WriteLine("Marca: " + marca.nombre);
-            Perfume perfume1 = new Perfume(perfume.id, txt_codigo.Text, marca, txt_nombre.Text, tipo_de_perfume,
-                genero, int.Parse(txt_presentacion.Text), pais, spray, recargable, richTextBox_descripcion.Text,
-                int.Parse(txt_anio_de_lanzamiento.Text), Double.Parse(txt_precio.Text), activo, nombre_foto_uno, nombre_foto_dos, null, null, null);
-
-            return perfume1;
-
         }
 
         private void btn_x_cerrar_Click(object sender, EventArgs e)
         {
             this.Close();
-           
         }
-
 
         //Diseño del combo box
         private void comboBoxdiseño_DrawItem(object sender, DrawItemEventArgs e)
@@ -691,41 +700,116 @@ namespace Eterea_Parfums_Desktop
             if (e.Index < 0)
                 return;
 
-            // Obtener el ComboBox y el texto del ítem actual
             ComboBox combo = sender as ComboBox;
             string text = combo.Items[e.Index].ToString();
 
-            // Definir colores personalizados
             Color backgroundColor;
             Color textColor;
 
             if ((e.State & DrawItemState.Selected) == DrawItemState.Selected)
             {
-                // Color cuando el ítem está seleccionado
                 backgroundColor = Color.FromArgb(195, 156, 164);
                 textColor = Color.White;
             }
             else
             {
-                // Color cuando el ítem NO está seleccionado
-                backgroundColor = Color.FromArgb(250, 236, 239); // Color personalizado
+                backgroundColor = Color.FromArgb(250, 236, 239);
                 textColor = Color.FromArgb(195, 156, 164);
             }
 
-            // Pintar el fondo del ítem
             using (SolidBrush brush = new SolidBrush(backgroundColor))
             {
                 e.Graphics.FillRectangle(brush, e.Bounds);
             }
 
-            // Dibujar el texto
             TextRenderer.DrawText(e.Graphics, text, e.Font, e.Bounds, textColor, TextFormatFlags.Left);
-
-            // Evitar problemas visuales
             e.DrawFocusRectangle();
+        }
+
+        //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+        // Devuelve fileName (con extensión) desde una URL pública
+        private static string FileNameFromUrl(string urlCompleta)
+         {
+             if (string.IsNullOrWhiteSpace(urlCompleta)) return null;
+             try { return Path.GetFileName(new Uri(urlCompleta).AbsolutePath); }
+             catch { return Path.GetFileName(urlCompleta); }
+         }
+
+         // Devuelve nombre sin extensión desde URL (o null)
+         private static string NombreSinExtFromUrl(string urlCompleta)
+         {
+             var fn = FileNameFromUrl(urlCompleta);
+             return string.IsNullOrWhiteSpace(fn) ? null : Path.GetFileNameWithoutExtension(fn);
+         }
+
+         // Extrae el NÚMERO aleatorio si el nombre tiene patrón slug-####-sufijo
+         // Ej: "212-vip-black-5555-envase" -> 5555
+         private static int? TryGetRandomFromNombre(string nombreSinExtension)
+         {
+             if (string.IsNullOrWhiteSpace(nombreSinExtension)) return null;
+             // buscamos "-####-" en el medio
+             var match = System.Text.RegularExpressions.Regex.Match(nombreSinExtension, @"-(\d{3,6})-");
+             if (match.Success && int.TryParse(match.Groups[1].Value, out int n)) return n;
+             return null;
+         }
+
+         // Construye el nombre final respetando tu formato y conservando el N° si existe
+         // Si nombreAnteriorSinExt trae un número aleatorio, se conserva. Si no, genera uno nuevo.
+         /*private string BuildNombrePerfumeConNumero(string nombrePerfumeActual, string sufijo, string nombreAnteriorSinExt)
+         {
+             var slug = Eterea_Parfums_Desktop.Helpers.AsignarNombreImagenHelper.Slugify(nombrePerfumeActual);
+             int num = TryGetRandomFromNombre(nombreAnteriorSinExt) ?? new Random().Next(1000, 9999);
+             return $"{slug}-{num}-{sufijo}";
+         }*/
+
+         // Guarda la Image a JPG temporal y devuelve la ruta
+         private string GuardarComoJpegTemporal(Image imagen, string nombreDeseadoConExtension)
+         {
+             string tempPath = Path.Combine(Path.GetTempPath(), nombreDeseadoConExtension);
+             imagen.Save(tempPath, System.Drawing.Imaging.ImageFormat.Jpeg);
+             return tempPath;
+         }
+
+        // Extrae el slug base (sin número ni sufijo) del stem actual.
+        // Ej: "212-vip-black-5555-envase" + "envase" -> "212-vip-black"
+        private static string ExtraerBaseSlug(string stem, string sufijo)
+        {
+            if (string.IsNullOrWhiteSpace(stem)) return null;
+            var rx = new System.Text.RegularExpressions.Regex(
+                @"^(?<base>.+)-\d{3,6}-" + System.Text.RegularExpressions.Regex.Escape(sufijo) + "$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var m = rx.Match(stem);
+            return m.Success ? m.Groups["base"].Value : null;
+        }
+
+        // Construye el nombre final respetando formato y permite forzar NUEVO número.
+        // - Si forceNewRandom = true => SIEMPRE genera número nuevo.
+        // - Si false, intenta conservar el número si el stem anterior lo tenía.
+        private string BuildNombrePerfumeConNumero(string nombrePerfumeActual, string sufijo,
+                                                   string nombreAnteriorSinExt, bool forceNewRandom)
+        {
+            var slug = Eterea_Parfums_Desktop.Helpers.AsignarNombreImagenHelper.Slugify(nombrePerfumeActual);
+
+            int num;
+            if (!forceNewRandom)
+            {
+                // Intentar conservar número previo
+                var match = System.Text.RegularExpressions.Regex.Match(
+                    nombreAnteriorSinExt ?? "", @"-(\d{3,6})-");
+                num = (match.Success && int.TryParse(match.Groups[1].Value, out var n)) ? n
+                                                                                        : new Random().Next(1000, 9999);
+            }
+            else
+            {
+                // Forzar nuevo
+                num = new Random().Next(1000, 9999);
+            }
+
+            return $"{slug}-{num}-{sufijo}";
         }
 
 
     }
-
 }

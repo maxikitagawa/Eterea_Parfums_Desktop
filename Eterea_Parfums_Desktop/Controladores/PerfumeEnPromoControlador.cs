@@ -144,36 +144,60 @@ namespace Eterea_Parfums_Desktop.Controladores
         public static List<Promocion> getByIDPerfume(int idPerfume)
         {
             string query = @"
-            SELECT p.id, p.nombre, p.fecha_inicio, p.fecha_fin, p.descuento, p.activo, p.descripcion, p.banner
-            FROM promocion p
-            INNER JOIN perfumes_en_promo pep ON p.id = pep.promocion_id
-            WHERE pep.perfume_id = @idPerfume AND p.activo = 1";
+        SELECT p.id,
+               p.nombre,
+               p.fecha_inicio,
+               p.fecha_fin,
+               p.descuento,
+               p.activo,
+               p.descripcion,
+               p.banner,
+               p.imagen_URL
+        FROM dbo.promocion p
+        INNER JOIN dbo.perfumes_en_promo pep ON p.id = pep.promocion_id
+        WHERE pep.perfume_id = @idPerfume AND p.activo = 1";
 
-            List<Promocion> listaPromociones = new List<Promocion>();
+            var listaPromociones = new List<Promocion>();
 
-            SqlCommand cmd = new SqlCommand(query, DB_Controller.connection);
-            cmd.Parameters.AddWithValue("@idPerfume", idPerfume);
-
-            try
+            using (var cmd = new SqlCommand(query, DB_Controller.connection))
             {
-                DB_Controller.connection.Open();
-                SqlDataReader r = cmd.ExecuteReader();
+                cmd.Parameters.AddWithValue("@idPerfume", idPerfume);
 
-                while (r.Read())
+                try
                 {
-                    listaPromociones.Add(new Promocion(r.GetInt32(0), r.GetString(1), r.GetDateTime(2), r.GetDateTime(3), r.GetInt32(4), r.GetBoolean(5), r.GetString(6), r.GetString(7)));
+                    DB_Controller.connection.Open();
+                    using (var r = cmd.ExecuteReader())
+                    {
+                        while (r.Read())
+                        {
+                            listaPromociones.Add(new Promocion(
+                                r.GetInt32(0),                   // id
+                                r.GetString(1),                  // nombre
+                                r.GetDateTime(2),                // fecha_inicio
+                                r.GetDateTime(3),                // fecha_fin
+                                r.GetInt32(4),                   // descuento
+                                r.GetBoolean(5),                 // activo
+                                r.GetString(6),                  // descripcion
+                                r.GetString(7),                  // banner
+                                r.IsDBNull(8) ? null : r.GetString(8) // imagen_URL
+                            ));
+                        }
+                    }
                 }
-                r.Close();
-                DB_Controller.connection.Close();
+                catch (Exception e)
+                {
+                    throw new Exception("Hay un error en la query: " + e.Message);
+                }
+                finally
+                {
+                    if (DB_Controller.connection.State == System.Data.ConnectionState.Open)
+                        DB_Controller.connection.Close();
+                }
+            }
 
-            }
-            catch (Exception e)
-            {
-                throw new Exception("Hay un error en la query: " + e.Message);
-            }
             return listaPromociones;
-
         }
+
 
 
 
