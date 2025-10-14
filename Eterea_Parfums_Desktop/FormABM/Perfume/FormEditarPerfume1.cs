@@ -508,7 +508,7 @@ namespace Eterea_Parfums_Desktop
             try
             {
                 // ------------ IMAGEN 1 ------------
-                string oldName1 = nombre_foto_uno;
+                string oldName1 = FileNameFromUrl(perfume.imagen1_URL) ?? (string.IsNullOrWhiteSpace(perfume.imagen1) ? null : perfume.imagen1 + ".jpg");
                 string oldStem1 = string.IsNullOrWhiteSpace(perfume.imagen1)
                                     ? NombreSinExtFromUrl(perfume.imagen1_URL)
                                     : perfume.imagen1;                            // ej "212-vip-black-5555-envase"
@@ -522,46 +522,42 @@ namespace Eterea_Parfums_Desktop
                 string newStem1 = BuildNombrePerfumeConNumero(txt_nombre.Text, SufijoImg1, oldStem1,
                                                               forceNewRandom: nombreCambio);
                 string newFile1 = newStem1 + ".jpg";
-
-                if (imagen1 != null)
+                if (imagen1 != null) // CASO A: subió archivo nuevo
                 {
-                    string temp1 = GuardarComoJpegTemporal(imagen1, newFile1);
+                    var temp1 = GuardarComoJpegTemporal(imagen1, newFile1);
                     try
                     {
-                        var r1 = await ApiImageUploader.ReplaceAsync(
+                        var r = await ApiImageUploader.ReplaceAsync(
                             localFilePath: temp1,
-                            newNameOnServer: newFile1,      // nombre deseado
                             oldNameOnServerOrNull: oldName1,
+                            newNameOnServer: newFile1,
                             _: true
                         );
-                        urlImagen1Actual = r1.url;
-                        nombre_foto_uno = newStem1;       // sin extensión
+                        urlImagen1Actual = r.url;
+                        nombre_foto_uno = newStem1;
                     }
-                    finally { try { System.IO.File.Delete(temp1); } catch { } }
+                    finally { try { File.Delete(temp1); } catch { } }
                 }
-                else
+                else // CASO B/C: no subió archivo
                 {
-                    // No cambió el archivo, pero si cambió el nombre/slug o el número (porque lo forzamos),
-                    // hacemos RENAME igualmente para que el archivo del server quede con el nuevo nombre.
                     if (!string.IsNullOrWhiteSpace(oldName1) &&
                         !string.Equals(oldStem1, newStem1, StringComparison.OrdinalIgnoreCase))
                     {
-                        var (returnedName, returnedUrl) = await ApiImageUploader.RenameAsync(
-                            oldNameOnServer: oldName1,
-                            newNameOnServer: newFile1
-                        );
+                        // B: cambió nombre: renombrá archivo físico y URL
+                        var (returnedName, returnedUrl) = await ApiImageUploader.RenameAsync(oldName1, newFile1);
                         urlImagen1Actual = returnedUrl;
                         nombre_foto_uno = Path.GetFileNameWithoutExtension(returnedName);
                     }
                     else
                     {
+                        // C: no cambió nada
                         urlImagen1Actual = perfume.imagen1_URL;
                         nombre_foto_uno = string.IsNullOrWhiteSpace(perfume.imagen1) ? newStem1 : perfume.imagen1;
                     }
                 }
 
                 // ------------ IMAGEN 2 ------------
-                string oldName2 = FileNameFromUrl(perfume.imagen2_URL);
+                string oldName2 = FileNameFromUrl(perfume.imagen2_URL) ?? (string.IsNullOrWhiteSpace(perfume.imagen2) ? null : perfume.imagen2 + ".jpg"); ;
                 string oldStem2 = string.IsNullOrWhiteSpace(perfume.imagen2)
                                     ? NombreSinExtFromUrl(perfume.imagen2_URL)
                                     : perfume.imagen2;
@@ -573,36 +569,35 @@ namespace Eterea_Parfums_Desktop
                                                               forceNewRandom: nombreCambio2);
                 string newFile2 = newStem2 + ".jpg";
 
-                if (imagen2 != null)
+                if (imagen2 != null) // CASO A: subió archivo nuevo
                 {
-                    string temp2 = GuardarComoJpegTemporal(imagen2, newFile2);
+                    var temp2 = GuardarComoJpegTemporal(imagen2, newFile2);
                     try
                     {
-                        var r2 = await ApiImageUploader.ReplaceAsync(
+                        var r = await ApiImageUploader.ReplaceAsync(
                             localFilePath: temp2,
-                            newNameOnServer: newFile2,
                             oldNameOnServerOrNull: oldName2,
+                            newNameOnServer: newFile2,
                             _: true
                         );
-                        urlImagen2Actual = r2.url;
+                        urlImagen2Actual = r.url;
                         nombre_foto_dos = newStem2;
                     }
-                    finally { try { System.IO.File.Delete(temp2); } catch { } }
+                    finally { try { File.Delete(temp2); } catch { } }
                 }
-                else
+                else // CASO B/C: no subió archivo
                 {
                     if (!string.IsNullOrWhiteSpace(oldName2) &&
                         !string.Equals(oldStem2, newStem2, StringComparison.OrdinalIgnoreCase))
                     {
-                        var (returnedName, returnedUrl) = await ApiImageUploader.RenameAsync(
-                            oldNameOnServer: oldName2,
-                            newNameOnServer: newFile2
-                        );
+                        // B: cambió nombre: renombrá archivo físico y URL
+                        var (returnedName, returnedUrl) = await ApiImageUploader.RenameAsync(oldName2, newFile2);
                         urlImagen2Actual = returnedUrl;
                         nombre_foto_dos = Path.GetFileNameWithoutExtension(returnedName);
                     }
                     else
                     {
+                        // C: no cambió nada
                         urlImagen2Actual = perfume.imagen2_URL;
                         nombre_foto_dos = string.IsNullOrWhiteSpace(perfume.imagen2) ? newStem2 : perfume.imagen2;
                     }
