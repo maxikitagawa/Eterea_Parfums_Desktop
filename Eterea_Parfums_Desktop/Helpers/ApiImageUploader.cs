@@ -1,6 +1,4 @@
-﻿using Eterea_Parfums_Desktop.DTOs;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Configuration;
 using System.Diagnostics;
 using System.Drawing;
@@ -10,10 +8,18 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+
+public sealed class UploadImageResult
+{
+    public string fileName { get; set; } // ej: "banner-black-friday.jpg"
+    public string url { get; set; }      // ej: "https://.../imagenes/banner-black-friday.jpg"
+    public string api { get; set; }      // ej: "https://.../api/imagenes/banner-black-friday.jpg"
+}
 
 public static class ApiImageUploader
 {
-    // HttpClient compartido (recomendado). Las cabeceras sensibles se ponen por-request.
+    // HttpClient único (recomendado)
     private static readonly HttpClient _http = new HttpClient
     {
         Timeout = TimeSpan.FromSeconds(120)
@@ -30,30 +36,36 @@ public static class ApiImageUploader
         return baseUrl;
     }
 
-    private static string GetUploadPath() => ConfigurationManager.AppSettings["ApiUploadPath"] ?? "/api/imagenes/upload";
-    private static string GetReplacePath() => ConfigurationManager.AppSettings["ApiReplacePath"] ?? "/api/imagenes/replace";
-    private static string GetRenamePath() => ConfigurationManager.AppSettings["ApiRenamePath"] ?? "/api/imagenes/rename";
+    private static string GetUploadPath() { return ConfigurationManager.AppSettings["ApiUploadPath"] ?? "/api/imagenes/upload"; }
+    private static string GetReplacePath() { return ConfigurationManager.AppSettings["ApiReplacePath"] ?? "/api/imagenes/replace"; }
+    private static string GetRenamePath() { return ConfigurationManager.AppSettings["ApiRenamePath"] ?? "/api/imagenes/rename"; }
 
     private static void ApplyApiKey(HttpRequestMessage req)
     {
         var apiKeyHdr = ConfigurationManager.AppSettings["ApiKeyHeaderName"];
         var apiKeyVal = ConfigurationManager.AppSettings["ApiKeyValue"];
         if (!string.IsNullOrWhiteSpace(apiKeyHdr) && !string.IsNullOrWhiteSpace(apiKeyVal))
+        {
+            // TryAddWithoutValidation para evitar problemas con caracteres raros
             req.Headers.TryAddWithoutValidation(apiKeyHdr, apiKeyVal);
+        }
     }
 
     private static string ExtractFileNameFromUrl(string publicUrl)
     {
+        // Robusto y compatible con C# 7.3
         var uri = new Uri(publicUrl, UriKind.Absolute);
-        return Path.GetFileName(uri.LocalPath);
+        var path = uri.LocalPath; // ej: "/imagenes/banner-black-friday.jpg"
+        var name = Path.GetFileName(path); // ej: "banner-black-friday.jpg"
+        return name;
     }
 
     // =========================
     // SUBIR (simple)
     // POST /api/imagenes/upload
     // multipart:
-    //   file   = (archivo)
-    //   newName (opcional) => nombre final deseado
+    //   file    = (archivo)
+    //   newName = nombre final deseado (opcional)
     // =========================
     public static async Task<UploadImageResult> UploadAsync(string localFilePath, string desiredFileName)
     {
@@ -71,12 +83,13 @@ public static class ApiImageUploader
             var originalName = Path.GetFileName(localFilePath);
             form.Add(fileContent, "file", originalName);
 
-            // Importante: la API espera "newName" (no "fileName")
+            // La API espera el campo "newName"
             if (!string.IsNullOrWhiteSpace(desiredFileName))
                 form.Add(new StringContent(desiredFileName), "newName");
 
-            using (var req = new HttpRequestMessage(HttpMethod.Post, uploadUri) { Content = form })
+            using (var req = new HttpRequestMessage(HttpMethod.Post, uploadUri))
             {
+                req.Content = form;
                 ApplyApiKey(req);
 
                 var resp = await _http.SendAsync(req);
@@ -95,14 +108,15 @@ public static class ApiImageUploader
     }
 
     // =========================
-    // REEMPLAZAR (sube nueva y borra vieja)
+    // REEMPLAZAR (sube nueva y borra vieja si corresponde)
     // POST /api/imagenes/replace
     // multipart:
-    //   file    = (archivo nuevo)  [requerido]
-    //   oldName = nombre viejo     [opcional, si se envía y ≠ newName => se borra]
-    //   newName = nombre final     [opcional; si no, se genera GUID.ext]
+    //   file    = (archivo nuevo)        [requerido]
+    //   oldName = "vieja.jpg"            [opcional; si se envía y != newName => se borra]
+    //   newName = "nueva.jpg"            [opcional; si se omite, server pone GUID.ext]
     // =========================
-    public static async Task<UploadImageResult> ReplaceAsync(string localFilePath, string newNameOnServer, string oldNameOnServerOrNull)
+    // Firma clara: (localPath, oldName, newName)
+    public static async Task<UploadImageResult> ReplaceAsync(string localFilePath, string oldNameOnServerOrNull, string newNameOnServerOrNull)
     {
         if (!File.Exists(localFilePath))
             throw new FileNotFoundException("No se encontró el archivo a subir.", localFilePath);
@@ -121,11 +135,12 @@ public static class ApiImageUploader
             if (!string.IsNullOrWhiteSpace(oldNameOnServerOrNull))
                 form.Add(new StringContent(oldNameOnServerOrNull), "oldName");
 
-            if (!string.IsNullOrWhiteSpace(newNameOnServer))
-                form.Add(new StringContent(newNameOnServer), "newName");
+            if (!string.IsNullOrWhiteSpace(newNameOnServerOrNull))
+                form.Add(new StringContent(newNameOnServerOrNull), "newName");
 
-            using (var req = new HttpRequestMessage(HttpMethod.Post, replaceUri) { Content = form })
+            using (var req = new HttpRequestMessage(HttpMethod.Post, replaceUri))
             {
+                req.Content = form;
                 ApplyApiKey(req);
 
                 var resp = await _http.SendAsync(req);
@@ -143,6 +158,13 @@ public static class ApiImageUploader
         }
     }
 
+    // (Overload opcional por si te resulta más cómodo el orden: localPath, newName, oldName)
+    public static Task<UploadImageResult> ReplaceAsync(string localFilePath, string newNameOnServer, string oldNameOnServerOrNull, bool overload)
+    {
+        // 'overload' no se usa; es para diferenciar firma.
+        return ReplaceAsync(localFilePath, oldNameOnServerOrNull, newNameOnServer);
+    }
+
     // =========================
     // RENOMBRAR (sin subir archivo)
     // POST /api/imagenes/rename?oldName=...&newName=...
@@ -153,7 +175,11 @@ public static class ApiImageUploader
         if (string.IsNullOrWhiteSpace(newNameOnServer)) throw new ArgumentException("newName requerido.", nameof(newNameOnServer));
 
         var baseUrl = GetBaseUrl();
-        var renameUrl = $"{baseUrl}{GetRenamePath()}?oldName={Uri.EscapeDataString(oldNameOnServer)}&newName={Uri.EscapeDataString(newNameOnServer)}";
+        var renameUrl = string.Concat(
+            baseUrl, GetRenamePath(),
+            "?oldName=", Uri.EscapeDataString(oldNameOnServer),
+            "&newName=", Uri.EscapeDataString(newNameOnServer)
+        );
 
         using (var req = new HttpRequestMessage(HttpMethod.Post, renameUrl))
         {
@@ -166,12 +192,13 @@ public static class ApiImageUploader
                 throw new InvalidOperationException($"Error {resp.StatusCode} renombrando imagen: {body}");
 
             // La API devuelve { oldName, newName, url, api }
-            dynamic r = JsonConvert.DeserializeObject(body);
-            string returnedName = r?.newName ?? newNameOnServer;
-            string returnedUrl = r?.url;
+            var r = JsonConvert.DeserializeObject<dynamic>(body);
+            string returnedName = r != null && r.newName != null ? (string)r.newName : newNameOnServer;
+            string returnedUrl = r != null && r.url != null ? (string)r.url : null;
 
+            // Fallback por compatibilidad (si la API no incluyera url)
             if (string.IsNullOrWhiteSpace(returnedUrl))
-                returnedUrl = $"{baseUrl}/Uploads/{returnedName}";
+                returnedUrl = baseUrl + "/imagenes/" + returnedName;
 
             return (returnedName, returnedUrl);
         }
@@ -187,7 +214,7 @@ public static class ApiImageUploader
             throw new ArgumentException("fileName requerido (con extensión).", nameof(fileName));
 
         var baseUrl = GetBaseUrl();
-        var uri = $"{baseUrl}/api/imagenes/{Uri.EscapeDataString(fileName)}";
+        var uri = baseUrl + "/api/imagenes/" + Uri.EscapeDataString(fileName);
 
         using (var req = new HttpRequestMessage(HttpMethod.Delete, uri))
         {
@@ -196,11 +223,15 @@ public static class ApiImageUploader
             using (var resp = await _http.SendAsync(req))
             {
                 // 204 NoContent = ok; 404 NotFound = ya no existe; otras => error
-                if (resp.StatusCode == HttpStatusCode.NoContent || resp.StatusCode == HttpStatusCode.NotFound || resp.IsSuccessStatusCode)
+                if (resp.StatusCode == HttpStatusCode.NoContent ||
+                    resp.StatusCode == HttpStatusCode.NotFound ||
+                    resp.IsSuccessStatusCode)
+                {
                     return true;
+                }
 
                 var body = await resp.Content.ReadAsStringAsync();
-                throw new Exception($"DeleteAsync falló ({(int)resp.StatusCode}): {body}");
+                throw new Exception("DeleteAsync falló (" + (int)resp.StatusCode + "): " + body);
             }
         }
     }
@@ -214,7 +245,7 @@ public static class ApiImageUploader
             throw new ArgumentException("publicUrl requerido.", nameof(publicUrl));
 
         var fileName = ExtractFileNameFromUrl(publicUrl);
-        if (string.IsNullOrWhiteSpace(fileName) || fileName == "/" || fileName.Contains("?"))
+        if (string.IsNullOrWhiteSpace(fileName) || fileName == "/" || fileName.IndexOf('?') >= 0)
             throw new Exception("No se pudo inferir el nombre de archivo desde la URL.");
 
         return await DeleteAsync(fileName);
@@ -227,7 +258,6 @@ public static class ApiImageUploader
     {
         try
         {
-            // opcional: setear User-Agent
             if (!_http.DefaultRequestHeaders.UserAgent.Any())
                 _http.DefaultRequestHeaders.UserAgent.ParseAdd("EtereaDesktop/1.0");
 
@@ -236,20 +266,24 @@ public static class ApiImageUploader
                 if (!resp.IsSuccessStatusCode)
                 {
                     var body = await resp.Content.ReadAsStringAsync();
-                    Debug.WriteLine($"GET {url} -> {(int)resp.StatusCode} {resp.StatusCode}. Body: {body}");
+                    Debug.WriteLine("GET " + url + " -> " + (int)resp.StatusCode + " " + resp.StatusCode + ". Body: " + body);
                     return Eterea_Parfums_Desktop.Properties.Resources.sinImagen;
                 }
 
                 var bytes = await resp.Content.ReadAsByteArrayAsync();
                 using (var ms = new MemoryStream(bytes))
                 {
-                    return Image.FromStream(ms);
+                    // Clon a Bitmap para que no quede atado al stream
+                    using (var img = Image.FromStream(ms))
+                    {
+                        return new Bitmap(img);
+                    }
                 }
             }
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Excepción GET {url}: {ex}");
+            Debug.WriteLine("Excepción GET " + url + ": " + ex);
             return Eterea_Parfums_Desktop.Properties.Resources.sinImagen;
         }
     }

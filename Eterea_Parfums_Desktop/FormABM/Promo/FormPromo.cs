@@ -1735,95 +1735,80 @@ namespace Eterea_Parfums_Desktop
         {
             if (!ConfirmarEdicion()) return false;
 
-            // Obtener promoción actual desde BD
             var promoActual = PromoControlador.obtenerPorId(idPromo);
-            if (promoActual == null)
-            {
-                MessageBox.Show("No se encontró la promoción en la base de datos.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return false;
-            }
+            var bannerAnterior = promoActual.banner;       // ej. "banner-black-friday" (stem)
+            var urlAnterior = promoActual.imagen_URL;   // ej. https://.../imagenes/banner-black-friday.jpg
 
-            string bannerAnterior = promoActual.banner;        // ej. "banner-black-friday"
-            string urlAnterior = promoActual.imagen_URL;       // ej. https://.../imagenes/banner-black-friday.jpg
             string nombreNuevo = txt_nomb_promo.Text.Trim();
+            string nuevoStem = AsignarNombreImagenHelper.BuildPromoFileStem(nombreNuevo); // ej. "banner-nuevo-slug"
+            string oldFile = bannerAnterior + ".jpg";
+            string newFile = nuevoStem + ".jpg";
 
-            bool cambioNombre = !string.Equals(promoActual.nombre?.Trim(), nombreNuevo, StringComparison.OrdinalIgnoreCase);
-
-            string nuevoStem = bannerAnterior;
-            string nuevaUrl = urlAnterior;
+            string nombreBannerFinal = bannerAnterior; // por defecto
+            string urlFinal = urlAnterior;
 
             try
             {
-                // CASO 1: Imagen NUEVA seleccionada
+                // CASO A: se subió NUEVA imagen -> REPLACE (guarda nueva y borra vieja si corresponde)
                 if (nuevaImagenCargada && pictBox_banner.Image != null)
                 {
-                    try { await ApiImageUploader.DeleteAsync(bannerAnterior + ".jpg"); } catch { }
+                    // guardo la imagen del picturebox a un temp
+                    string temp = Path.Combine(Path.GetTempPath(), newFile);
+                    using (var bmp = new Bitmap(pictBox_banner.Image))
+                        bmp.Save(temp, System.Drawing.Imaging.ImageFormat.Jpeg);
 
-                    var upload = await SubirBannerPromoAsync(pictBox_banner.Image, nombreNuevo);
-                    if (!upload.ok)
+                    try
                     {
-                        MessageBox.Show(upload.error, "Error al subir imagen", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return false;
+                        var res = await ApiImageUploader.ReplaceAsync(temp, oldFile, newFile);
+                        nombreBannerFinal = Path.GetFileNameWithoutExtension(res.fileName); // debería ser nuevoStem
+                        urlFinal = res.url;
                     }
-
-                    nuevoStem = upload.stem;
-                    nuevaUrl = upload.publicUrl;
+                    finally { try { File.Delete(temp); } catch { } }
                 }
-                // CASO 2: Mismo banner pero cambio de nombre => renombrar en servidor
-                else if (cambioNombre)
+                // CASO B: NO se subió imagen nueva, pero cambió SOLO el NOMBRE -> RENAME (mueve archivo, desaparece el viejo)
+                else if (!string.Equals(bannerAnterior, nuevoStem, StringComparison.Ordinal))
                 {
-                    if (pictBox_banner.Image == null)
-                    {
-                        MessageBox.Show("No hay imagen en el banner para re-subir con el nuevo nombre.", "Atención", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return false;
-                    }
-
-                    var upload = await SubirBannerPromoAsync(pictBox_banner.Image, nombreNuevo);
-                    if (!upload.ok)
-                    {
-                        MessageBox.Show(upload.error, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return false;
-                    }
-
-                    try { await ApiImageUploader.DeleteAsync(bannerAnterior + ".jpg"); } catch { }
-
-                    nuevoStem = upload.stem;
-                    nuevaUrl = upload.publicUrl;
+                    var res = await ApiImageUploader.RenameAsync(oldFile, newFile);
+                    nombreBannerFinal = Path.GetFileNameWithoutExtension(res.fileName ?? newFile);
+                    urlFinal = res.url;
                 }
-                // CASO 3: Ni imagen nueva ni cambio de nombre -> se conserva la anterior.
+                // CASO C: ni imagen nueva ni cambio de nombre -> nada que tocar
+                else
+                {
+                    nombreBannerFinal = bannerAnterior;
+                    urlFinal = urlAnterior;
+                }
+
+                // Actualizo en BD (nombre, fechas, activo, desc, banner, url, y perfumes)
+                var seleccionTipoPromo = (KeyValuePair<int, string>)combo_tipo_promo.SelectedItem;
+                var promoEditada = new Promocion(
+                    idPromo,
+                    nombreNuevo,
+                    dateTime_inicio_promo.Value,
+                    dateTime_fin_promo.Value,
+                    seleccionTipoPromo.Key,
+                    (combo_activo_promo.SelectedIndex == 0),
+                    txt_descripcion_promo.Text.Trim(),
+                    nombreBannerFinal,  // <- stem final
+                    urlFinal            // <- url pública final
+                );
+
+                if (PromoControlador.editarPromoYRelaciones(promoEditada, ObtenerIdsPerfumesEnPromo()))
+                {
+                    this.DialogResult = DialogResult.OK;
+                    return true;
+                }
+
+                MessageBox.Show("No se pudo actualizar la promoción en BD.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error al actualizar imagen: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Error al editar la promoción: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }
-
-            // Armar objeto actualizado
-            KeyValuePair<int, string> tipoSel = (KeyValuePair<int, string>)combo_tipo_promo.SelectedItem;
-            var promoEditada = new Promocion(
-                idPromo,
-                nombreNuevo,
-                dateTime_inicio_promo.Value,
-                dateTime_fin_promo.Value,
-                tipoSel.Key,
-                (combo_activo_promo.SelectedIndex == 0),
-                txt_descripcion_promo.Text.Trim(),
-                nuevoStem,
-                nuevaUrl
-            );
-
-            // Guardar en BD
-            if (PromoControlador.editarPromoYRelaciones(promoEditada, ObtenerIdsPerfumesEnPromo()))
-            {
-                MessageBox.Show("Promoción actualizada correctamente.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                this.DialogResult = DialogResult.OK;
-                await CargarImagenPromoPreferUrlAsync(nuevaUrl, nuevoStem);
-                return true;
-            }
-
-            MessageBox.Show("No se pudo actualizar la promoción.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return false;
         }
+
 
 
 
