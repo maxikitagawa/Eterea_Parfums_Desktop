@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -92,12 +93,18 @@ namespace Eterea_Parfums_Desktop
 
         private void filtrar()
         {
-            List<Nota> notas = NotaControlador.getAll();
-            List<Nota> notas_filtradas;
-            if (filtro != null)
+            List<Nota> notas = NotaControlador.getAll() ?? new List<Nota>();
+
+            if (!string.IsNullOrWhiteSpace(filtro))
             {
-                // Filtrar las notas según el nombre
-                notas_filtradas = notas.Where(x => x.nombre != null && x.nombre.ToLower().StartsWith(filtro)).ToList();
+                var cmp = CultureInfo.CurrentCulture.CompareInfo;
+                string pref = filtro.Trim();
+
+                var notas_filtradas = notas
+                    .Where(x => !string.IsNullOrEmpty(x.nombre) &&
+                                cmp.IsPrefix(x.nombre, pref,
+                                    CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace))
+                    .ToList();
 
                 if (notas_filtradas.Count > 0)
                 {
