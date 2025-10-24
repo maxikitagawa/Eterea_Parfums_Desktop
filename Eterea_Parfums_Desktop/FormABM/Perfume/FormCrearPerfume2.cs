@@ -47,7 +47,7 @@ namespace Eterea_Parfums_Desktop
             lbl_error_seleccion_nota.Visible = false;
 
             this.Load += new System.EventHandler(this.FormCrearPerfume2_Load);
-            checkedListBoxAroma.ItemCheck += checkedListBoxAroma_ItemCheck;
+            //checkedListBoxAroma.ItemCheck += checkedListBoxAroma_ItemCheck;
         }
 
         private void cargarTipoDeAromas()
@@ -233,10 +233,13 @@ namespace Eterea_Parfums_Desktop
                     notas_con_tipo_de_nota.Add(notaConTipoDeNota);
                     notas_del_perfume.Add(notasDelPerfume);
                     //uncheckear el checkedlistbox
-                    checkedListBoxNota.SetItemChecked(checkedListBoxNota.SelectedIndex, false);
+                    //checkedListBoxNota.SetItemChecked(checkedListBoxNota.SelectedIndex, false);
                     //Limpiar el textbox de la nota
                     txt_nota.Clear();
                     lbl_nota.Text = "Nota";
+
+                    checkedListBoxNota.ClearSelected();
+
                     cargarDataGridViewNotasDePerfume();
                 }
 
@@ -304,30 +307,31 @@ namespace Eterea_Parfums_Desktop
             perfumesUC.cargarPerfumes();
 
         }
-        
+
         private void checkedListBoxNota_ItemCheck(object sender, ItemCheckEventArgs e)
         {
+            // Seguridad: índice válido
+            if (e.Index < 0) return;
+
+            // 1) Forzar selección única (destildar todos menos el clickeado)
+            for (int i = 0; i < checkedListBoxNota.Items.Count; i++)
+            {
+                if (i != e.Index && checkedListBoxNota.GetItemChecked(i))
+                    checkedListBoxNota.SetItemChecked(i, false);
+            }
+
+            // 2) Actualizar etiqueta usando e.Index/e.NewValue (sin SelectedItem)
+            // Ojo: dentro del handler el estado aún no cambió; si querés el estado final, usá BeginInvoke
             this.BeginInvoke(new Action(() =>
             {
-                // Verifica si hay al menos un elemento marcado
-                if (checkedListBoxNota.CheckedItems.Count == 0)
-                {
-                    lbl_tipo_de_nota.Text = "";
-                }
-                else
-                {
-                    // Desmarcar todos los elementos antes de marcar el nuevo
-                    for (int i = 0; i < checkedListBoxNota.Items.Count; i++)
-                    {
-                        if (i != checkedListBoxNota.SelectedIndex) // Evita desmarcar el que acaba de ser seleccionado
-                        {
-                            checkedListBoxNota.SetItemChecked(i, false);
-                        }
-                    }
-                    // Obtener el último elemento marcado
-                    string ultimoMarcado = checkedListBoxNota.SelectedItem.ToString();
-                    lbl_tipo_de_nota.Text = ultimoMarcado;
-                }
+                // Después del Invoke, el estado ya se aplicó
+                bool quedoChequeado = checkedListBoxNota.GetItemChecked(e.Index);
+                lbl_tipo_de_nota.Text = quedoChequeado
+                    ? checkedListBoxNota.Items[e.Index].ToString()
+                    : "";
+
+                // 3) Sacar el resaltado azul
+                checkedListBoxNota.ClearSelected();
             }));
         }
 
@@ -382,7 +386,7 @@ namespace Eterea_Parfums_Desktop
 
         //verificar ********** rayooo
 
-        private void checkedListBoxAroma_ItemCheck(object sender, ItemCheckEventArgs e)
+        /*private void checkedListBoxAroma_ItemCheck(object sender, ItemCheckEventArgs e)
         {
             // Espera hasta que se complete el evento para actualizar el control
             this.BeginInvoke((MethodInvoker)delegate
@@ -401,7 +405,41 @@ namespace Eterea_Parfums_Desktop
                     }
                 }
             });
+        }*/
+
+        private void CheckedListBox_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            var clb = (CheckedListBox)sender;
+
+            // Evitar índices fuera de rango cuando la lista está vacía o refrescando
+            if (e.Index < 0 || e.Index >= clb.Items.Count)
+                return;
+
+            // Determinar si el ítem está chequeado
+            bool isChecked = clb.GetItemChecked(e.Index);
+
+            // Elegir colores (ignoramos el estado "Selected" para NO usar el azul)
+            Color backgroundColor = isChecked
+                ? Color.FromArgb(232, 186, 197)   // fondo personalizado si está tildado
+                : Color.White;                    // fondo normal si no está tildado
+
+            Color textColor = isChecked ? Color.White : Color.Black;
+
+            // Pintar fondo y texto
+            using (var bg = new SolidBrush(backgroundColor))
+            using (var fg = new SolidBrush(textColor))
+            {
+                e.Graphics.FillRectangle(bg, e.Bounds);
+
+                // Texto del ítem
+                string text = clb.Items[e.Index].ToString();
+                e.Graphics.DrawString(text, e.Font, fg, e.Bounds);
+            }
+
+            // Si no querés recuadro de foco, comentá la línea de abajo
+            // e.DrawFocusRectangle();
         }
+
 
         //Verificar rayooo
         private void checkedListBoxAroma_DrawItem(object sender, DrawItemEventArgs e)
@@ -440,8 +478,29 @@ namespace Eterea_Parfums_Desktop
         // Configuración del CheckedListBox
         private void FormCrearPerfume2_Load(object sender, EventArgs e)
         {
+            // Aroma
             checkedListBoxAroma.DrawMode = DrawMode.OwnerDrawFixed;
-            checkedListBoxAroma.DrawItem += checkedListBoxAroma_DrawItem;
+            checkedListBoxAroma.DrawItem -= CheckedListBox_DrawItem;
+            checkedListBoxAroma.DrawItem += CheckedListBox_DrawItem;
+
+            // Nota
+            checkedListBoxNota.DrawMode = DrawMode.OwnerDrawFixed;
+            checkedListBoxNota.DrawItem -= CheckedListBox_DrawItem;
+            checkedListBoxNota.DrawItem += CheckedListBox_DrawItem;
+
+            // --- Que el tilde se aplique al hacer click ---
+            checkedListBoxAroma.CheckOnClick = true;
+            checkedListBoxNota.CheckOnClick = true;
+
+            // --- Limpiar la selección apenas cambie ---
+            checkedListBoxAroma.SelectedIndexChanged += (s, ev) => checkedListBoxAroma.ClearSelected();
+            checkedListBoxNota.SelectedIndexChanged += (s, ev) => checkedListBoxNota.ClearSelected();
+
+            // (Opcional) también limpiar por teclado y mouse para ser 100% agresivos
+            checkedListBoxAroma.MouseUp += (s, ev) => checkedListBoxAroma.ClearSelected();
+            checkedListBoxNota.MouseUp += (s, ev) => checkedListBoxNota.ClearSelected();
+            checkedListBoxAroma.KeyUp += (s, ev) => checkedListBoxAroma.ClearSelected();
+            checkedListBoxNota.KeyUp += (s, ev) => checkedListBoxNota.ClearSelected();
         }
 
 
