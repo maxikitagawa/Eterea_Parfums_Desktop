@@ -258,11 +258,10 @@ namespace Eterea_Parfums_Desktop
             notas_con_tipo_de_nota.Add(notaConTipo);
             notas_del_perfume.Add(notasDelPerfume);
 
-            // desmarcar y limpiar
-            if (checkedListBoxNota.SelectedIndex >= 0)
-                checkedListBoxNota.SetItemChecked(checkedListBoxNota.SelectedIndex, false);
+            // limpiar sin perder el tilde del tipo
             txt_nota.Clear();
             lbl_nota.Text = "Nota";
+            checkedListBoxNota.ClearSelected(); // solo quita la selección visual
 
             cargarDataGridViewNotasDePerfume(notas_con_tipo_de_nota);
         }
@@ -345,25 +344,28 @@ namespace Eterea_Parfums_Desktop
         // ==================== UI/Handlers ====================
         private void checkedListBoxNota_ItemCheck(object sender, ItemCheckEventArgs e)
         {
+            // Seguridad
+            if (e.Index < 0) return;
+
+            // 1) Forzar selección única (destildar todos menos el clickeado)
+            for (int i = 0; i < checkedListBoxNota.Items.Count; i++)
+            {
+                if (i != e.Index && checkedListBoxNota.GetItemChecked(i))
+                    checkedListBoxNota.SetItemChecked(i, false);
+            }
+
+            // 2) Actualizar etiqueta con el estado final y quitar resaltado azul
             this.BeginInvoke(new Action(() =>
             {
-                if (checkedListBoxNota.CheckedItems.Count == 0)
-                {
-                    lbl_tipo_de_nota.Text = "";
-                }
-                else
-                {
-                    for (int i = 0; i < checkedListBoxNota.Items.Count; i++)
-                    {
-                        if (i != checkedListBoxNota.SelectedIndex)
-                            checkedListBoxNota.SetItemChecked(i, false);
-                    }
+                bool quedoChequeado = checkedListBoxNota.GetItemChecked(e.Index);
+                lbl_tipo_de_nota.Text = quedoChequeado
+                    ? checkedListBoxNota.Items[e.Index].ToString()
+                    : "";
 
-                    if (checkedListBoxNota.SelectedItem != null)
-                        lbl_tipo_de_nota.Text = checkedListBoxNota.SelectedItem.ToString();
-                }
+                checkedListBoxNota.ClearSelected(); // sin azul
             }));
         }
+
 
         private void btn_x_cerrar_Click(object sender, EventArgs e)
         {
@@ -421,36 +423,56 @@ namespace Eterea_Parfums_Desktop
             // (opcional) feedback visual
         }
 
-        private void checkedListBoxAroma_DrawItem(object sender, DrawItemEventArgs e)
+        private void CheckedListBox_DrawItem(object sender, DrawItemEventArgs e)
         {
-            e.DrawBackground();
+            var clb = (CheckedListBox)sender;
 
-            string itemText = checkedListBoxAroma.Items[e.Index].ToString();
-            bool isChecked = checkedListBoxAroma.GetItemChecked(e.Index);
+            if (e.Index < 0 || e.Index >= clb.Items.Count)
+                return;
 
-            Color textColor = Color.Black;
-            Color backgroundColor = Color.White;
+            bool isChecked = clb.GetItemChecked(e.Index);
 
-            if ((e.State & DrawItemState.Selected) == DrawItemState.Selected || isChecked)
+            // Ignoramos "Selected" para NO usar el azul, pintamos según esté tildado
+            Color backgroundColor = isChecked ? Color.FromArgb(232, 186, 197) : Color.White;
+            Color textColor = isChecked ? Color.White : Color.Black;
+
+            using (var bg = new SolidBrush(backgroundColor))
+            using (var fg = new SolidBrush(textColor))
             {
-                backgroundColor = Color.FromArgb(232, 186, 197);
-                textColor = Color.White;
+                e.Graphics.FillRectangle(bg, e.Bounds);
+                string text = clb.Items[e.Index].ToString();
+                e.Graphics.DrawString(text, e.Font, fg, e.Bounds);
             }
 
-            using (SolidBrush backgroundBrush = new SolidBrush(backgroundColor))
-            using (SolidBrush textBrush = new SolidBrush(textColor))
-            {
-                e.Graphics.FillRectangle(backgroundBrush, e.Bounds);
-                e.Graphics.DrawString(itemText, e.Font, textBrush, e.Bounds);
-            }
-
-            e.DrawFocusRectangle();
+            
         }
+
 
         private void FormEditarPerfume2_Load(object sender, EventArgs e)
         {
+            // OwnerDraw en ambos
             checkedListBoxAroma.DrawMode = DrawMode.OwnerDrawFixed;
-            checkedListBoxAroma.DrawItem += checkedListBoxAroma_DrawItem;
+            checkedListBoxAroma.DrawItem -= CheckedListBox_DrawItem;
+            checkedListBoxAroma.DrawItem += CheckedListBox_DrawItem;
+
+            checkedListBoxNota.DrawMode = DrawMode.OwnerDrawFixed;
+            checkedListBoxNota.DrawItem -= CheckedListBox_DrawItem;
+            checkedListBoxNota.DrawItem += CheckedListBox_DrawItem;
+
+            // Tilde al hacer click
+            checkedListBoxAroma.CheckOnClick = true;
+            checkedListBoxNota.CheckOnClick = true;
+
+            // Limpiar selección para que no quede azul
+            checkedListBoxAroma.SelectedIndexChanged += (s, ev) => checkedListBoxAroma.ClearSelected();
+            checkedListBoxNota.SelectedIndexChanged += (s, ev) => checkedListBoxNota.ClearSelected();
+
+            // Blindaje extra (mouse/teclado)
+            checkedListBoxAroma.MouseUp += (s, ev) => checkedListBoxAroma.ClearSelected();
+            checkedListBoxNota.MouseUp += (s, ev) => checkedListBoxNota.ClearSelected();
+            checkedListBoxAroma.KeyUp += (s, ev) => checkedListBoxAroma.ClearSelected();
+            checkedListBoxNota.KeyUp += (s, ev) => checkedListBoxNota.ClearSelected();
         }
+    
     }
 }
