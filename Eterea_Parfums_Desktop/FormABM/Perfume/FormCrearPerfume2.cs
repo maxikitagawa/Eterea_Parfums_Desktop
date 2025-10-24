@@ -1,4 +1,5 @@
 ﻿using Eterea_Parfums_Desktop.Controladores;
+using Eterea_Parfums_Desktop.Helpers;
 using Eterea_Parfums_Desktop.ControlesDeUsuario;
 using Eterea_Parfums_Desktop.Modelos;
 using System;
@@ -93,22 +94,17 @@ namespace Eterea_Parfums_Desktop
 
         private void filtrar()
         {
-            List<Nota> notas = NotaControlador.getAll() ?? new List<Nota>();
+            var notas = NotaControlador.getAll() ?? new List<Nota>();
+            string textoFiltro = txt_nota.Text;
 
-            if (!string.IsNullOrWhiteSpace(filtro))
+            if (!string.IsNullOrWhiteSpace(textoFiltro))
             {
-                var cmp = CultureInfo.CurrentCulture.CompareInfo;
-                string pref = filtro.Trim();
+                string match = NotaFiltroHelper.MejorCoincidencia(textoFiltro, notas);
 
-                var notas_filtradas = notas
-                    .Where(x => !string.IsNullOrEmpty(x.nombre) &&
-                                cmp.IsPrefix(x.nombre, pref,
-                                    CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace))
-                    .ToList();
-
-                if (notas_filtradas.Count > 0)
+                if (match != null)
                 {
-                    lbl_nota.Text = notas_filtradas.First().nombre;
+                    lbl_nota.Text = match;
+                    lbl_buscar_nota.Text = match; // si usás este label como sugerencia
                 }
                 else
                 {
@@ -121,6 +117,7 @@ namespace Eterea_Parfums_Desktop
             else
             {
                 lbl_buscar_nota.Text = "";
+                lbl_nota.Text = "Nota";
             }
         }
 
