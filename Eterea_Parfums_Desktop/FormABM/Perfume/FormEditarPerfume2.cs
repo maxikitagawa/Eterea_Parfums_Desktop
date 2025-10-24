@@ -54,12 +54,14 @@ namespace Eterea_Parfums_Desktop
         // ==================== Carga de catálogos ====================
         private void cargarTipoDeAromas()
         {
-            tipo_de_aromas = TipoDeAromaControlador.getAll();
-            if (tipo_de_aromas != null)
-            {
-                foreach (TipoDeAroma tipo_de_aroma in tipo_de_aromas)
-                    checkedListBoxAroma.Items.Add(tipo_de_aroma.nombre);
-            }
+            tipo_de_aromas = TipoDeAromaControlador.getAll() ?? new List<TipoDeAroma>();
+
+            checkedListBoxAroma.Items.Clear();
+            // Mostramos el campo 'nombre' pero guardamos el objeto completo
+            checkedListBoxAroma.DisplayMember = "nombre";
+
+            foreach (var ta in tipo_de_aromas)
+                checkedListBoxAroma.Items.Add(ta, false);
         }
 
         private void cargarTipoDeNotas()
@@ -74,20 +76,23 @@ namespace Eterea_Parfums_Desktop
 
         private void CargarDatosCheckBoxListAromas()
         {
-            var aromasDelPerfume = AromaDelPerfumeControlador.getAllByIDPerfume(perfume.id) ?? new List<AromaDelPerfume>();
-            foreach (AromaDelPerfume aromaDelPerfume in aromasDelPerfume)
-            {
-                var tipoDeAroma = TipoDeAromaControlador.getById(aromaDelPerfume.tipoDeAroma.id);
-                if (tipoDeAroma == null) continue;
+            var aromasDelPerfume = AromaDelPerfumeControlador.getAllByIDPerfume(perfume.id)
+                                   ?? new List<AromaDelPerfume>();
 
-                for (int index = 0; index < checkedListBoxAroma.Items.Count; index++)
+            // Marcamos por ID (no por texto)
+            foreach (var ap in aromasDelPerfume)
+            {
+                int idx = -1;
+                for (int i = 0; i < checkedListBoxAroma.Items.Count; i++)
                 {
-                    if (string.Equals(checkedListBoxAroma.Items[index].ToString(), tipoDeAroma.nombre, StringComparison.Ordinal))
+                    var item = checkedListBoxAroma.Items[i] as TipoDeAroma;
+                    if (item != null && item.id == ap.tipoDeAroma.id)
                     {
-                        checkedListBoxAroma.SetItemChecked(index, true);
+                        idx = i;
                         break;
                     }
                 }
+                if (idx >= 0) checkedListBoxAroma.SetItemChecked(idx, true);
             }
         }
 
@@ -287,7 +292,7 @@ namespace Eterea_Parfums_Desktop
                 PerfumeControlador.update(perfume);
 
                 // 3) Aromas: sincronización (borra los que ya no están, agrega los nuevos)
-                var marcados = checkedListBoxAroma.CheckedItems.Cast<string>().ToList();
+                var marcados = checkedListBoxAroma.CheckedItems.Cast<TipoDeAroma>().ToList();
                 var existentes = AromaDelPerfumeControlador.getAllByIDPerfume(perfume.id) ?? new List<AromaDelPerfume>();
 
                 // borrar los que no están marcados
@@ -296,14 +301,15 @@ namespace Eterea_Parfums_Desktop
                     string nombreAromaExistente = TipoDeAromaControlador.getById(aromaExistente.tipoDeAroma.id)?.nombre;
                     if (string.IsNullOrEmpty(nombreAromaExistente)) continue;
 
-                    if (!marcados.Contains(nombreAromaExistente))
-                        AromaDelPerfumeControlador.deleteBYTipoDePerfume(aromaExistente.tipoDeAroma.id);
+                    bool sigueMarcado = marcados.Any(m => m.id == aromaExistente.tipoDeAroma.id);
+                    if (!sigueMarcado)
+                        AromaDelPerfumeControlador.DeleteByPerfumeAndTipo(perfume.id, aromaExistente.tipoDeAroma.id);
                 }
 
                 // agregar los nuevos
                 foreach (var nombreAroma in marcados)
                 {
-                    var tipo = TipoDeAromaControlador.getByNombre(nombreAroma);
+                    var tipo = nombreAroma; // ya es TipoDeAroma
                     if (tipo == null) continue;
 
                     bool yaExiste = existentes.Any(a => a.tipoDeAroma.id == tipo.id);
@@ -313,7 +319,6 @@ namespace Eterea_Parfums_Desktop
                         AromaDelPerfumeControlador.create(aromaDelPerfume);
                     }
                 }
-
                 // 4) Notas: reemplazo completo (más simple y seguro)
                 NotasDelPerfumeControlador.delete(perfume.id);
                 if (notas_del_perfume != null)
@@ -423,13 +428,10 @@ namespace Eterea_Parfums_Desktop
         private void CheckedListBox_DrawItem(object sender, DrawItemEventArgs e)
         {
             var clb = (CheckedListBox)sender;
-
-            if (e.Index < 0 || e.Index >= clb.Items.Count)
-                return;
+            if (e.Index < 0 || e.Index >= clb.Items.Count) return;
 
             bool isChecked = clb.GetItemChecked(e.Index);
 
-            // Ignoramos "Selected" para NO usar el azul, pintamos según esté tildado
             Color backgroundColor = isChecked ? Color.FromArgb(232, 186, 197) : Color.White;
             Color textColor = isChecked ? Color.White : Color.Black;
 
@@ -437,13 +439,16 @@ namespace Eterea_Parfums_Desktop
             using (var fg = new SolidBrush(textColor))
             {
                 e.Graphics.FillRectangle(bg, e.Bounds);
-                string text = clb.Items[e.Index].ToString();
+
+                string text;
+                if (clb.Items[e.Index] is TipoDeAroma ta && !string.IsNullOrWhiteSpace(ta.nombre))
+                    text = ta.nombre;
+                else
+                    text = clb.Items[e.Index]?.ToString() ?? string.Empty;
+
                 e.Graphics.DrawString(text, e.Font, fg, e.Bounds);
             }
-
-            
         }
-
 
         private void FormEditarPerfume2_Load(object sender, EventArgs e)
         {

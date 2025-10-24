@@ -25,6 +25,17 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario.AdministrarStock
         public AdministrarStock_UC(int idSucursal)
         {
             InitializeComponent();
+
+            img_perfume.SizeMode = PictureBoxSizeMode.Zoom;
+            img_perfume.WaitOnLoad = false; // para LoadAsync
+            img_perfume.LoadCompleted += (s, e) =>
+            {
+                if (e.Error != null || img_perfume.Image == null)
+                {
+                    img_perfume.Image = Properties.Resources.sinImagen;
+                }
+            };
+
             this.idSucursal = idSucursal;
             
             Sucursal sucursal = SucursalControlador.getById(idSucursal);
@@ -132,9 +143,9 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario.AdministrarStock
 
 
 
-        private void txt_codigo_producto_TextChanged(object sender, EventArgs e)
+        private async void txt_codigo_producto_TextChanged(object sender, EventArgs e)
         {
-            if (limpiezaAutomatica) return;  // Salimos si es limpieza automática
+            if (limpiezaAutomatica) return;
 
             string codigoIngresado = txt_codigo_producto.Text.Trim();
 
@@ -142,7 +153,6 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario.AdministrarStock
             {
                 lbl_error_codigo.Text = "El código del producto debe tener 13 dígitos.";
                 lbl_error_codigo.Visible = true;
-
                 LimpiarCamposSinOcultarMensaje();
                 return;
             }
@@ -153,28 +163,27 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario.AdministrarStock
             {
                 lbl_error_codigo.Text = "El código ingresado es inexistente.";
                 lbl_error_codigo.Visible = true;
-
                 LimpiarCamposSinOcultarMensaje();
+                img_perfume.Image = Properties.Resources.sinImagen;
+                return;
             }
-            else
-            {
-                lbl_error_codigo.Visible = false;
 
-                txt_datos_producto.Text = perfume.nombre;
-                txt_tamaño_producto.Text = perfume.presentacion_ml + " ML";
+            lbl_error_codigo.Visible = false;
 
-                List<Stock> stocks = StockControlador.getAll();
-                int stockTotal = stocks
-                    .Where(s => s.perfume.id == perfume.id && s.sucursal.id == idSucursal)
-                    .Sum(s => s.cantidad);
+            txt_datos_producto.Text = perfume.nombre;
+            txt_tamaño_producto.Text = perfume.presentacion_ml + " ML";
 
-                txt_cantidad_actual_producto.Text = stockTotal.ToString();
+            List<Stock> stocks = StockControlador.getAll();
+            int stockTotal = stocks
+                .Where(s => s.perfume.id == perfume.id && s.sucursal.id == idSucursal)
+                .Sum(s => s.cantidad);
 
-                string rutaCompletaImagen = Program.Ruta_Base + perfume.imagen1 + ".jpg";
-                img_perfume.Image = File.Exists(rutaCompletaImagen) ? Image.FromFile(rutaCompletaImagen) : Properties.Resources.sinImagen;
-            }
+            txt_cantidad_actual_producto.Text = stockTotal.ToString();
+
+            // === NUEVO: cargar imagen desde la web/API ===
+            string url = ObtenerUrlImagenPrincipal(perfume);
+            await CargarImagenDesdeUrlAsync(url);
         }
-
 
 
         // Método auxiliar para limpiar los campos
@@ -265,6 +274,43 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario.AdministrarStock
             LimpiarCampos();
             limpiezaAutomatica = false;  // Desactivar bandera
         }
+
+        // Helpers 
+        private string ObtenerUrlImagenPrincipal(Perfume p)
+        {
+            if (!string.IsNullOrWhiteSpace(p.imagen1_URL))
+                return p.imagen1_URL.Trim();
+
+            if (!string.IsNullOrWhiteSpace(p.imagen1))
+            {
+                string baseUrl = (Program.Ruta_Web ?? "").Trim().TrimEnd('/');
+                string nombre = p.imagen1.Trim().TrimStart('/');
+                if (!System.IO.Path.HasExtension(nombre))
+                    nombre += ".jpg";
+                return $"{baseUrl}/{nombre}";
+            }
+            return null;
+        }
+
+        private async Task CargarImagenDesdeUrlAsync(string url)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(url))
+                {
+                    img_perfume.Image = Properties.Resources.sinImagen;
+                    return;
+                }
+                img_perfume.LoadAsync(url); // no bloquea la UI
+            }
+            catch
+            {
+                img_perfume.Image = Properties.Resources.sinImagen;
+            }
+        }
+
+
+
     }
 
         
