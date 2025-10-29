@@ -110,11 +110,12 @@ namespace Eterea_Parfums_Desktop
             combo_descuento.Items.Add("20");
             combo_descuento.SelectedIndex = 0;
 
-            string nombreImagen = perfumeSeleccionado.imagen1_URL.ToString();
+            CargarImagenPerfume(perfumeSeleccionado);
+            //string nombreImagen = perfumeSeleccionado.imagen1_URL.ToString();
             //string rutaCompletaImagen = Program.Ruta_Base + nombreImagen + ".jpg";
             //img_perfume.Image = Image.FromFile(rutaCompletaImagen);
-            img_perfume.SizeMode = PictureBoxSizeMode.Zoom;
-            img_perfume.ImageLocation = nombreImagen; 
+            //img_perfume.SizeMode = PictureBoxSizeMode.Zoom;
+            //img_perfume.ImageLocation = nombreImagen; 
 
             this.perfume = perfumeSeleccionado;
 
@@ -143,6 +144,78 @@ namespace Eterea_Parfums_Desktop
             ConfigurarDescuentos();
             cargarDataGridViewNotasDePerfume();
             CargarDataGridViewAromas();
+        }
+
+        private static string ObtenerRutaFallback()
+        {
+            return "https://drive.google.com/file/d/1XQJ3E1nk4AY2cdwPbQhbXndIkqQGRlP5/view?usp=drive_link";
+        }
+
+        private void CargarImagenPerfume(Perfume perfumeSeleccionado)
+        {
+            if (perfumeSeleccionado == null)
+            {
+                img_perfume.ImageLocation = ObtenerRutaFallback();
+                return;
+            }
+
+            // 1) Normalizar URL (trim + escape espacios)
+            string url = (perfumeSeleccionado.imagen1_URL ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                img_perfume.ImageLocation = ObtenerRutaFallback();
+                return;
+            }
+
+            // Escapar espacios u otros caracteres comunes
+            url = url.Replace(" ", "%20");
+
+            // 2) Si viene solo el nombre de archivo, completar con BASE_URL
+            if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase) &&
+                !System.IO.Path.IsPathRooted(url))
+            {
+                const string BASE_URL = "https://etereaparfums.com.ar/imagenes/";
+                url = BASE_URL + url.TrimStart('/');
+            }
+
+            // 3) Intento 1: usar LoadAsync (rápido y simple)
+            try
+            {
+                img_perfume.SizeMode = PictureBoxSizeMode.Zoom;
+                img_perfume.ImageLocation = url; // asigno primero
+                img_perfume.LoadAsync();         // dispara la carga
+                return;
+            }
+            catch
+            {
+                // seguimos al intento 2
+            }
+
+            // 4) Intento 2: descargar y cargar desde memoria (más tolerante)
+            try
+            {
+                using (var wc = new System.Net.WebClient())
+                {
+                    // opcional: user-agent para servers estrictos
+                    wc.Headers.Add("User-Agent", "EtereaParfumsDesktop/1.0");
+                    byte[] data = wc.DownloadData(url);
+                    using (var ms = new System.IO.MemoryStream(data))
+                    {
+                        // Importante: clonar el Image para liberar el stream
+                        using (var tmp = Image.FromStream(ms, useEmbeddedColorManagement: true, validateImageData: true))
+                        {
+                            img_perfume.Image = new Bitmap(tmp);
+                            img_perfume.SizeMode = PictureBoxSizeMode.Zoom;
+                            return;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // 5) Fallback si todo falla
+                img_perfume.ImageLocation = ObtenerRutaFallback();
+            }
         }
 
 

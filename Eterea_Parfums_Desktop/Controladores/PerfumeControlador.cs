@@ -149,48 +149,28 @@ namespace Eterea_Parfums_Desktop.Controladores
 
         public static Perfume getByID(int id)
         {
-            Perfume perfume = new Perfume();
-            string query = "select * from dbo.perfume where id = @id;";
-            SqlCommand cmd = new SqlCommand(query, DB_Controller.connection);
-            cmd.Parameters.AddWithValue("@id", id);
-            try
+            Perfume perfume = null;
+            const string query = "SELECT * FROM dbo.perfume WHERE id = @id;";
+            using (var cmd = new SqlCommand(query, DB_Controller.connection))
             {
-                DB_Controller.connection.Open();
-                SqlDataReader r = cmd.ExecuteReader();
-                while (r.Read())
+                cmd.Parameters.AddWithValue("@id", id);
+                try
                 {
-                    Marca marca = new Marca(r.GetInt32(2), null);
-                    TipoDePerfume tipo_de_perfume = new TipoDePerfume(r.GetInt32(4), null);
-                    Genero genero = new Genero(r.GetInt32(5), null);
-                    Pais pais = new Pais(r.GetInt32(7), null);
-                    perfume.id = r.GetInt32(0);
-                    perfume.codigo = r.GetString(1);
-                    perfume.marca = marca;
-                    perfume.nombre = r.GetString(3);
-                    perfume.tipo_de_perfume = tipo_de_perfume;
-                    perfume.genero = genero;
-                    perfume.presentacion_ml = r.GetInt32(6);
-                    perfume.pais = pais;
-                    perfume.spray = r.GetBoolean(8);
-                    perfume.recargable = r.GetBoolean(9);
-                    perfume.descripcion = r.GetString(10);
-                    perfume.anio_de_lanzamiento = r.GetInt32(11);
-                    perfume.precio_en_pesos = r.GetDouble(12);
-                    perfume.activo = r.GetBoolean(13);
-                    perfume.imagen1 = r.GetString(14);
-                    perfume.imagen2 = r.GetString(15);
+                    DB_Controller.connection.Open();
+                    using (var r = cmd.ExecuteReader())
+                    {
+                        if (r.Read())
+                            perfume = MapPerfume(r);
+                    }
                 }
-                r.Close();
-
-            }
-            catch (Exception e)
-            {
-
-                throw new Exception("Hay un error en la query: " + e.Message);
-            }
-            finally
-            {
-                DB_Controller.connection.Close();
+                catch (Exception e)
+                {
+                    throw new Exception("Hay un error en la query: " + e.Message);
+                }
+                finally
+                {
+                    DB_Controller.connection.Close();
+                }
             }
             return perfume;
         }
@@ -542,54 +522,31 @@ namespace Eterea_Parfums_Desktop.Controladores
 
         public static Perfume getByCodigo(string codigo)
         {
-            Perfume perfume = null; // Inicialmente null
-            string query = "select * from dbo.perfume where codigo = @codigo;";
-            SqlCommand cmd = new SqlCommand(query, DB_Controller.connection);
-            cmd.Parameters.AddWithValue("@codigo", codigo);
-            try
+            Perfume perfume = null;
+            const string query = "SELECT * FROM dbo.perfume WHERE codigo = @codigo;";
+            using (var cmd = new SqlCommand(query, DB_Controller.connection))
             {
-                DB_Controller.connection.Open();
-                SqlDataReader r = cmd.ExecuteReader();
-                if (r.Read())
+                cmd.Parameters.AddWithValue("@codigo", codigo);
+                try
                 {
-                    perfume = new Perfume();
-
-                    Marca marca = new Marca(r.GetInt32(2), null);
-                    TipoDePerfume tipo_de_perfume = new TipoDePerfume(r.GetInt32(4), null);
-                    Genero genero = new Genero(r.GetInt32(5), null);
-                    Pais pais = new Pais(r.GetInt32(7), null);
-                    perfume.id = r.GetInt32(0);
-                    perfume.codigo = r.GetString(1);
-                    perfume.marca = marca;
-                    perfume.nombre = r.GetString(3);
-                    perfume.tipo_de_perfume = tipo_de_perfume;
-                    perfume.genero = genero;
-                    perfume.presentacion_ml = r.GetInt32(6);
-                    perfume.pais = pais;
-                    perfume.spray = r.GetBoolean(8);
-                    perfume.recargable = r.GetBoolean(9);
-                    perfume.descripcion = r.GetString(10);
-                    perfume.anio_de_lanzamiento = r.GetInt32(11);
-                    perfume.precio_en_pesos = r.GetDouble(12);
-                    perfume.activo = r.GetBoolean(13);
-                    perfume.imagen1 = r.GetString(14);
-                    perfume.imagen2 = r.GetString(15);
+                    DB_Controller.connection.Open();
+                    using (var r = cmd.ExecuteReader())
+                    {
+                        if (r.Read())
+                            perfume = MapPerfume(r);
+                    }
                 }
-                r.Close();
-
-            }
-            catch (Exception e)
-            {
-
-                throw new Exception("Hay un error en la query: " + e.Message);
-            }
-            finally
-            {
-                DB_Controller.connection.Close();
+                catch (Exception e)
+                {
+                    throw new Exception("Hay un error en la query: " + e.Message);
+                }
+                finally
+                {
+                    DB_Controller.connection.Close();
+                }
             }
             return perfume;
         }
-
 
         public static List<Perfume> getPerfumesSimilares(Perfume perfume)
         {
@@ -833,7 +790,60 @@ namespace Eterea_Parfums_Desktop.Controladores
             }
         }
 
+        private static Perfume MapPerfume(SqlDataReader r)
+        {
+            // Pedimos índices por nombre (seguro ante cambios de orden)
+            int idxId = r.GetOrdinal("id");
+            int idxCodigo = r.GetOrdinal("codigo");
+            int idxMarcaId = r.GetOrdinal("marca_id");
+            int idxNombre = r.GetOrdinal("nombre");
+            int idxTipoPerfumeId = r.GetOrdinal("tipo_de_perfume_id");
+            int idxGeneroId = r.GetOrdinal("genero_id");
+            int idxPresentacionMl = r.GetOrdinal("presentacion_ml");
+            int idxPaisId = r.GetOrdinal("pais_id");
+            int idxSpray = r.GetOrdinal("spray");
+            int idxRecargable = r.GetOrdinal("recargable");
+            int idxDescripcion = r.GetOrdinal("descripcion");
+            int idxAnio = r.GetOrdinal("anio_de_lanzamiento");
+            int idxPrecio = r.GetOrdinal("precio_en_pesos");
+            int idxActivo = r.GetOrdinal("activo");
+            int idxImagen1 = r.GetOrdinal("imagen1");
+            int idxImagen2 = r.GetOrdinal("imagen2");
+            int idxFechaBaja = r.GetOrdinal("fecha_baja");     // puede ser NULL
+            int idxImagen1Url = r.GetOrdinal("imagen1_URL");    // puede ser NULL
+            int idxImagen2Url = r.GetOrdinal("imagen2_URL");    // puede ser NULL
 
+            var marca = new Marca(r.GetInt32(idxMarcaId), "");
+            var tipo = new TipoDePerfume(r.GetInt32(idxTipoPerfumeId), "");
+            var genero = new Genero(r.GetInt32(idxGeneroId), "");
+            var pais = new Pais(r.GetInt32(idxPaisId), "");
+
+            var p = new Perfume
+            {
+                id = r.GetInt32(idxId),
+                codigo = r.GetString(idxCodigo).Trim(),
+                marca = marca,
+                nombre = r.GetString(idxNombre),
+                tipo_de_perfume = tipo,
+                genero = genero,
+                presentacion_ml = r.GetInt32(idxPresentacionMl),
+                pais = pais,
+                spray = r.GetBoolean(idxSpray),
+                recargable = r.GetBoolean(idxRecargable),
+                descripcion = r.GetString(idxDescripcion),
+                anio_de_lanzamiento = r.GetInt32(idxAnio),
+                precio_en_pesos = r.GetDouble(idxPrecio),
+                activo = r.GetBoolean(idxActivo),
+                imagen1 = r.IsDBNull(idxImagen1) ? "" : r.GetString(idxImagen1).Trim(),
+                imagen2 = r.IsDBNull(idxImagen2) ? "" : r.GetString(idxImagen2).Trim(),
+                // Nuevos campos:
+                fecha_baja = r.IsDBNull(idxFechaBaja) ? (DateTime?)null : r.GetDateTime(idxFechaBaja),
+                imagen1_URL = r.IsDBNull(idxImagen1Url) ? "" : r.GetString(idxImagen1Url).Trim(),
+                imagen2_URL = r.IsDBNull(idxImagen2Url) ? "" : r.GetString(idxImagen2Url).Trim()
+            };
+
+            return p;
+        }
 
 
 

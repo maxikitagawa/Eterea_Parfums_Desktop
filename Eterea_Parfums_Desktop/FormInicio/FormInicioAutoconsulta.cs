@@ -207,54 +207,35 @@ namespace Eterea_Parfums_Desktop
         {
             if (!escaneoHabilitado || !txt_scan.Visible || !txt_scan.Enabled)
             {
-                txt_scan.Text = ""; // Limpia si el campo no debería recibir datos
+                txt_scan.Text = "";
                 return;
             }
 
-            string codigo = txt_scan.Text.Trim();
+            // ✅ Quedarse sólo con dígitos
+            string codigo = new string(txt_scan.Text.Where(char.IsDigit).ToArray());
 
-            // Si el código tiene 12 dígitos, le agrega un "0" al inicio
-            if (codigo.Length == 12)
-            {
-                codigo = "0" + codigo;
-            }
+            if (codigo.Length < 13)
+                codigo = codigo.PadLeft(13, '0');//Normalizar a 13 dígitos (EAN-13): agrega ceros a la izquierda si faltan
 
             if (string.IsNullOrEmpty(codigo))
                 return;
 
-            // Buscar el perfume por código modificado
             Perfume perfumeEncontrado = PerfumeControlador.getByCodigo(codigo);
+
             if (perfumeEncontrado != null)
             {
-                // Si el perfume existe, abrir el formulario de detalles
-                FormVerDetallePerfume detalleForm = new FormVerDetallePerfume(perfumeEncontrado);
+                var detalleForm = new FormVerDetallePerfume(perfumeEncontrado);
                 detalleForm.FormClosed += (s, args) => ResetAutoConsulta();
-
-                //FormStart formStart = Application.OpenForms["FormStart"] as FormStart;
-                //formStart?.BringToFront();
-                //formStart?.Activate();
-
-
                 ModalHelper.MostrarModalConFondoOscuro(detalleForm);
-               
-
             }
             else
             {
-                // Restablecer el escaneo
                 ResetAutoConsulta();
-
-                //Mostrar el mensaje para decidir que hacer al fallar el escaneo
-                FormCartelCodigoNoEncontrado cartel = new FormCartelCodigoNoEncontrado(this);
-                //Mostrar con fondo oscuro
+                var cartel = new FormCartelCodigoNoEncontrado(this);
                 ModalHelper.MostrarModalConFondoOscuro(cartel);
-
-              
-                
             }
         }
 
-    
         public void ResetAutoConsulta()
         {
             escaneoHabilitado = false;
