@@ -205,7 +205,8 @@ namespace Eterea_Parfums_Desktop
             combo_sucursal.Items.Clear();
             foreach (Sucursal sucursal in sucursales)
             {
-                combo_sucursal.Items.Add(sucursal.nombre.ToString());
+                if (sucursal.id != 0)              // ⬅️ filtra id 0
+                    combo_sucursal.Items.Add(sucursal.nombre);
             }
 
 
