@@ -22,6 +22,22 @@ namespace Eterea_Parfums_Desktop
         private static readonly Regex _rxClave =
             new Regex(@"^(?=.*[A-Z])(?=.*[a-zA-Z])(?=.*\d)(?=.*[!¡""#\$%&/\(\)=\?¿]).{8,}$");
 
+        //flag de proteccion
+        private bool _suspendComboEvents = false;
+
+        //tiempo para filtro por ingreso de caracteres en pais, provincia, localidad y calle
+        private Timer _debPais, _debProv, _debLoc;
+        private const int DebounceMs = 180;
+
+        // Para piso/departamento:
+        // Todo dígitos (1–3) o todo letras MAYÚSCULAS (1–3)
+        private static readonly Regex _rxPisoDpto_Permisivo = new Regex(@"^(?:\d{0,3}|[A-Z]{0,3})$");
+        private static readonly Regex _rxPisoDpto_Final = new Regex(@"^(?:\d{1,3}|[A-Z]{1,3})$");
+
+        // Último valor válido (para revertir en TextChanged)
+        private string _lastValidPiso = "";
+        private string _lastValidDepto = "";
+
         public FormCrearEmpleado()
         {
             InitializeComponent();
@@ -58,11 +74,24 @@ namespace Eterea_Parfums_Desktop
             txt_num_calle.MaxLength = 6;
             txt_num_calle.KeyPress += SoloDigitos_KeyPress;
 
-            // Piso / Dpto: alfanumérico, sin especiales, hasta 3 chars
+        
+
+            // Piso / Dpto: alfanumérico pero sin mezcla, máx 3
             txt_piso.MaxLength = 3;
             txt_departamento.MaxLength = 3;
-            txt_piso.KeyPress += SoloAlfaNumerico_KeyPress;
-            txt_departamento.KeyPress += SoloAlfaNumerico_KeyPress;
+
+            txt_piso.CharacterCasing = CharacterCasing.Upper;
+            txt_departamento.CharacterCasing = CharacterCasing.Upper;
+
+            txt_piso.KeyPress += PisoDpto_KeyPress_ModoExclusivo;
+            txt_departamento.KeyPress += PisoDpto_KeyPress_ModoExclusivo;
+
+            txt_piso.TextChanged += Piso_TextChanged_RebotarInvalido;
+            txt_departamento.TextChanged += Depto_TextChanged_RebotarInvalido;
+
+            // Inicializa últimos válidos
+            _lastValidPiso = txt_piso.Text;
+            _lastValidDepto = txt_departamento.Text;
 
             // Sueldo: solo números, validación >= 500000 en submit
             txt_sueldo.MaxLength = 10;
@@ -76,6 +105,13 @@ namespace Eterea_Parfums_Desktop
             dateTime_nac.ValueChanged += dateTime_nac_ValueChanged;
             dateTime_nac.Format = DateTimePickerFormat.Short;
             dateTime_ing.Format = DateTimePickerFormat.Short;
+
+
+            // Que el label de error para "Clave" ajuste su alto automáticamente y haga wrap por ancho máx
+            lbl_claveE.AutoSize = true;
+            lbl_claveE.MaximumSize = new Size(300, 0); // ajustamos 300 al ancho
+            lbl_claveE.AutoEllipsis = false;           // no cortar con "..."
+            lbl_claveE.UseCompatibleTextRendering = true; // opcional para mejor tipografía
 
             // ---------- COMBOS ----------
             // Estado, Rol, Sucursal (diseño como lo tenías)
@@ -118,15 +154,188 @@ namespace Eterea_Parfums_Desktop
             HabilitarCombo(combo_localidad, false);
             HabilitarCombo(combo_calle, false);
 
-            // Eventos de dependencia
-            combo_pais.TextChanged += combo_pais_TextChanged;
-            combo_provincia.TextChanged += combo_provincia_TextChanged;
-            combo_localidad.TextChanged += combo_localidad_TextChanged;
+            // Timers debounce
+            _debPais = new Timer { Interval = DebounceMs };
+            _debProv = new Timer { Interval = DebounceMs };
+            _debLoc = new Timer { Interval = DebounceMs };
+
+            _debPais.Tick += (s, e) => { _debPais.Stop(); HandlePaisTextSettled(); };
+            _debProv.Tick += (s, e) => { _debProv.Stop(); HandleProvinciaTextSettled(); };
+            _debLoc.Tick += (s, e) => { _debLoc.Stop(); HandleLocalidadTextSettled(); };
+
+            // Wrappers ligeros: solo reinician el timer
+            combo_pais.TextChanged += combo_pais_TextChanged_Debounced;
+            combo_provincia.TextChanged += combo_provincia_TextChanged_Debounced;
+            combo_localidad.TextChanged += combo_localidad_TextChanged_Debounced;
 
             // Botones
             btn_crear.Click += btn_crear_Click_1;
-            button1.Click += button1_Click;
+            button2.Click += button1_Click;
         }
+
+        // ---- Wrappers: reinician el timer, sin lógica pesada ----
+        private void combo_pais_TextChanged_Debounced(object sender, EventArgs e)
+        {
+            if (_suspendComboEvents) return;
+            if (!combo_pais.Focused) return;
+            RestartDebounce(_debPais);
+        }
+
+        private void combo_provincia_TextChanged_Debounced(object sender, EventArgs e)
+        {
+            if (_suspendComboEvents) return;
+            if (!combo_provincia.Focused) return;
+            RestartDebounce(_debProv);
+        }
+
+        private void combo_localidad_TextChanged_Debounced(object sender, EventArgs e)
+        {
+            if (_suspendComboEvents) return;
+            if (!combo_localidad.Focused) return;
+            RestartDebounce(_debLoc);
+        }
+
+        private void RestartDebounce(Timer t)
+        {
+            t.Stop();
+            t.Start();
+        }
+
+        // ---- Lógica cuando el texto se estabilizó (tras ~180 ms) ----
+        private void HandlePaisTextSettled()
+        {
+            if (_suspendComboEvents) return;
+
+            var texto = combo_pais.Text?.Trim() ?? "";
+            var paisSel = _paises.FirstOrDefault(p =>
+                string.Equals(p.nombre, texto, StringComparison.OrdinalIgnoreCase));
+
+            _suspendComboEvents = true;
+            try
+            {
+                // Siempre que cambia País: invalidar y limpiar Provincia/Localidad/Calle
+                ResetCombo(combo_provincia, false, limpiarTexto: true);
+                ResetCombo(combo_localidad, false, limpiarTexto: true);
+                ResetCombo(combo_calle, false, limpiarTexto: true);
+
+                if (paisSel == null) return;
+
+                // Cargar provincias del país
+                _provincias = ProvinciaControlador.getProvinciasPorPaisId(paisSel.id) ?? new List<Provincia>();
+                ResetCombo(combo_provincia, true, limpiarTexto: true);
+                CargarComboConAutoComplete(combo_provincia, _provincias.Select(x => x.nombre).ToList());
+            }
+            finally { _suspendComboEvents = false; }
+        }
+
+        private void HandleProvinciaTextSettled()
+        {
+            if (_suspendComboEvents) return;
+
+            var texto = combo_provincia.Text?.Trim() ?? "";
+            var provSel = _provincias.FirstOrDefault(p =>
+                string.Equals(p.nombre, texto, StringComparison.OrdinalIgnoreCase));
+
+            _suspendComboEvents = true;
+            try
+            {
+                // Al cambiar Provincia: invalidar y limpiar Localidad/Calle
+                ResetCombo(combo_localidad, false, limpiarTexto: true);
+                ResetCombo(combo_calle, false, limpiarTexto: true);
+
+                if (provSel == null) return;
+
+                _localidades = LocalidadControlador.getLocalidadesPorProvinciaId(provSel.id) ?? new List<Localidad>();
+                ResetCombo(combo_localidad, true, limpiarTexto: true);
+                CargarComboConAutoComplete(combo_localidad, _localidades.Select(x => x.nombre).ToList());
+            }
+            finally { _suspendComboEvents = false; }
+        }
+
+        private void HandleLocalidadTextSettled()
+        {
+            if (_suspendComboEvents) return;
+
+            var texto = combo_localidad.Text?.Trim() ?? "";
+            var locSel = _localidades.FirstOrDefault(l =>
+                string.Equals(l.nombre, texto, StringComparison.OrdinalIgnoreCase));
+
+            _suspendComboEvents = true;
+            try
+            {
+                // Al cambiar Localidad: invalidar y limpiar Calle
+                ResetCombo(combo_calle, false, limpiarTexto: true);
+
+                if (locSel == null) return;
+
+                _calles = CalleControlador.getCallesPorLocalidadId(locSel.id) ?? new List<Calle>();
+                ResetCombo(combo_calle, true, limpiarTexto: true);
+                CargarComboConAutoComplete(combo_calle, _calles.Select(x => x.nombre).ToList());
+            }
+            finally { _suspendComboEvents = false; }
+        }
+
+        // Bloquea en el momento de teclear cualquier mezcla (p.ej. "3B" o "PB1")
+        private void PisoDpto_KeyPress_ModoExclusivo(object sender, KeyPressEventArgs e)
+        {
+            if (char.IsControl(e.KeyChar)) return; // permitir Backspace, Tab, etc.
+
+            var tb = (TextBox)sender;
+
+            // Probar con el texto "como quedaría" y en MAYÚSCULAS
+            string proposed = ProposedTextAfterKeyPress(tb, e.KeyChar).ToUpperInvariant();
+
+            if (!_rxPisoDpto_Permisivo.IsMatch(proposed))
+            {
+                e.Handled = true; // bloquear mezcla letras/números o largo > 3
+                return;
+            }
+
+            // Si es letra, forzar que entre ya en mayúscula (por si falla CharacterCasing)
+            if (char.IsLetter(e.KeyChar))
+                e.KeyChar = char.ToUpperInvariant(e.KeyChar);
+        }
+
+
+        // Rebotar pegados/ediciones que rompen la regla
+        private void Piso_TextChanged_RebotarInvalido(object sender, EventArgs e)
+        {
+            RebotarSiInvalido((TextBox)sender, ref _lastValidPiso);
+        }
+
+        private void Depto_TextChanged_RebotarInvalido(object sender, EventArgs e)
+        {
+            RebotarSiInvalido((TextBox)sender, ref _lastValidDepto);
+        }
+
+        private void RebotarSiInvalido(TextBox tb, ref string lastValid)
+        {
+            if (_rxPisoDpto_Permisivo.IsMatch(tb.Text))
+            {
+                lastValid = tb.Text.ToUpperInvariant(); // asegura mayúsculas
+            }
+            else
+            {
+                int caret = tb.SelectionStart - 1;
+                tb.Text = lastValid;
+                tb.SelectionStart = Math.Max(0, Math.Min(caret, tb.Text.Length));
+            }
+        }
+
+        // Construye el texto "propuesto" tras presionar una tecla (considera selección)
+        private string ProposedTextAfterKeyPress(TextBox tb, char ch)
+        {
+            if (char.IsControl(ch)) return tb.Text;
+            int start = tb.SelectionStart;
+            int len = tb.SelectionLength;
+
+            string baseText = tb.Text;
+            if (len > 0)
+                baseText = baseText.Remove(start, len);
+
+            return baseText.Insert(start, ch.ToString());
+        }
+
 
         // ====== Helpers de UI ======
         private void OcultarErrores()
@@ -166,13 +375,28 @@ namespace Eterea_Parfums_Desktop
 
         private void CargarComboConAutoComplete(ComboBox combo, List<string> valores)
         {
-            combo.Items.Clear();
-            foreach (var v in valores) combo.Items.Add(v);
+            _suspendComboEvents = true;
+            string currentText = combo.Text;
 
-            var ac = new AutoCompleteStringCollection();
-            ac.AddRange(valores.ToArray());
-            combo.AutoCompleteCustomSource = ac;
+            combo.BeginUpdate();
+            try
+            {
+                combo.Items.Clear();
+                foreach (var v in valores) combo.Items.Add(v);
+
+                var ac = new AutoCompleteStringCollection();
+                ac.AddRange(valores.ToArray());
+                combo.AutoCompleteCustomSource = ac;
+            }
+            finally
+            {
+                combo.EndUpdate();
+                // restaurar el texto sin disparar lógicas dependientes
+                combo.Text = currentText;
+                _suspendComboEvents = false;
+            }
         }
+
 
         private void HabilitarCombo(ComboBox combo, bool habilitar)
         {
@@ -188,84 +412,160 @@ namespace Eterea_Parfums_Desktop
         // ====== Dependencias de combos con filtrado incremental ======
         private void combo_pais_TextChanged(object sender, EventArgs e)
         {
+            if (_suspendComboEvents) return;
+            if (!combo_pais.Focused) return; // ignorar cambios programáticos
+
             var texto = combo_pais.Text?.Trim() ?? "";
             var paisSel = _paises.FirstOrDefault(p => string.Equals(p.nombre, texto, StringComparison.OrdinalIgnoreCase));
-            if (paisSel == null)
+
+            _suspendComboEvents = true;
+            try
             {
-                // Mientras escribe, sugerimos por prefijo
-                var sugerencias = _paises
-                    .Where(p => p.id != 1 && p.nombre.StartsWith(texto, StringComparison.OrdinalIgnoreCase))
-                    .Select(p => p.nombre)
-                    .ToList();
-                CargarComboConAutoComplete(combo_pais, sugerencias.Any() ? sugerencias : _paises.Where(p => p.id != 1).Select(p => p.nombre).ToList());
-                HabilitarCombo(combo_provincia, false);
+                if (paisSel == null)
+                {
+                    // Sin coincidencia exacta: cortar cadena dependiente
+                    HabilitarCombo(combo_provincia, false);
+                    HabilitarCombo(combo_localidad, false);
+                    HabilitarCombo(combo_calle, false);
+                    return;
+                }
+
+                _provincias = ProvinciaControlador.getProvinciasPorPaisId(paisSel.id) ?? new List<Provincia>();
+                CargarComboConAutoComplete(combo_provincia, _provincias.Select(x => x.nombre).ToList());
+                HabilitarCombo(combo_provincia, true);
                 HabilitarCombo(combo_localidad, false);
                 HabilitarCombo(combo_calle, false);
-                return;
             }
-
-            // País válido → cargar provincias y habilitar
-            _provincias = ProvinciaControlador.getProvinciasPorPaisId(paisSel.id) ?? new List<Provincia>();
-            CargarComboConAutoComplete(combo_provincia, _provincias.Select(x => x.nombre).ToList());
-            HabilitarCombo(combo_provincia, true);
-            HabilitarCombo(combo_localidad, false);
-            HabilitarCombo(combo_calle, false);
+            finally { _suspendComboEvents = false; }
         }
+
 
         private void combo_provincia_TextChanged(object sender, EventArgs e)
         {
+            if (_suspendComboEvents) return;
+            if (!combo_provincia.Focused) return;
+
             var texto = combo_provincia.Text?.Trim() ?? "";
             var provSel = _provincias.FirstOrDefault(p => string.Equals(p.nombre, texto, StringComparison.OrdinalIgnoreCase));
-            if (provSel == null)
-            {
-                var sugerencias = _provincias
-                    .Where(p => p.nombre.StartsWith(texto, StringComparison.OrdinalIgnoreCase))
-                    .Select(p => p.nombre)
-                    .ToList();
-                CargarComboConAutoComplete(combo_provincia, sugerencias.Any() ? sugerencias : _provincias.Select(p => p.nombre).ToList());
-                HabilitarCombo(combo_localidad, false);
-                HabilitarCombo(combo_calle, false);
-                return;
-            }
 
-            _localidades = LocalidadControlador.getLocalidadesPorProvinciaId(provSel.id) ?? new List<Localidad>();
-            CargarComboConAutoComplete(combo_localidad, _localidades.Select(x => x.nombre).ToList());
-            HabilitarCombo(combo_localidad, true);
-            HabilitarCombo(combo_calle, false);
+            _suspendComboEvents = true;
+            try
+            {
+                if (provSel == null)
+                {
+                    HabilitarCombo(combo_localidad, false);
+                    HabilitarCombo(combo_calle, false);
+                    return;
+                }
+
+                _localidades = LocalidadControlador.getLocalidadesPorProvinciaId(provSel.id) ?? new List<Localidad>();
+                CargarComboConAutoComplete(combo_localidad, _localidades.Select(x => x.nombre).ToList());
+                HabilitarCombo(combo_localidad, true);
+                HabilitarCombo(combo_calle, false);
+            }
+            finally { _suspendComboEvents = false; }
         }
+
 
         private void combo_localidad_TextChanged(object sender, EventArgs e)
         {
+            if (_suspendComboEvents) return;
+            if (!combo_localidad.Focused) return;
+
             var texto = combo_localidad.Text?.Trim() ?? "";
             var locSel = _localidades.FirstOrDefault(l => string.Equals(l.nombre, texto, StringComparison.OrdinalIgnoreCase));
-            if (locSel == null)
-            {
-                var sugerencias = _localidades
-                    .Where(l => l.nombre.StartsWith(texto, StringComparison.OrdinalIgnoreCase))
-                    .Select(l => l.nombre)
-                    .ToList();
-                CargarComboConAutoComplete(combo_localidad, sugerencias.Any() ? sugerencias : _localidades.Select(l => l.nombre).ToList());
-                HabilitarCombo(combo_calle, false);
-                return;
-            }
 
-            _calles = CalleControlador.getCallesPorLocalidadId(locSel.id) ?? new List<Calle>();
-            CargarComboConAutoComplete(combo_calle, _calles.Select(x => x.nombre).ToList());
-            HabilitarCombo(combo_calle, true);
+            _suspendComboEvents = true;
+            try
+            {
+                if (locSel == null)
+                {
+                    HabilitarCombo(combo_calle, false);
+                    return;
+                }
+
+                _calles = CalleControlador.getCallesPorLocalidadId(locSel.id) ?? new List<Calle>();
+                CargarComboConAutoComplete(combo_calle, _calles.Select(x => x.nombre).ToList());
+                HabilitarCombo(combo_calle, true);
+            }
+            finally { _suspendComboEvents = false; }
         }
+
+        private void ResetCombo(ComboBox combo, bool habilitar, bool limpiarTexto = true)
+        {
+            _suspendComboEvents = true;
+            try
+            {
+                combo.BeginUpdate();
+                combo.Items.Clear();
+                combo.AutoCompleteCustomSource = new AutoCompleteStringCollection();
+            }
+            finally
+            {
+                combo.EndUpdate();
+                if (limpiarTexto) combo.Text = string.Empty;   // ⬅️ borra selección previa inválida
+                combo.Enabled = habilitar;
+                _suspendComboEvents = false;
+            }
+        }
+
+
+
 
         // ====== Botones ======
         private void btn_crear_Click_1(object sender, EventArgs e)
         {
-            if (validarDatosEmpleado(out string errorMsg))
+            if (validarDatosEmpleado(out string _))
             {
                 crear();
             }
             else
             {
-                MessageBox.Show(errorMsg, "Datos inválidos", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                // Sin MessageBox. Solo etiquetas de error visibles.
+                // (Opcional) Enfocar el primer control con error:
+                EnfocarPrimerControlConError();
             }
         }
+
+        private void EnfocarPrimerControlConError()
+        {
+            // Mapeo simple de etiqueta de error -> control a enfocar
+            var pares = new (Label label, Control control)[]
+            {
+        (lbl_usuarioE, txt_usuario),
+        (lbl_claveE, txt_contraseña),
+        (lbl_nombreE, txt_nombre),
+        (lbl_apellidoE, txt_apellido),
+        (lbl_dniE, txt_dni),
+        (lbl_nacE, dateTime_nac),
+        (lbl_celularE, txt_celular),
+        (lbl_e_mailE, txt_e_mail),
+        (lbl_paisE, combo_pais),
+        (lbl_provinciaE, combo_provincia),
+        (lbl_localidadE, combo_localidad),
+        (lbl_cpE, txt_cp),
+        (lbl_calleE, combo_calle),
+        (lbl_num_calleE, txt_num_calle),
+        (lbl_pisoE, txt_piso),
+        (lbl_departamentoE, txt_departamento),
+        (lbl_comentarios_domicilioE, richTextBox_comentario),
+        (lbl_sucursalE, combo_sucursal),
+        (lbl_ingE, dateTime_ing),
+        (lbl_sueldoE, txt_sueldo),
+        (lbl_activoE, combo_activo),
+        (lbl_rolE, combo_rol)
+            };
+
+            foreach (var p in pares)
+            {
+                if (p.label.Visible)
+                {
+                    p.control.Focus();
+                    break;
+                }
+            }
+        }
+
 
         private void crear()
         {
@@ -331,7 +631,7 @@ namespace Eterea_Parfums_Desktop
             // Clave (fuerte)
             if (string.IsNullOrWhiteSpace(txt_contraseña.Text) || !_rxClave.IsMatch(txt_contraseña.Text))
             {
-                lbl_claveE.Text = "La clave debe tener 8+ caracteres, incluir mayúsculas, letras, números y 1 especial (!, ¡, \", #, $, %, &, /, (, ), =, ?, ¿).";
+                lbl_claveE.Text = "La clave debe tener 8+ caracteres, incluir mayúsculas, letras, números y 1 especial (!,¡,\",#,$,%,&,/,(,),=,?,¿).";
                 lbl_claveE.Show(); errorMsg += lbl_claveE.Text + Environment.NewLine;
             }
 
@@ -375,10 +675,13 @@ namespace Eterea_Parfums_Desktop
                 lbl_nacE.Show(); errorMsg += lbl_nacE.Text + Environment.NewLine;
             }
 
-            // Celular
-            if (string.IsNullOrWhiteSpace(txt_celular.Text) || !txt_celular.Text.All(char.IsDigit) || txt_celular.Text.Length > 13)
+            // Celular: numérico, entre 10 y 13 dígitos
+            if (string.IsNullOrWhiteSpace(txt_celular.Text) ||
+                !txt_celular.Text.All(char.IsDigit) ||
+                txt_celular.Text.Length < 10 ||
+                txt_celular.Text.Length > 13)
             {
-                lbl_celularE.Text = "El celular debe ser numérico y no superar 13 dígitos.";
+                lbl_celularE.Text = "El celular debe ser numérico y tener entre 10 y 13 dígitos.";
                 lbl_celularE.Show(); errorMsg += lbl_celularE.Text + Environment.NewLine;
             }
 
@@ -409,17 +712,18 @@ namespace Eterea_Parfums_Desktop
                 lbl_num_calleE.Show(); errorMsg += lbl_num_calleE.Text + Environment.NewLine;
             }
 
-            // Piso / Dpto (si cargan algo, validar formato)
-            if (!string.IsNullOrWhiteSpace(txt_piso.Text) && !txt_piso.Text.All(char.IsLetterOrDigit))
+            // Piso / Dpto (opcionales): si están cargados, no mezclar y 1..3 del mismo tipo
+            if (!string.IsNullOrWhiteSpace(txt_piso.Text) && !_rxPisoDpto_Final.IsMatch(txt_piso.Text))
             {
-                lbl_pisoE.Text = "Piso: solo letras o números (máx. 3).";
+                lbl_pisoE.Text = "Piso: ingrese 1–3 dígitos (ej. 34) o 1–3 letras (ej. PB), sin mezclar.";
                 lbl_pisoE.Show(); errorMsg += lbl_pisoE.Text + Environment.NewLine;
             }
-            if (!string.IsNullOrWhiteSpace(txt_departamento.Text) && !txt_departamento.Text.All(char.IsLetterOrDigit))
+            if (!string.IsNullOrWhiteSpace(txt_departamento.Text) && !_rxPisoDpto_Final.IsMatch(txt_departamento.Text))
             {
-                lbl_departamentoE.Text = "Departamento: solo letras o números (máx. 3).";
+                lbl_departamentoE.Text = "Departamento: 1–3 dígitos o 1–3 letras, sin mezclar.";
                 lbl_departamentoE.Show(); errorMsg += lbl_departamentoE.Text + Environment.NewLine;
             }
+
 
             // Comentarios: solo letras/números/espacios y hasta 2 paréntesis en total
             var comentario = (richTextBox_comentario.Text ?? string.Empty).Trim();
