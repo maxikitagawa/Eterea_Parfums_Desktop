@@ -12,6 +12,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Configuration;
+using System.Net.Http;
 
 namespace Eterea_Parfums_Desktop.ControlesDeUsuario.GenerarInformes
 {
@@ -28,7 +30,8 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario.GenerarInformes
 
             dataGridViewPerfumes.RowTemplate.Height = 80;
 
-            cargarDatos();
+            // Cargar asíncrono cuando el UC ya está cargado (no congela la UI)
+            this.Load += async (_, __) => await cargarDatosAsync();
 
             this.numeroSucursal = numeroSucursal;
             var sucursal = SucursalControlador.getAll().FirstOrDefault(s => s.id == numeroSucursal);
@@ -275,11 +278,85 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario.GenerarInformes
         }
 
 
-        public void ActualizarSucursal(Sucursal nuevaSucursal)
+        public async void ActualizarSucursal(Sucursal nuevaSucursal)
         {
             this.numeroSucursal = nuevaSucursal.id;
             lbl_info.Text = nuevaSucursal.nombre;
-            cargarDatos(); // Opcional si querés refrescar la tabla con los datos de la nueva sucursal
+            await cargarDatosAsync();
+        }
+
+        // Devuelve la URL pública de la imagen 1 del perfume.
+        // Prioriza imagen1_URL. Si no hay, compone con /imagenes/{imagen1}.jpg
+        private string GetImagenUrl(Perfume p)
+        {
+            if (p == null) return null;
+
+            if (!string.IsNullOrWhiteSpace(p.imagen1_URL))
+                return p.imagen1_URL.Trim();
+
+            var baseUrl = ConfigurationManager.AppSettings["ApiBaseUrl"]?.TrimEnd('/');
+            if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(p.imagen1))
+                return null;
+
+            return $"{baseUrl}/imagenes/{p.imagen1}.jpg";
+        }
+
+        private async Task cargarDatosAsync()
+        {
+            //Ocultas la primera columna de la tabla (es una columna de seleccion de fila)
+            dataGridViewPerfumes.RowHeadersVisible = false;
+
+            perfumes = PerfumeControlador.getAll()
+                .Where(p => p.activo == true)
+                .ToList();
+
+            stocks = StockControlador.getAll()
+                .Where(s => s.sucursal != null && s.sucursal.id == numeroSucursal)
+                .ToList();
+
+            dataGridViewPerfumes.Rows.Clear();
+
+            int cellWidth = dataGridViewPerfumes.Columns[0].Width;
+            int cellHeight = dataGridViewPerfumes.RowTemplate.Height;
+
+            foreach (Stock stock in stocks)
+            {
+                Perfume perfume = perfumes.Find(p => p.id == stock.perfume.id);
+                if (perfume == null) continue;
+
+                int rowIndex = dataGridViewPerfumes.Rows.Add();
+
+                // Placeholder inicial (si tenés un recurso “sinImagen”)
+                dataGridViewPerfumes.Rows[rowIndex].Cells[0].Value = Eterea_Parfums_Desktop.Properties.Resources.sinImagen;
+                ((DataGridViewImageCell)dataGridViewPerfumes.Rows[rowIndex].Cells[0]).ImageLayout = DataGridViewImageCellLayout.Zoom;
+
+                dataGridViewPerfumes.Rows[rowIndex].Cells[1].Value = perfume.codigo;
+                dataGridViewPerfumes.Rows[rowIndex].Cells[2].Value = (MarcaControlador.getById(perfume.marca.id)).nombre;
+                dataGridViewPerfumes.Rows[rowIndex].Cells[3].Value = perfume.nombre;
+                dataGridViewPerfumes.Rows[rowIndex].Cells[4].Value = (TipoDePerfumeControlador.getById(perfume.tipo_de_perfume.id)).tipo_de_perfume;
+                dataGridViewPerfumes.Rows[rowIndex].Cells[5].Value = (GeneroControlador.getById(perfume.genero.id)).genero;
+                dataGridViewPerfumes.Rows[rowIndex].Cells[6].Value = perfume.presentacion_ml + " ml";
+                dataGridViewPerfumes.Rows[rowIndex].Cells[7].Value = "$ " + perfume.precio_en_pesos.ToString();
+                dataGridViewPerfumes.Rows[rowIndex].Cells[8].Value = SucursalControlador.getById(stock.sucursal.id).nombre;
+                dataGridViewPerfumes.Rows[rowIndex].Cells[9].Value = stock.cantidad;
+
+                // ↓ Descarga desde tu API y redimensiona a la celda
+                try
+                {
+                    var url = GetImagenUrl(perfume);
+                    var img = await ApiImageUploader.DownloadImageAsync(url); // usa tu helper
+                    if (img != null)
+                    {
+                        var resized = redimensionarImagen(img, cellWidth, cellHeight);
+                        if (rowIndex < dataGridViewPerfumes.Rows.Count)
+                            dataGridViewPerfumes.Rows[rowIndex].Cells[0].Value = resized;
+                    }
+                }
+                catch
+                {
+                    // Dejá la imagen por defecto si falla
+                }
+            }
         }
 
     }
