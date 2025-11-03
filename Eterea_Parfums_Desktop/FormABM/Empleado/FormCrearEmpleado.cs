@@ -89,6 +89,7 @@ namespace Eterea_Parfums_Desktop
             txt_piso.TextChanged += Piso_TextChanged_RebotarInvalido;
             txt_departamento.TextChanged += Depto_TextChanged_RebotarInvalido;
 
+
             // Inicializa últimos válidos
             _lastValidPiso = txt_piso.Text;
             _lastValidDepto = txt_departamento.Text;

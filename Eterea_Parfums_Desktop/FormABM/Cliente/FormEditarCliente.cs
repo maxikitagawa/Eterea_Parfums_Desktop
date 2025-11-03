@@ -821,6 +821,7 @@ namespace Eterea_Parfums_Desktop
             lbl_nombreE.Hide();
             lbl_claveE.Hide();
             lbl_clave.Hide();
+            txt_clave.Hide();
             lbl_apellidoE.Hide();
             lbl_dniE.Hide();
             lbl_cond_ivaE.Hide();

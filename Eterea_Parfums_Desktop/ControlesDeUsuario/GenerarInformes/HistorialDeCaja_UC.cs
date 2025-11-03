@@ -35,6 +35,9 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario.GenerarInformes
             selector_dia.ValueChanged += selector_dia_ValueChanged;
 
             CrearColumnas();
+
+            this.Cursor = Cursors.Default;
+            this.UseWaitCursor = false;
         }
 
         private void selector_dia_ValueChanged(object sender, EventArgs e)
