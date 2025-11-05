@@ -913,10 +913,6 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             MessageBox.Show("Pago realizado exitosamente", "Confirmación", MessageBoxButtons.OK, MessageBoxIcon.Information);
             btn_imprimir.Visible = true;
             btn_pago.Visible = false;
-
-            // Reusar el flujo de generación y entrega de factura (PDF + imprimir/mail)
-            // Simulamos el click del botón de imprimir que genera el PDF y muestra el chooser
-            btn_imprimir_Click(sender, e);
         }
 
         private void combo_cuotas_SelectedIndexChanged(object sender, EventArgs e)
@@ -1347,7 +1343,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
                     filas += $@"
                 <tr>
-                  <td class='num'>{Num(cant)}</td>
+                  <td class='cant'>{Num(cant)}</td>
                   <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
                   <td class='money'>{Mon(unitSinIva)}</td>
                   <td class='money'>{Mon(descMonto)}</td>
