@@ -9,6 +9,7 @@
             font-size: 12px;
             margin: 20px;
             padding: 0;
+           
         }
 
         table {
@@ -41,6 +42,18 @@
             margin: auto;
             font-weight: bold;
         }
+
+        .num {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .money {
+            text-align: right;
+            white-space: nowrap;
+        }
+        
+
     </style>
 </head>
 <body>
@@ -88,25 +101,38 @@
 
                 <!-- Datos cliente -->
                 <table class="border" style="margin-bottom: 20px;">
+                    <!-- 1° Cliente -->
                     <tr>
-                        <td style="width: 20%;">Cliente:</td>
-                        <td colspan="3" style="width: 80%;">@CLIENTE</td>
+                        <td style="width: 20%; background: #F6DDE6; font-weight: bold;">Cliente:</td>
+                        <td colspan="3" style="width:80%;">@CLIENTE</td>
                     </tr>
+
+                    <!-- 2° Documento -->
                     <tr>
-                        <td>Condicion IVA:</td>
-                        <td style="width: 40%;">@CONDIVA</td>
-                        <td style="width: 20%;">Forma de Pago:</td>
-                        <td>@FORMAPAGO</td>
-                    </tr>
-                    <tr>
-                        <td>DNI/CUIT:</td>
+                        <td style="background: #F6DDE6; font-weight: bold;">Documento:</td>
                         <td colspan="3">@DOCUMENTO</td>
                     </tr>
+
+                    <!-- 3° Domicilio + Localidad -->
                     <tr>
-                        <td>Domicilio:</td>
-                        <td style="width: 40%;">@DOMICILIO</td>
-                        <td style="width: 20%;">Localidad:</td>
+                        <td style="background: #F6DDE6; font-weight: bold;">Domicilio:</td>
+                        <td style="width:40%;">@DOMICILIO</td>
+                        <td style="width: 20%; background: #F6DDE6; font-weight: bold;">Localidad:</td>
                         <td>@LOCALIDAD</td>
+                    </tr>
+
+                    <!-- 4° Condición IVA -->
+                    <tr>
+                        <td style="background: #F6DDE6; font-weight: bold;">Condición IVA:</td>
+                        <td colspan="3">@CONDIVA</td>
+                    </tr>
+
+                    <!-- 5° Forma de Pago (+ Cuota inline si corresponde) -->
+                    <tr>
+                        <td style="background: #F6DDE6; font-weight: bold;">Forma de Pago:</td>
+                        <td style="width:40%;">@FORMAPAGO</td>
+                        <td style="width: 20%; background: #F6DDE6; font-weight: bold;">@CUOTAS_LABEL</td>
+                        <td>@CUOTAS_VAL</td>
                     </tr>
                 </table>
 
@@ -114,12 +140,12 @@
                 <table class="border" style="margin-bottom: 30px;">
                     <thead>
                         <tr>
-                            <th style="width: 20%;">Descripción</th>
-                            <th style="width: 12%;">Precio Unitario</th>
-                            <th style="width: 13%;">Cantidad</th>
-                            <th style="width: 15%;">Descuento Total</th>
-                            <th style="width: 20%;">Subtotal</th>
-                            <th style="width: 20%;">Subtotal con iva</th>
+                            <th style="width:20%; background:#F6DDE6;">Descripción</th>
+                            <th style="width:12%; background:#F6DDE6;">Precio Unitario</th>
+                            <th style="width:13%; background:#F6DDE6;">Cantidad</th>
+                            <th style="width:15%; background:#F6DDE6;">Descuento Total</th>
+                            <th style="width:20%; background:#F6DDE6;">Subtotal</th>
+                            <th style="width:20%; background:#F6DDE6;">Subtotal con iva</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -127,29 +153,29 @@
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="4" style="border: 0px solid white;"></td>
-                            <td style="text-align: right;"><strong>Importe Neto Gravado:</strong></td>
-                            <td style="text-align: right;"> @IMPORTE</td>
+                            <td colspan="4" style="border:0"></td>
+                            <td class="num" style="background:#DCDCDC;"><strong>Importe Neto Gravado:</strong></td>
+                            <td class="money" style="background:#DCDCDC;">@IMPORTE</td>
                         </tr>
                         <tr>
-                            <td colspan="4" style="border:0px solid white;"></td>
-                            <td style="text-align: right;"><strong>IVA 21%:</strong></td>
-                            <td style="text-align: right;"> @IVA</td>
+                            <td colspan="4" style="border:0"></td>
+                            <td class="num" style="background: #e4e4e4;"><strong>IVA 21%:</strong></td>
+                            <td class="money" style="background: #e4e4e4;">@IVA</td>
                         </tr>
                         <tr>
-                            <td colspan="4" style="border:0px solid white;"></td>
-                            <td style="text-align: right;"><strong>Bonificación:</strong></td>
-                            <td style="text-align: right;"> @DESCUENTO</td>
+                            <td colspan="4" style="border:0"></td>
+                            <td class="num" style="background:#DCDCDC;"><strong>Bonificación:</strong></td>
+                            <td class="money" style="background:#DCDCDC;">@DESCUENTO</td>
                         </tr>
                         <tr>
-                            <td colspan="4" style="border:0px solid white;"></td>
-                            <td style="text-align: right;"><strong>Recargo Tarjeta:</strong></td>
-                            <td style="text-align: right;">@RECARGO</td>
+                            <td colspan="4" style="border:0"></td>
+                            <td class="num" style="background: #e4e4e4;"><strong>Recargo Tarjeta:</strong></td>
+                            <td class="money" style="background: e4e4e4;">@RECARGO</td>
                         </tr>
                         <tr>
-                            <td colspan="4" style="border: 0px solid white;"></td>
-                            <td style="text-align: right;"><strong>Importe Total:</strong></td>
-                            <td style="text-align: right;"> @TOTAL</td>
+                            <td colspan="4" style="border:0"></td>
+                            <td class="num" style="background:#DCDCDC;"><strong>Importe Total:</strong></td>
+                            <td class="money" style="background:#DCDCDC;">@TOTAL</td>
                         </tr>
                     </tfoot>
                 </table>

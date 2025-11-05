@@ -13,6 +13,8 @@ using System.Windows.Forms;
 using System.Drawing;
 using Eterea_Parfums_Desktop.Helpers;
 using iTextSharp.tool.xml.html;
+using System.Globalization;
+
 
 namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 {
@@ -32,6 +34,10 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
         private bool yaMostroAdvertenciaCaja = false;  // lo ponés como campo en la clase
 
+
+        private static readonly CultureInfo Ar = CultureInfo.GetCultureInfo("es-AR");
+        private static string Mon(decimal v) => "$ " + v.ToString("N2", Ar);
+        private static string Num(int v) => v.ToString(Ar);
 
 
         public Facturar_UC()
@@ -894,18 +900,13 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
         private string tipo_de_factura()
         {
-            string cond_frente_al_iva = txt_condicion_iva.Text?.Trim().ToLower();
-            String tipo_De_factura = "";
-            if (cond_frente_al_iva == "Responsable Inscripto")
-            {
-               tipo_De_factura = "A";
-            }
-            else //Para Monotributista, Exento o Consumidor Final: factura B
-            {
-               tipo_De_factura = "B";
-            }
-            return tipo_De_factura;
+            string cond = (txt_condicion_iva.Text ?? "").Trim().ToLowerInvariant();
+            // Factura A solo para Responsable Inscripto
+            if (cond.Contains("responsable inscripto"))
+                return "A";
+            return "B"; // monotributista, exento, consumidor final => B
         }
+
 
         private void combo_forma_pago_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -1126,268 +1127,257 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 MessageBox.Show("Debe agregar al menos un artículo para facturar.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+
+            if (numero == null || numero == "Caja sin asignar")
+            {
+                MessageBox.Show("\"Debes ingresar un número de caja. \n Haz click en 'Abrir Caja' ", "Número de Caja", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string condicionCliente = txt_condicion_iva.Text.Trim();
+            string PaginaHTML_Texto = "";
+
+            string carpetaFacturas = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "FacturasGeneradas");
+            if (!Directory.Exists(carpetaFacturas)) Directory.CreateDirectory(carpetaFacturas);
+
+            string rutaFactura = Path.Combine(carpetaFacturas, $"Factura_Orden_{txt_numero_factura.Text}.pdf");
+            string filePath = rutaFactura;
+
+            // ---------------------------
+            // FACTURA B (Consumidor Final / Exento / Monotributo)
+            // ---------------------------
+            if (condicionCliente == "Consumidor Final" || condicionCliente == "Exento" || condicionCliente == "Monotributo") 
+            {
+                PaginaHTML_Texto = Properties.Resources.PlantillaFactura.ToString();
+
+                string dni = txt_dni.Text;
+                string localidad = "Sin localidad";
+                string domicilio = "Sin calle";
+                string numeracion_calle = "Sin numeración";
+                string domicilioEntero = "Sin domicilio";
+
+                if (string.IsNullOrWhiteSpace(dni))
+                {
+                    dni = "Sin DNI";
+                }
+                else
+                {
+                    long dniNumerico;
+                    localidad = "Sin localidad";
+                    domicilio = "Sin calle";
+                    numeracion_calle = "Sin numeración";
+                    if (!long.TryParse(dni, out dniNumerico))
+                    {
+                        MessageBox.Show("El DNI ingresado no es válido.");
+                        return;
+                    }
+                    dniNumerico = long.Parse(dni);
+                    Cliente cliente = ClienteControlador.obtenerPorDni(dniNumerico);
+                    if (cliente.localidad_id != null) localidad = cliente.localidad_id.nombre;
+                    if (cliente.calle_id != null) domicilio = cliente.calle_id.nombre;
+                    if (cliente.numeracion_calle != null) numeracion_calle = cliente.numeracion_calle.ToString();
+                    domicilioEntero = domicilio + " " + numeracion_calle;
+                }
+
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CLIENTE", txt_nombre_cliente.Text);
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DOCUMENTO", dni);
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@NUMEROFACTURA", txt_numero_factura.Text);
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@FECHA", DateTime.Now.ToString("dd/MM/yyyy"));
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CONDIVA", txt_condicion_iva.Text);
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@FORMAPAGO", combo_forma_pago.SelectedItem.ToString());
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DOMICILIO", domicilioEntero);
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@LOCALIDAD", localidad);
+
+                // Forma de pago y cuota (inline)
+                var forma = combo_forma_pago.SelectedItem?.ToString() ?? "";
+                var cuotasSel = combo_cuotas.SelectedItem?.ToString() ?? "1";
+                bool esTarjeta = forma == "Visa Crédito" || forma == "Mastercard" || forma == "Amex";
+                string cuotaInline = esTarjeta ? $" - Cuotas: {System.Net.WebUtility.HtmlEncode(cuotasSel)}" : string.Empty;
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CUOTA_INLINE", cuotaInline);
+
+                // Filas del detalle
+                string filas = string.Empty;
+                decimal total = 0m;
+
+                foreach (DataGridViewRow row in Factura.Rows)
+                {
+                    var desc = row.Cells["Nombre_Perfume"].Value?.ToString() ?? "";
+                    var unit = Convert.ToDecimal(row.Cells["Precio_Unitario"].Value);
+                    var cant = Convert.ToInt32(row.Cells["Cantidad"].Value);
+                    var descMonto = Convert.ToDecimal(row.Cells["Descuento"].Value ?? 0m);
+                    var tot = Convert.ToDecimal(row.Cells["Tot"].Value);
+
+                    filas += $@"
+                <tr>
+                  <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
+                  <td class='money'>{Mon(unit)}</td>
+                  <td class='num'>{Num(cant)}</td>
+                  <td class='money'>{Mon(descMonto)}</td>
+                  <td class='money'>{Mon(tot)}</td>
+                </tr>";
+
+                    total += tot;
+                }
+
+                double precioTotal = double.Parse(txt_total.Text);
+                double precioSubtotal = double.Parse(txt_subtotal.Text);
+                double recargoTarjeta = double.Parse(txt_monto_recargo.Text);
+                double descuento = double.Parse(txt_monto_descuento.Text);
+
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@FILAS", filas);
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@IMPORTE", Mon((decimal)precioSubtotal));
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@RECARGO", Mon((decimal)recargoTarjeta));
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DESCUENTO", Mon((decimal)descuento));
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@TOTAL", Mon((decimal)precioTotal));
+            }
+            // ---------------------------
+            // FACTURA A (Responsable Inscripto)
+            // ---------------------------
             else
             {
+                PaginaHTML_Texto = Properties.Resources.FacturaA.ToString();
 
-            
+                string dni = txt_dni.Text;
+                string localidad = "Sin localidad";
+                string domicilio = "Sin calle";
+                string numeracion_calle = "Sin numeración";
+                string domicilioEntero = "Sin domicilio";
 
-            if (numero != null && numero != "Caja sin asignar")
-            {
-            
-                    string condicionCliente = txt_condicion_iva.Text.Trim();
-                    //MessageBox.Show("Condicion cliente: " + condicionCliente);
-                    string PaginaHTML_Texto = "";
-
-                   
-                    string carpetaFacturas = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "FacturasGeneradas");
-
-                    if (!Directory.Exists(carpetaFacturas))
-                    {
-                        Directory.CreateDirectory(carpetaFacturas);
-                    }
-
-                    string rutaFactura = Path.Combine(carpetaFacturas, $"Factura_Orden_{txt_numero_factura.Text}.pdf");
-                    string filePath = rutaFactura;
-
-                    // Verificar si el cliente es Responsable Monotributo
-                    // CREACION DE PDF DE LA FACTURA B
-                    if (condicionCliente == "Consumidor Final" || condicionCliente == "Exento")
+                if (string.IsNullOrWhiteSpace(dni))
                 {
-                    PaginaHTML_Texto = Properties.Resources.PlantillaFactura.ToString();
-
-                    string dni = txt_dni.Text;
-                    string localidad = "Sin localidad";
-                    string domicilio = "Sin calle";
-                    string numeracion_calle = "Sin numeración";
-                    string domicilioEntero = "Sin domicilio";
-
-                    if (string.IsNullOrWhiteSpace(dni))
-                    {
-                        dni = "Sin DNI";
-                    }
-                    else
-                    {
-                        long dniNumerico;
-                        localidad = "Sin localidad";
-                        domicilio = "Sin calle";
-                        numeracion_calle = "Sin numeración";
-                        if (!long.TryParse(dni, out dniNumerico))
-                        {
-                            MessageBox.Show("El DNI ingresado no es válido.");
-                            return;
-                        }
-                        dniNumerico = long.Parse(dni);
-                        Cliente cliente = new Cliente();
-                        cliente = ClienteControlador.obtenerPorDni(dniNumerico);
-                        if (cliente.localidad_id != null)
-                        {
-                            localidad = cliente.localidad_id.nombre;
-                        }
-
-                        if (cliente.calle_id != null)
-                        {
-                            domicilio = cliente.calle_id.nombre;
-                        }
-
-                        if (cliente.numeracion_calle != null)
-                        {
-                            numeracion_calle = cliente.numeracion_calle.ToString();
-                        }
-                        domicilioEntero = domicilio + " " + numeracion_calle;
-                    }
-                    
-
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CLIENTE", txt_nombre_cliente.Text);
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DOCUMENTO", dni);
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@NUMEROFACTURA", txt_numero_factura.Text);
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@FECHA", DateTime.Now.ToString("dd/MM/yyyy"));
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CONDIVA", txt_condicion_iva.Text);
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@FORMAPAGO", combo_forma_pago.SelectedItem.ToString());
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DOMICILIO", domicilioEntero);
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@LOCALIDAD", localidad);
-
-
-                        string filas = string.Empty;
-                    decimal total = 0;
-                    foreach (DataGridViewRow row in Factura.Rows)
-                    {
-                        filas += "<tr>";
-                        filas += "<td>" + row.Cells["Nombre_Perfume"].Value.ToString() + "</td>";
-                        filas += "<td>" + row.Cells["Precio_Unitario"].Value.ToString() + "</td>";
-                        filas += "<td>" + row.Cells["Cantidad"].Value.ToString() + "</td>";
-                        filas += "<td>" + row.Cells["Descuento"].Value.ToString() + "</td>";
-                        filas += "<td>" + row.Cells["Tot"].Value.ToString() + "</td>";
-                        filas += "</tr>";
-                        total += decimal.Parse(row.Cells["Tot"].Value.ToString());
-                    }
-
-
-                        double precioTotal = double.Parse(txt_total.Text);
-                    double precioSubtotal = double.Parse(txt_subtotal.Text);
-                    double recargoTarjeta = double.Parse(txt_monto_recargo.Text);
-                    double descuento = double.Parse(txt_monto_descuento.Text);
-
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@FILAS", filas);
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@IMPORTE", precioSubtotal.ToString());
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@RECARGO", recargoTarjeta.ToString());
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DESCUENTO", descuento.ToString());
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@TOTAL", precioTotal.ToString());
-
-                    }
-
-                // CREACION DE PDF DE LA FACTURA A
-                else
-                {
-                    PaginaHTML_Texto = Properties.Resources.FacturaA.ToString();
-
-
-
-                        string dni = txt_dni.Text;
-                        string localidad = "Sin localidad";
-                        string domicilio = "Sin calle";
-                        string numeracion_calle = "Sin numeración";
-                        string domicilioEntero = "Sin domicilio";
-
-                        if (string.IsNullOrWhiteSpace(dni))
-                        {
-                            dni = "Sin DNI";
-                        }
-                        else
-                        {
-                            long dniNumerico;
-                            localidad = "Sin localidad";
-                            domicilio = "Sin calle";
-                            numeracion_calle = "Sin numeración";
-                            if (!long.TryParse(dni, out dniNumerico))
-                            {
-                                MessageBox.Show("El DNI ingresado no es válido.");
-                                return;
-                            }
-                            dniNumerico = long.Parse(dni);
-                            Cliente cliente = new Cliente();
-                            cliente = ClienteControlador.obtenerPorDni(dniNumerico);
-                            if (cliente.localidad_id != null)
-                            {
-                                localidad = cliente.localidad_id.nombre;
-                            }
-
-                            if (cliente.calle_id != null)
-                            {
-                                domicilio = cliente.calle_id.nombre;
-                            }
-
-                            if (cliente.numeracion_calle != null)
-                            {
-                                numeracion_calle = cliente.numeracion_calle.ToString();
-                            }
-                            domicilioEntero = domicilio + " " + numeracion_calle;
-                        }
-
-
-                        PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CLIENTE", txt_nombre_cliente.Text);
-                        PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DOCUMENTO", dni);
-                        PaginaHTML_Texto = PaginaHTML_Texto.Replace("@NUMEROFACTURA", txt_numero_factura.Text);
-                        PaginaHTML_Texto = PaginaHTML_Texto.Replace("@FECHA", DateTime.Now.ToString("dd/MM/yyyy"));
-                        PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CONDIVA", txt_condicion_iva.Text);
-                        PaginaHTML_Texto = PaginaHTML_Texto.Replace("@FORMAPAGO", combo_forma_pago.SelectedItem.ToString());
-                        PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DOMICILIO", domicilioEntero);
-                        PaginaHTML_Texto = PaginaHTML_Texto.Replace("@LOCALIDAD", localidad);
-
-
-                        string filas = string.Empty;
-                    decimal total = 0;
-                    foreach (DataGridViewRow row in Factura.Rows)
-                    {
-                        decimal totalFila = decimal.Parse(row.Cells["Tot"].Value.ToString());
-                        decimal totalSinIVA = totalFila / 1.21m;
-                        decimal precioUnitario = decimal.Parse(row.Cells["Precio_Unitario"].Value.ToString());
-                        decimal precioSinIVA = precioUnitario / 1.21m;
-
-                            filas += "<tr>";
-                        filas += "<td>" + row.Cells["Nombre_Perfume"].Value.ToString() + "</td>";
-                        filas += "<td>" + precioSinIVA.ToString("0") + "</td>";
-                        filas += "<td>" + row.Cells["Cantidad"].Value.ToString() + "</td>";
-                        filas += "<td>" + row.Cells["Descuento"].Value.ToString() + "</td>";
-                        filas += "<td>" + totalSinIVA.ToString("0") + "</td>";
-                        filas += "<td>" + row.Cells["Tot"].Value.ToString() + "</td>";
-                        filas += "</tr>";
-                        total += decimal.Parse(row.Cells["Tot"].Value.ToString());
-                    }
-
-                    double precioTotal = double.Parse(txt_total.Text);
-                    double precioSubtotal = double.Parse(txt_subtotal.Text);
-                    double recargoTarjeta = double.Parse(txt_monto_recargo.Text);
-                    double iva = double.Parse(txt_iva.Text);
-                    double descuento = double.Parse(txt_monto_descuento.Text);
-
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@FILAS", filas);
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@IMPORTE", precioSubtotal.ToString());
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@RECARGO", recargoTarjeta.ToString());
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DESCUENTO", descuento.ToString());
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@IVA", iva.ToString());
-                    PaginaHTML_Texto = PaginaHTML_Texto.Replace("@TOTAL", precioTotal.ToString());
-                }
-
-                    // GUARDAR FACTURA AUTOMÁTICAMENTE EN CARPETA
-                    if (!Directory.Exists(carpetaFacturas))
-                        Directory.CreateDirectory(carpetaFacturas);
-
-                    string rutaArchivo = Path.Combine(carpetaFacturas, $"Factura_Orden_{txt_numero_factura.Text}.pdf");
-
-                    using (FileStream stream = new FileStream(rutaArchivo, FileMode.Create))
-                    {
-                        Document pdfDoc = new Document(PageSize.A4, 25, 25, 25, 25);
-                        PdfWriter writer = PdfWriter.GetInstance(pdfDoc, stream);
-                        pdfDoc.Open();
-
-                        // Agregamos el logo
-                        iTextSharp.text.Image img = iTextSharp.text.Image.GetInstance(Properties.Resources.LogoEtereaFactura, System.Drawing.Imaging.ImageFormat.Png);
-                        img.ScaleToFit(60, 60);
-                        img.Alignment = iTextSharp.text.Image.UNDERLYING;
-                        img.SetAbsolutePosition(pdfDoc.LeftMargin + 12, pdfDoc.Top - 73);
-                        pdfDoc.Add(img);
-
-                        // Agregamos el HTML
-                        using (StringReader sr = new StringReader(PaginaHTML_Texto))
-                        {
-                            XMLWorkerHelper.GetInstance().ParseXHtml(writer, pdfDoc, sr);
-                        }
-
-                        pdfDoc.Close();
-                        stream.Close();
-                    }
-
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                    {
-                        FileName = rutaArchivo,
-                        UseShellExecute = true
-                    });
-
-                    DialogResult resultado = MessageBox.Show("¿Desea imprimir la factura ahora?", "Factura impresa",
-                        MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-
-                    if (resultado == DialogResult.Yes)
-                    {
-                        ImprimirPdf(rutaArchivo);
-                    }
-
-                    CrearFactura();
-                    CrearDetalleFactura();
-
-
-                    if (!string.IsNullOrWhiteSpace(txt_email.Text))
-                    {
-                        CorreoHelper.EnviarCorreoFactura(filePath, txt_email.Text.Trim());
-                        MessageBox.Show("Factura enviada a " + txt_email.Text + " correctamente");
-                    }
-                    ReiniciarFormulario();
+                    dni = "Sin DNI";
                 }
                 else
                 {
-                    // No hay caja asignada, mostrar FormNumeroDeCaja para elegirla
-                    MessageBox.Show("\"Debes ingresar un número de caja. \n Haz click en 'Abrir Caja' ", "Número de Caja", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    long dniNumerico;
+                    localidad = "Sin localidad";
+                    domicilio = "Sin calle";
+                    numeracion_calle = "Sin numeración";
+                    if (!long.TryParse(dni, out dniNumerico))
+                    {
+                        MessageBox.Show("El DNI ingresado no es válido.");
+                        return;
+                    }
+                    dniNumerico = long.Parse(dni);
+                    Cliente cliente = ClienteControlador.obtenerPorDni(dniNumerico);
+                    if (cliente.localidad_id != null) localidad = cliente.localidad_id.nombre;
+                    if (cliente.calle_id != null) domicilio = cliente.calle_id.nombre;
+                    if (cliente.numeracion_calle != null) numeracion_calle = cliente.numeracion_calle.ToString();
+                    domicilioEntero = domicilio + " " + numeracion_calle;
                 }
+
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CLIENTE", txt_nombre_cliente.Text);
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DOCUMENTO", dni);
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@NUMEROFACTURA", txt_numero_factura.Text);
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@FECHA", DateTime.Now.ToString("dd/MM/yyyy"));
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CONDIVA", txt_condicion_iva.Text);
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@FORMAPAGO", combo_forma_pago.SelectedItem.ToString());
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DOMICILIO", domicilioEntero);
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@LOCALIDAD", localidad);
+
+                // Forma de pago y cuota (inline)
+                var forma = combo_forma_pago.SelectedItem?.ToString() ?? "";
+                var cuotasSel = combo_cuotas.SelectedItem?.ToString() ?? "1";
+                bool esTarjeta = forma == "Visa Crédito" || forma == "Mastercard" || forma == "Amex";
+                string cuotaInline = esTarjeta ? $" - Cuotas: {System.Net.WebUtility.HtmlEncode(cuotasSel)}" : string.Empty;
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CUOTA_INLINE", cuotaInline);
+
+                // Filas del detalle (A: con y sin IVA)
+                string filas = string.Empty;
+                decimal total = 0m;
+
+                foreach (DataGridViewRow row in Factura.Rows)
+                {
+                    var desc = row.Cells["Nombre_Perfume"].Value?.ToString() ?? "";
+
+                    var unitConIva = Convert.ToDecimal(row.Cells["Precio_Unitario"].Value);
+                    var unitSinIva = unitConIva / 1.21m;
+
+                    var cant = Convert.ToInt32(row.Cells["Cantidad"].Value);
+
+                    var totConIva = Convert.ToDecimal(row.Cells["Tot"].Value);
+                    var totSinIva = totConIva / 1.21m;
+
+                    var descMonto = Convert.ToDecimal(row.Cells["Descuento"].Value ?? 0m);
+
+                    filas += $@"
+                <tr>
+                  <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
+                  <td class='money'>{Mon(unitSinIva)}</td>
+                  <td class='num'>{Num(cant)}</td>
+                  <td class='money'>{Mon(descMonto)}</td>
+                  <td class='money'>{Mon(totSinIva)}</td>
+                  <td class='money'>{Mon(totConIva)}</td>
+                </tr>";
+
+                    total += totConIva;
+                }
+
+                double precioTotal = double.Parse(txt_total.Text);
+                double precioSubtotal = double.Parse(txt_subtotal.Text);
+                double recargoTarjeta = double.Parse(txt_monto_recargo.Text);
+                double iva = double.Parse(txt_iva.Text);
+                double descuento = double.Parse(txt_monto_descuento.Text);
+
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@FILAS", filas);
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@IMPORTE", Mon((decimal)precioSubtotal));
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@RECARGO", Mon((decimal)recargoTarjeta));
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DESCUENTO", Mon((decimal)descuento));
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@IVA", Mon((decimal)iva));
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@TOTAL", Mon((decimal)precioTotal));
             }
+
+            // GUARDAR FACTURA AUTOMÁTICAMENTE EN CARPETA
+            if (!Directory.Exists(carpetaFacturas)) Directory.CreateDirectory(carpetaFacturas);
+            string rutaArchivo = Path.Combine(carpetaFacturas, $"Factura_Orden_{txt_numero_factura.Text}.pdf");
+
+            using (FileStream stream = new FileStream(rutaArchivo, FileMode.Create))
+            {
+                Document pdfDoc = new Document(PageSize.A4, 25, 25, 25, 25);
+                PdfWriter writer = PdfWriter.GetInstance(pdfDoc, stream);
+                pdfDoc.Open();
+
+                // Logo
+                iTextSharp.text.Image img = iTextSharp.text.Image.GetInstance(Properties.Resources.LogoEtereaFactura, System.Drawing.Imaging.ImageFormat.Png);
+                img.ScaleToFit(60, 60);
+                img.Alignment = iTextSharp.text.Image.UNDERLYING;
+                img.SetAbsolutePosition(pdfDoc.LeftMargin + 12, pdfDoc.Top - 73);
+                pdfDoc.Add(img);
+
+                // HTML
+                using (StringReader sr = new StringReader(PaginaHTML_Texto))
+                {
+                    XMLWorkerHelper.GetInstance().ParseXHtml(writer, pdfDoc, sr);
+                }
+
+                pdfDoc.Close();
+                stream.Close();
+            }
+
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = rutaArchivo,
+                UseShellExecute = true
+            });
+
+            DialogResult resultado = MessageBox.Show("¿Desea imprimir la factura ahora?", "Factura impresa",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            if (resultado == DialogResult.Yes)
+            {
+                ImprimirPdf(rutaArchivo);
+            }
+
+            CrearFactura();
+            CrearDetalleFactura();
+
+            if (!string.IsNullOrWhiteSpace(txt_email.Text))
+            {
+                CorreoHelper.EnviarCorreoFactura(filePath, txt_email.Text.Trim());
+                MessageBox.Show("Factura enviada a " + txt_email.Text + " correctamente");
+            }
+
+            ReiniciarFormulario();
         }
 
         private void ReiniciarFormulario()
