@@ -9,14 +9,12 @@
             font-size: 12px;
             margin: 20px;
             padding: 0;
-           
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
         }
-
 
         .border th, .border td {
             border: 1px solid black;
@@ -44,19 +42,30 @@
             font-weight: bold;
         }
 
-        /* Alineación/nowrap para números e importes (también en TH) */
+        /* Alineación/nowrap para números e importes */
         .num, .money, th.num, th.money {
             text-align: right;
             white-space: nowrap;
         }
 
-
-        /* Encabezado rosado */
+        /* Encabezado rosado de la grilla */
         .th-pink {
             background: #F6DDE6;
         }
-        
 
+        /* Centrar todos los encabezados de la grilla */
+        thead th {
+            text-align: center !important;
+            vertical-align: middle;
+        }
+
+        /* Forzar 1 solo renglón (no cortar) */
+        .th-nowrap {
+            white-space: nowrap;
+        }
+
+
+      
     </style>
 </head>
 <body>
@@ -139,12 +148,12 @@
                 <table class="border" style="margin-bottom: 30px;">
                     <thead>
                         <tr>
-                            <th class="th-desc th-pink">Descripción</th>
-                            <th class="money th-pink">Precio Unitario</th>
-                            <th class="num th-pink">Cantidad</th>
-                            <th class="money th-pink">Descuento Total</th>
-                            <th class="money th-pink">Subtotal</th>
-                            <th class="money th-pink">Subtotal con IVA</th>
+                            <th class="th-pink th-nowrap">Cantidad</th>
+                            <th class="th-pink th-nowrap">Descripción</th>
+                            <th class="th-pink">Precio<br />Unitario</th>
+                            <th class="th-pink">Descuento<br />Promo</th>
+                            <th class="th-pink th-nowrap">Subtotal</th>
+                            <th class="th-pink">Subtotal<br />c/IVA</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -174,7 +183,7 @@
                         <tr>
                             <td colspan="4" style="border:0"></td>
                             <td class="num" style="background: #F6DDE6;"><strong>Total:</strong></td>
-                            <td class="money" style="background: #f9e8ee;">@TOTAL</td>
+                            <td class="money" style="background: #FFFFFF;">@TOTAL</td>
                         </tr>
                     </tfoot>
                 </table>

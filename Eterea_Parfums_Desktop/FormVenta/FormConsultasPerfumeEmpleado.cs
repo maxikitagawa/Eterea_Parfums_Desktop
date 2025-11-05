@@ -43,10 +43,13 @@ namespace Eterea_Parfums_Desktop
 
         public string NumeroCaja { get; set; }
 
+        private readonly Facturar_UC _parent;
 
-        public FormConsultasPerfumeEmpleado(Facturar_UC facturacion)
+        public FormConsultasPerfumeEmpleado(Facturar_UC parent)
         {
             InitializeComponent();
+            _parent = parent;
+
 
             RegistrarClicks(this);
 
@@ -54,7 +57,7 @@ namespace Eterea_Parfums_Desktop
 
             this.VisibleChanged += FormConsultasPerfumeEmpleado_VisibleChanged;
 
-            facturacionForm = facturacion;
+            facturacionForm = parent;
 
             facturacionForm.DesactivarEscaner(); // ✅ Esto evita que el escáner de Facturar_UC interfiera
 
@@ -129,6 +132,8 @@ namespace Eterea_Parfums_Desktop
             filtrar();
 
             ResetearFiltros();
+
+            this.FormClosed += (s, e) => _parent?.ActivarEscaner(); // ✅ reactivar escáner del padre al cerrar
 
         }
 
@@ -669,92 +674,34 @@ namespace Eterea_Parfums_Desktop
                 int rowIndex = e.RowIndex;
                 Perfume perfumeSeleccionado = Perfumes_Paginados[rowIndex];
 
-                // Obtener stock en la sucursal actual
+                // ✔️ Chequeo de stock en sucursal (lo dejás tal cual)
                 int stockEnSucursal = 0;
                 var stockPorPerfumeSucursal = StockControlador.ObtenerTodosLosStocksPorSucursal(Program.sucursal);
                 if (stockPorPerfumeSucursal.ContainsKey(perfumeSeleccionado.id))
-                {
                     stockEnSucursal = stockPorPerfumeSucursal[perfumeSeleccionado.id];
-                }
 
                 if (stockEnSucursal <= 0)
                 {
                     MessageBox.Show("No hay stock disponible en esta sucursal para agregar este perfume.", "Sin Stock", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return; // No permitir agregar
+                    return;
                 }
 
-                // Si tiene stock, agregarlo a la factura
-                completarFactura(perfumeSeleccionado);
-                facturacionForm.ActualizarTotales();
+                // ✅ Usar método centralizado del padre (agrega o incrementa y calcula totales/descuentos)
+                _parent.AddOrIncrementPerfume(perfumeSeleccionado, 1);
+                _parent.ActualizarTotales();
+
+                // Opcional: reactivar escáner y cerrar
+                _parent.ActivarEscaner();
                 this.Close();
             }
         }
 
         private void completarFactura(Perfume perfumeSeleccionado)
         {
-            // Buscar si el perfume ya está en la factura
-            DataGridViewRow existingRow = null;
-
-            foreach (DataGridViewRow row in facturacionForm.GetFacturaDataGrid().Rows)
-            {
-                if (row.Cells["Nombre_Perfume"].Value != null && row.Cells["Nombre_Perfume"].Value.ToString() == perfumeSeleccionado.nombre)
-                {
-                    existingRow = row;
-                    break;
-                }
-            }
-
-            if (existingRow != null)
-            {
-                // Si el perfume ya está en la factura, incrementar la cantidad
-                int cantidad = Convert.ToInt32(existingRow.Cells["Cantidad"].Value);
-                existingRow.Cells["Cantidad"].Value = cantidad + 1;
-
-                // Multiplicar el precio unitario por la cantidad para obtener el nuevo subtotal
-                float precioUnitario = float.Parse(existingRow.Cells["Precio_Unitario"].Value.ToString());
-                float nuevoSubtotal = precioUnitario * int.Parse(existingRow.Cells["Cantidad"].Value.ToString());
-                existingRow.Cells[7].Value = nuevoSubtotal;
-                /*PerfumeEnPromoControlador promoController = new PerfumeEnPromoControlador();
-                int descuentoPorcentaje = promoController.ObtenerMayorDescuentoPorPerfume(perfumeSeleccionado.id);
-                decimal descuentoMonto = (precioUnitario * Convert.ToDecimal(descuentoPorcentaje)) / 100;
-                facturacionForm.GetFacturaDataGrid().Rows[rowIndex].Cells["Descuento"].Value = descuentoMonto;
-                
-                // Recalcular el total y otros valores necesarios
-
-                /*   totalFactura();
-                   CalcularImporteRecargo(float.Parse(txt_subtotal.Text), float.Parse(txt_recargo.Text));
-                   desc();
-                   sumaFinal(float.Parse(txt_subtotal.Text), float.Parse(txt_monto_recargo.Text), float.Parse(txt_monto_descuento.Text));
-                   */
-            }
-            else
-            {
-                // Si el perfume no está en la factura, agregar una nueva fila
-                int rowIndex = facturacionForm.GetFacturaDataGrid().Rows.Add();
-                facturacionForm.GetFacturaDataGrid().Rows[rowIndex].Cells[0].Value = perfumeSeleccionado.id.ToString();
-                facturacionForm.GetFacturaDataGrid().Rows[rowIndex].Cells["Nombre_Perfume"].Value = perfumeSeleccionado.nombre.ToString();
-                facturacionForm.GetFacturaDataGrid().Rows[rowIndex].Cells["Cantidad"].Value = 1;
-                facturacionForm.GetFacturaDataGrid().Rows[rowIndex].Cells[2].Value = "➕";
-                facturacionForm.GetFacturaDataGrid().Rows[rowIndex].Cells[3].Value = "➖";
-                facturacionForm.GetFacturaDataGrid().Rows[rowIndex].Cells["Precio_Unitario"].Value = perfumeSeleccionado.precio_en_pesos.ToString();
-                PerfumeEnPromoControlador promoController = new PerfumeEnPromoControlador();
-                int descuentoPorcentaje = promoController.obtenerMayorDescuentoPorPerfume(perfumeSeleccionado.id) ?? 0;
-                decimal precioUnitario = Convert.ToDecimal(perfumeSeleccionado.precio_en_pesos);
-                decimal descuentoMonto = ((precioUnitario * descuentoPorcentaje) / 100);
-                facturacionForm.GetFacturaDataGrid().Rows[rowIndex].Cells["Descuento"].Value = descuentoMonto;
-                facturacionForm.GetFacturaDataGrid().Rows[rowIndex].Cells["Tot"].Value = perfumeSeleccionado.precio_en_pesos.ToString();
-                facturacionForm.GetFacturaDataGrid().Rows[rowIndex].Cells["Eliminar"].Value = "Eliminar";
-                facturacionForm.descuentoUnitario();
-
-                /*   // Recalcular el total y otros valores necesarios
-                   totalFactura();
-                   CalcularImporteRecargo(float.Parse(txt_subtotal.Text), float.Parse(txt_recargo.Text));
-                   desc();
-                   sumaFinal(float.Parse(txt_subtotal.Text), float.Parse(txt_monto_recargo.Text), float.Parse(txt_monto_descuento.Text));
-              */
-            }
+            if (perfumeSeleccionado == null) return;
+            _parent.AddOrIncrementPerfume(perfumeSeleccionado, 1);
+            _parent.ActualizarTotales();
         }
-
 
 
         //Diseño del boton del datagridview

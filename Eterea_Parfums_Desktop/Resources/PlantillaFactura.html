@@ -137,10 +137,10 @@
                 <table class="border" style="margin-bottom: 30px;">
                     <thead>
                         <tr>
+                            <th class="num th-pink">Cantidad</th>
                             <th class="th-desc th-pink">Descripción</th>
                             <th class="money th-pink">Precio Unitario</th>
-                            <th class="num th-pink">Cantidad</th>
-                            <th class="money th-pink">Descuento Total</th>
+                            <th class="money th-pink">Descuento Promo</th>
                             <th class="money th-pink">Subtotal</th>
                         </tr>
                     </thead>
@@ -148,25 +148,21 @@
                         @FILAS
                     </tbody>
                     <tfoot>
+                      
                         <tr>
                             <td colspan="3" style="border:0"></td>
-                            <td class="num" style="background: #DCDCDC;"><strong>Importe:</strong></td>
-                            <td class="money" style="background: #DCDCDC;">@IMPORTE</td>
+                            <td class="num" style="background: #DCDCDC;"><strong>Bonificación:</strong></td>
+                            <td class="money" style="background: #DCDCDC;">@DESCUENTO</td>
                         </tr>
                         <tr>
                             <td colspan="3" style="border:0"></td>
-                            <td class="num" style="background: #e4e4e4;"><strong>Bonificación:</strong></td>
-                            <td class="money" style="background: #e4e4e4;">@DESCUENTO</td>
-                        </tr>
-                        <tr>
-                            <td colspan="3" style="border:0"></td>
-                            <td class="num" style="background: #DCDCDC;"><strong>Recargo Tarjeta:</strong></td>
-                            <td class="money" style="background: #DCDCDC;">@RECARGO</td>
+                            <td class="num" style="background: #E4E4E4;"><strong>Recargo Tarjeta:</strong></td>
+                            <td class="money" style="background: #E4E4E4; ">@RECARGO</td>
                         </tr>
                         <tr>
                             <td colspan="3" style="border:0"></td>
                             <td class="num" style="background: #F6DDE6; "><strong>Total:</strong></td>
-                            <td class="money" style="background: #f9e8ee; ">@TOTAL</td>
+                            <td class="money" style="background: #FFFFFF; ">@TOTAL</td>
                         </tr>
                     </tfoot>
                 </table>

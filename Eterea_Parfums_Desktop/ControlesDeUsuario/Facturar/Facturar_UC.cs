@@ -247,38 +247,13 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             //Ocultas la primera columna de la tabla (es una columna de seleccion de fila)
             Factura.RowHeadersVisible = false;
 
-            foreach (DataGridViewRow fila in Factura.Rows)
-            {
-                if (fila.Cells[0].Value.ToString() == perfume.id.ToString()) // Columna ID
-                {
-                    if (int.TryParse(fila.Cells[1].Value.ToString(), out int cantidadActual))
-                    {
-                        fila.Cells[1].Value = cantidadActual + 1;
-                        PerfumeEnPromoControlador promoController = new PerfumeEnPromoControlador();
-                        int descuentoPorcentaje = promoController.obtenerMayorDescuentoPorPerfume(perfume.id) ?? 0; //CAMBIE ALGO ACAAAAAA MAXI
-                        decimal precioUnitario = Convert.ToDecimal(perfume.precio_en_pesos);
-                        decimal descuentoMonto = ((precioUnitario * descuentoPorcentaje) / 100);
-                        fila.Cells[6].Value = descuentoMonto;
-                        //facturacionForm.GetFacturaDataGrid().Rows[rowIndex].Cells["Tot"].Value = perfume.precio_en_pesos.ToString();
-                        fila.Cells[7].Value = (cantidadActual + 1) * perfume.precio_en_pesos;
-                        descuentoUnitario();
-                        ActualizarTotales();
-                    }
-                    return;
-                }
-            }
-
+            Factura.CellPainting -= Factura_CellPainting;
             Factura.CellPainting += Factura_CellPainting;
 
-            int rowIndex = Factura.Rows.Add(perfume.id, 1, "", "", perfume.nombre, perfume.precio_en_pesos, "", "", ""); ;
+            // 👉 Usamos el método único
+            AddOrIncrementPerfume(perfume, 1);
 
-            // Asignar botones a las celdas de la nueva fila
-            Factura.Rows[rowIndex].Cells[2] = new DataGridViewButtonCell() { Value = "➕" };
-            Factura.Rows[rowIndex].Cells[3] = new DataGridViewButtonCell() { Value = "➖" };
-            Factura.Rows[rowIndex].Cells[8] = new DataGridViewButtonCell() { Value = "Eliminar" };// "🗑" 
-
-            descuentoUnitario();
-            ActualizarTotales();
+            txt_scan_factura.Clear();
         }
 
         private void Txt_scan_factura_Leave(object sender, EventArgs e)
@@ -374,6 +349,15 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
             txt_numero_caja.Text = "Caja sin asignar";
         }*/
+
+        private static string NombreConPresentacion(string nombre, object presentacionVal)
+        {
+            var nom = nombre?.Trim() ?? "";
+            int ml = 0;
+            if (presentacionVal != null) int.TryParse(presentacionVal.ToString(), out ml);
+            return ml > 0 ? $"{nom} {ml} ml" : nom;
+        }
+
 
         private void btn_buscar_Click(object sender, EventArgs e)
         {
@@ -1167,21 +1151,21 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 PaginaHTML_Texto = Properties.Resources.PlantillaFactura.ToString();
 
                 string dni = txt_dni.Text;
-                string localidad = "Sin localidad";
-                string domicilio = "Sin calle";
-                string numeracion_calle = "Sin numeración";
-                string domicilioEntero = "Sin domicilio";
+                string localidad = "SIN DATO";
+                string domicilio = "SIN DATO";
+                string numeracion_calle = "SIN DATO";
+                string domicilioEntero = "SIN DATO";
 
                 if (string.IsNullOrWhiteSpace(dni))
                 {
-                    dni = "Sin DNI";
+                    dni = "SIN DATO";
                 }
                 else
                 {
                     long dniNumerico;
-                    localidad = "Sin localidad";
-                    domicilio = "Sin calle";
-                    numeracion_calle = "Sin numeración";
+                    localidad = "SIN DATO";
+                    domicilio = "SIN DATO";
+                    numeracion_calle = "SIN DATO";
                     if (!long.TryParse(dni, out dniNumerico))
                     {
                         MessageBox.Show("El DNI ingresado no es válido.");
@@ -1238,19 +1222,19 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
                 foreach (DataGridViewRow row in Factura.Rows)
                 {
+                    var cant = Convert.ToInt32(row.Cells["Cantidad"].Value);
                     var desc = row.Cells["Nombre_Perfume"].Value?.ToString() ?? "";
                     var unit = Convert.ToDecimal(row.Cells["Precio_Unitario"].Value);
-                    var cant = Convert.ToInt32(row.Cells["Cantidad"].Value);
                     var descMonto = Convert.ToDecimal(row.Cells["Descuento"].Value ?? 0m);
                     var tot = Convert.ToDecimal(row.Cells["Tot"].Value);
 
                     filas += $@"
                 <tr>
-                  <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
-                  <td class='money'>{Mon(unit)}</td>
-                  <td class='num'>{Num(cant)}</td>
-                  <td class='money'>{Mon(descMonto)}</td>
-                  <td class='money'>{Mon(tot)}</td>
+                 <td class='num'>{Num(cant)}</td>
+                 <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
+                 <td class='money'>{Mon(unit)}</td>
+                 <td class='money'>{Mon(descMonto)}</td>
+                 <td class='money'>{Mon(tot)}</td>
                 </tr>";
 
                     total += tot;
@@ -1262,7 +1246,6 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 double descuento = double.Parse(txt_monto_descuento.Text);
 
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@FILAS", filas);
-                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@IMPORTE", Mon((decimal)precioSubtotal));
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@RECARGO", Mon((decimal)recargoTarjeta));
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DESCUENTO", Mon((decimal)descuento));
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@TOTAL", Mon((decimal)precioTotal));
@@ -1321,9 +1304,9 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 {
                     rowFormaPago = @"
                 <tr>
-                  <td style='background:#FBE9EF; font-weight:bold;'>Forma de Pago:</td>
+                  <td style='background:#F6DDE6; font-weight:bold;'>Forma de Pago:</td>
                   <td style='width:40%;'>" + System.Net.WebUtility.HtmlEncode(forma) + @"</td>
-                  <td style='width:20%; background:#FBE9EF; font-weight:bold;'>Cuotas:</td>
+                  <td style='width:20%; background:#F6DDE6; font-weight:bold;'>Cuotas:</td>
                   <td>" + System.Net.WebUtility.HtmlEncode(cuotasSel) + @"</td>
                 </tr>";
                 }
@@ -1331,7 +1314,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 {
                     rowFormaPago = @"
                 <tr>
-                  <td style='background:#FBE9EF; font-weight:bold;'>Forma de Pago:</td>
+                  <td style='background:#F6DDE6; font-weight:bold;'>Forma de Pago:</td>
                   <td colspan='3'>" + System.Net.WebUtility.HtmlEncode(forma) + @"</td>
                 </tr>";
                 }
@@ -1344,12 +1327,14 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
                 foreach (DataGridViewRow row in Factura.Rows)
                 {
+                    var cant = Convert.ToInt32(row.Cells["Cantidad"].Value);
+
                     var desc = row.Cells["Nombre_Perfume"].Value?.ToString() ?? "";
+
 
                     var unitConIva = Convert.ToDecimal(row.Cells["Precio_Unitario"].Value);
                     var unitSinIva = unitConIva / 1.21m;
 
-                    var cant = Convert.ToInt32(row.Cells["Cantidad"].Value);
 
                     var totConIva = Convert.ToDecimal(row.Cells["Tot"].Value);
                     var totSinIva = totConIva / 1.21m;
@@ -1358,9 +1343,9 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
                     filas += $@"
                 <tr>
+                  <td class='num'>{Num(cant)}</td>
                   <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
                   <td class='money'>{Mon(unitSinIva)}</td>
-                  <td class='num'>{Num(cant)}</td>
                   <td class='money'>{Mon(descMonto)}</td>
                   <td class='money'>{Mon(totSinIva)}</td>
                   <td class='money'>{Mon(totConIva)}</td>
@@ -1405,7 +1390,6 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 {
                     XMLWorkerHelper.GetInstance().ParseXHtml(writer, pdfDoc, sr);
                 }
-
                 pdfDoc.Close();
                 stream.Close();
             }
@@ -1572,7 +1556,49 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             }
         }
 
-     
+        public void AddOrIncrementPerfume(Perfume perfume, int cantidadInicial = 1)
+        {
+            if (perfume == null || cantidadInicial <= 0) return;
+
+            // IMPORTANTE: si la columna del DGV se llama "Nombre" usá ese nombre acá,
+            // si se llama "Nombre_Perfume", cambialo en las líneas de Cells["Nombre"].
+            const string colId = "Id_Perfume";
+            const string colCantidad = "Cantidad";
+            const string colNombre = "Nombre_Perfume"; // <-- CAMBIÁ A "Nombre" si tu columna se llama así
+            const string colPrecioUnit = "Precio_Unitario";
+            const string colDesc = "Descuento";
+            const string colTot = "Tot";
+
+            // 1) Si ya existe, incremento cantidad
+            foreach (DataGridViewRow fila in Factura.Rows)
+            {
+                if (!fila.IsNewRow && fila.Cells[colId]?.Value?.ToString() == perfume.id.ToString())
+                {
+                    int cantActual = 0;
+                    int.TryParse(fila.Cells[colCantidad].Value?.ToString(), out cantActual);
+                    fila.Cells[colCantidad].Value = cantActual + cantidadInicial;
+
+                    // recalcular totales/desc
+                    descuentoUnitario();
+                    ActualizarTotales();
+                    return;
+                }
+            }
+
+            // 2) Si no existe, agrego nueva fila
+            string nombreMostrar = NombreConPresentacion(perfume.nombre, perfume.presentacion_ml);
+
+            // Asegurate de que estos índices coincidan con tu DGV:
+            // [0]=Id_Perfume, [1]=Cantidad, [2]=Btn+, [3]=Btn-, [4]=Nombre_Perfume, [5]=Precio_Unitario, [6]=Descuento, [7]=Tot, [8]=Eliminar
+            int rowIndex = Factura.Rows.Add(perfume.id, cantidadInicial, "", "", nombreMostrar, perfume.precio_en_pesos, 0m, perfume.precio_en_pesos * cantidadInicial, "");
+            Factura.Rows[rowIndex].Cells[2] = new DataGridViewButtonCell() { Value = "➕" };
+            Factura.Rows[rowIndex].Cells[3] = new DataGridViewButtonCell() { Value = "➖" };
+            Factura.Rows[rowIndex].Cells[8] = new DataGridViewButtonCell() { Value = "Eliminar" };
+
+            // recalcular totales/desc
+            descuentoUnitario();
+            ActualizarTotales();
+        }
 
 
     }
