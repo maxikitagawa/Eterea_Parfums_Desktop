@@ -1111,7 +1111,6 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
 
 
-
         private void btn_imprimir_Click(object sender, EventArgs e)
         {
             string numero = Program.NumeroCajaActual;
@@ -1144,9 +1143,9 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             string filePath = rutaFactura;
 
             // ---------------------------
-            // FACTURA B (Consumidor Final / Exento / Monotributo)
+            // FACTURA B (Consumidor Final / Exento / Monotributista)
             // ---------------------------
-            if (condicionCliente == "Consumidor Final" || condicionCliente == "Exento" || condicionCliente == "Monotributo") 
+            if (condicionCliente == "Consumidor Final" || condicionCliente == "Exento" || condicionCliente == "Monotributista")
             {
                 PaginaHTML_Texto = Properties.Resources.PlantillaFactura.ToString();
 
@@ -1188,12 +1187,14 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DOMICILIO", domicilioEntero);
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@LOCALIDAD", localidad);
 
-                // Forma de pago y cuota (inline)
-                var forma = combo_forma_pago.SelectedItem?.ToString() ?? "";
-                var cuotasSel = combo_cuotas.SelectedItem?.ToString() ?? "1";
-                bool esTarjeta = forma == "Visa Crédito" || forma == "Mastercard" || forma == "Amex";
-                string cuotaInline = esTarjeta ? $" - Cuotas: {System.Net.WebUtility.HtmlEncode(cuotasSel)}" : string.Empty;
-                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CUOTA_INLINE", cuotaInline);
+                // ----- Cuotas como recuadro separado -----
+                var formaB = combo_forma_pago.SelectedItem?.ToString() ?? "";
+                var cuotasSelB = combo_cuotas.SelectedItem?.ToString() ?? "1";
+                bool esTarjetaB = formaB == "Visa Crédito" || formaB == "Mastercard" || formaB == "Amex";
+                string cuotasLabelB = esTarjetaB ? "Cuotas:" : "&nbsp;";
+                string cuotasValB = esTarjetaB ? System.Net.WebUtility.HtmlEncode(cuotasSelB) : "&nbsp;";
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CUOTAS_LABEL", cuotasLabelB);
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CUOTAS_VAL", cuotasValB);
 
                 // Filas del detalle
                 string filas = string.Empty;
@@ -1208,13 +1209,13 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                     var tot = Convert.ToDecimal(row.Cells["Tot"].Value);
 
                     filas += $@"
-                <tr>
-                  <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
-                  <td class='money'>{Mon(unit)}</td>
-                  <td class='num'>{Num(cant)}</td>
-                  <td class='money'>{Mon(descMonto)}</td>
-                  <td class='money'>{Mon(tot)}</td>
-                </tr>";
+<tr>
+  <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
+  <td class='money'>{Mon(unit)}</td>
+  <td class='num'>{Num(cant)}</td>
+  <td class='money'>{Mon(descMonto)}</td>
+  <td class='money'>{Mon(tot)}</td>
+</tr>";
 
                     total += tot;
                 }
@@ -1275,12 +1276,14 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DOMICILIO", domicilioEntero);
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@LOCALIDAD", localidad);
 
-                // Forma de pago y cuota (inline)
-                var forma = combo_forma_pago.SelectedItem?.ToString() ?? "";
-                var cuotasSel = combo_cuotas.SelectedItem?.ToString() ?? "1";
-                bool esTarjeta = forma == "Visa Crédito" || forma == "Mastercard" || forma == "Amex";
-                string cuotaInline = esTarjeta ? $" - Cuotas: {System.Net.WebUtility.HtmlEncode(cuotasSel)}" : string.Empty;
-                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CUOTA_INLINE", cuotaInline);
+                // ----- Cuotas como recuadro separado -----
+                var formaA = combo_forma_pago.SelectedItem?.ToString() ?? "";
+                var cuotasSelA = combo_cuotas.SelectedItem?.ToString() ?? "1";
+                bool esTarjetaA = formaA == "Visa Crédito" || formaA == "Mastercard" || formaA == "Amex";
+                string cuotasLabelA = esTarjetaA ? "Cuotas:" : "&nbsp;";
+                string cuotasValA = esTarjetaA ? System.Net.WebUtility.HtmlEncode(cuotasSelA) : "&nbsp;";
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CUOTAS_LABEL", cuotasLabelA);
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CUOTAS_VAL", cuotasValA);
 
                 // Filas del detalle (A: con y sin IVA)
                 string filas = string.Empty;
@@ -1301,14 +1304,14 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                     var descMonto = Convert.ToDecimal(row.Cells["Descuento"].Value ?? 0m);
 
                     filas += $@"
-                <tr>
-                  <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
-                  <td class='money'>{Mon(unitSinIva)}</td>
-                  <td class='num'>{Num(cant)}</td>
-                  <td class='money'>{Mon(descMonto)}</td>
-                  <td class='money'>{Mon(totSinIva)}</td>
-                  <td class='money'>{Mon(totConIva)}</td>
-                </tr>";
+<tr>
+  <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
+  <td class='money'>{Mon(unitSinIva)}</td>
+  <td class='num'>{Num(cant)}</td>
+  <td class='money'>{Mon(descMonto)}</td>
+  <td class='money'>{Mon(totSinIva)}</td>
+  <td class='money'>{Mon(totConIva)}</td>
+</tr>";
 
                     total += totConIva;
                 }
@@ -1379,6 +1382,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
             ReiniciarFormulario();
         }
+
 
         private void ReiniciarFormulario()
         {

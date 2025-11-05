@@ -15,6 +15,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: auto;
         }
 
         .border th, .border td {
@@ -43,14 +44,22 @@
             font-weight: bold;
         }
 
-        .num {
+        /* Alineación/nowrap para números e importes */
+        .num, .money, th.num, th.money {
             text-align: right;
             white-space: nowrap;
         }
 
-        .money {
-            text-align: right;
-            white-space: nowrap;
+       
+
+        /* La descripción se lleva el espacio flexible */
+        .th-desc {
+            width: 100%;
+        }
+
+        /* Encabezado rosado de la grilla */
+        .th-pink {
+            background: #F6DDE6;
         }
 
     </style>
@@ -127,23 +136,19 @@
                     </tr>
 
                     <!-- 5° Forma de Pago (+ Cuota inline si corresponde) -->
-                    <tr>
-                        <td style="background: #F6DDE6; font-weight: bold;">Forma de Pago:</td>
-                        <td style="width:40%;">@FORMAPAGO</td>
-                        <td style="width: 20%; background: #F6DDE6; font-weight: bold;">@CUOTAS_LABEL</td>
-                        <td>@CUOTAS_VAL</td>
-                    </tr>
+                    @ROW_FORMA_PAGO
+
                 </table>
 
                 <!-- Detalle factura -->
                 <table class="border" style="margin-bottom: 30px;">
                     <thead>
                         <tr>
-                            <th style="background:#F6DDE6;">Descripción</th>
-                            <th style="background:#F6DDE6;">Precio Unitario</th>
-                            <th style="background:#F6DDE6;">Cantidad</th>
-                            <th style="background:#F6DDE6;">Descuento Total</th>
-                            <th style="background:#F6DDE6;">Subtotal</th>
+                            <th class="th-desc th-pink">Descripción</th>
+                            <th class="money th-pink">Precio Unitario</th>
+                            <th class="num th-pink">Cantidad</th>
+                            <th class="money th-pink">Descuento Total</th>
+                            <th class="money th-pink">Subtotal</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -167,8 +172,8 @@
                         </tr>
                         <tr>
                             <td colspan="3" style="border:0"></td>
-                            <td class="num" style="background: #e4e4e4;"><strong>Total:</strong></td>
-                            <td class="money" style="background: #e4e4e4;">@TOTAL</td>
+                            <td class="num" style="background: #F6DDE6; "><strong>Total:</strong></td>
+                            <td class="money" style="background: #f9e8ee; ">@TOTAL</td>
                         </tr>
                     </tfoot>
                 </table>
