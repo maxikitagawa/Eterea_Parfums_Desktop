@@ -1109,6 +1109,23 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             }
         }
 
+        private static string FormatearDomicilio(Cliente c)
+        {
+            // Nombre de calle (si existe y no es “sin dato”)
+            var calle = c?.calle_id?.nombre?.Trim();
+            var tieneCalle = !string.IsNullOrWhiteSpace(calle) &&
+                             !calle.Equals("sin dato", StringComparison.OrdinalIgnoreCase) &&
+                             !calle.Equals("sin calle", StringComparison.OrdinalIgnoreCase);
+
+            // Numeración válida (> 0)
+            int? num = c?.numeracion_calle;
+            var tieneNumero = num.HasValue && num.Value > 0;
+
+            if (tieneCalle && tieneNumero) return $"{calle} {num.Value}";
+            if (tieneCalle) return calle;               // hay calle pero número vacío/0
+            return "SIN DATO";                                     // no hay datos
+        }
+
 
 
         private void btn_imprimir_Click(object sender, EventArgs e)
@@ -1172,10 +1189,9 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                     }
                     dniNumerico = long.Parse(dni);
                     Cliente cliente = ClienteControlador.obtenerPorDni(dniNumerico);
-                    if (cliente.localidad_id != null) localidad = cliente.localidad_id.nombre;
-                    if (cliente.calle_id != null) domicilio = cliente.calle_id.nombre;
-                    if (cliente.numeracion_calle != null) numeracion_calle = cliente.numeracion_calle.ToString();
-                    domicilioEntero = domicilio + " " + numeracion_calle;
+                    if (cliente?.localidad_id != null) localidad = cliente.localidad_id.nombre;
+
+                    domicilioEntero = FormatearDomicilio(cliente);
                 }
 
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CLIENTE", txt_nombre_cliente.Text);
@@ -1187,14 +1203,34 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DOMICILIO", domicilioEntero);
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@LOCALIDAD", localidad);
 
-                // ----- Cuotas como recuadro separado -----
-                var formaB = combo_forma_pago.SelectedItem?.ToString() ?? "";
-                var cuotasSelB = combo_cuotas.SelectedItem?.ToString() ?? "1";
-                bool esTarjetaB = formaB == "Visa Crédito" || formaB == "Mastercard" || formaB == "Amex";
-                string cuotasLabelB = esTarjetaB ? "Cuotas:" : "&nbsp;";
-                string cuotasValB = esTarjetaB ? System.Net.WebUtility.HtmlEncode(cuotasSelB) : "&nbsp;";
-                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CUOTAS_LABEL", cuotasLabelB);
-                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CUOTAS_VAL", cuotasValB);
+                // ===== Fila dinámica de "Forma de Pago" (+ "Cuotas" si es tarjeta) =====
+                var forma = combo_forma_pago.SelectedItem?.ToString() ?? "";
+                var cuotasSel = combo_cuotas.SelectedItem?.ToString() ?? "1";
+                bool esTarjeta = forma == "Visa Crédito" || forma == "Mastercard" || forma == "Amex";
+
+                string rowFormaPago;
+                if (esTarjeta)
+                {
+                    // 2 recuadros: Forma de Pago | Cuotas
+                    rowFormaPago = @"
+                <tr>
+                  <td style='background:#F6DDE6; font-weight:bold;'>Forma de Pago:</td>
+                  <td style='width:40%;'>" + System.Net.WebUtility.HtmlEncode(forma) + @"</td>
+                  <td style='width:20%; background:#F6DDE6; font-weight:bold;'>Cuotas:</td>
+                  <td>" + System.Net.WebUtility.HtmlEncode(cuotasSel) + @"</td>
+                </tr>";
+                }
+                else
+                {
+                    // Un solo recuadro ocupando todo el ancho a la derecha
+                    rowFormaPago = @"
+                <tr>
+                  <td style='background:#F6DDE6; font-weight:bold;'>Forma de Pago:</td>
+                  <td colspan='3'>" + System.Net.WebUtility.HtmlEncode(forma) + @"</td>
+                </tr>";
+                }
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@ROW_FORMA_PAGO", rowFormaPago);
+                // ======================================================================
 
                 // Filas del detalle
                 string filas = string.Empty;
@@ -1209,13 +1245,13 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                     var tot = Convert.ToDecimal(row.Cells["Tot"].Value);
 
                     filas += $@"
-<tr>
-  <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
-  <td class='money'>{Mon(unit)}</td>
-  <td class='num'>{Num(cant)}</td>
-  <td class='money'>{Mon(descMonto)}</td>
-  <td class='money'>{Mon(tot)}</td>
-</tr>";
+                <tr>
+                  <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
+                  <td class='money'>{Mon(unit)}</td>
+                  <td class='num'>{Num(cant)}</td>
+                  <td class='money'>{Mon(descMonto)}</td>
+                  <td class='money'>{Mon(tot)}</td>
+                </tr>";
 
                     total += tot;
                 }
@@ -1261,10 +1297,9 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                     }
                     dniNumerico = long.Parse(dni);
                     Cliente cliente = ClienteControlador.obtenerPorDni(dniNumerico);
-                    if (cliente.localidad_id != null) localidad = cliente.localidad_id.nombre;
-                    if (cliente.calle_id != null) domicilio = cliente.calle_id.nombre;
-                    if (cliente.numeracion_calle != null) numeracion_calle = cliente.numeracion_calle.ToString();
-                    domicilioEntero = domicilio + " " + numeracion_calle;
+                    if (cliente?.localidad_id != null) localidad = cliente.localidad_id.nombre;
+
+                    domicilioEntero = FormatearDomicilio(cliente);
                 }
 
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CLIENTE", txt_nombre_cliente.Text);
@@ -1276,14 +1311,32 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DOMICILIO", domicilioEntero);
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@LOCALIDAD", localidad);
 
-                // ----- Cuotas como recuadro separado -----
-                var formaA = combo_forma_pago.SelectedItem?.ToString() ?? "";
-                var cuotasSelA = combo_cuotas.SelectedItem?.ToString() ?? "1";
-                bool esTarjetaA = formaA == "Visa Crédito" || formaA == "Mastercard" || formaA == "Amex";
-                string cuotasLabelA = esTarjetaA ? "Cuotas:" : "&nbsp;";
-                string cuotasValA = esTarjetaA ? System.Net.WebUtility.HtmlEncode(cuotasSelA) : "&nbsp;";
-                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CUOTAS_LABEL", cuotasLabelA);
-                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CUOTAS_VAL", cuotasValA);
+                // ===== Fila dinámica de "Forma de Pago" (+ "Cuotas" si es tarjeta) =====
+                var forma = combo_forma_pago.SelectedItem?.ToString() ?? "";
+                var cuotasSel = combo_cuotas.SelectedItem?.ToString() ?? "1";
+                bool esTarjeta = forma == "Visa Crédito" || forma == "Mastercard" || forma == "Amex";
+
+                string rowFormaPago;
+                if (esTarjeta)
+                {
+                    rowFormaPago = @"
+                <tr>
+                  <td style='background:#FBE9EF; font-weight:bold;'>Forma de Pago:</td>
+                  <td style='width:40%;'>" + System.Net.WebUtility.HtmlEncode(forma) + @"</td>
+                  <td style='width:20%; background:#FBE9EF; font-weight:bold;'>Cuotas:</td>
+                  <td>" + System.Net.WebUtility.HtmlEncode(cuotasSel) + @"</td>
+                </tr>";
+                }
+                else
+                {
+                    rowFormaPago = @"
+                <tr>
+                  <td style='background:#FBE9EF; font-weight:bold;'>Forma de Pago:</td>
+                  <td colspan='3'>" + System.Net.WebUtility.HtmlEncode(forma) + @"</td>
+                </tr>";
+                }
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@ROW_FORMA_PAGO", rowFormaPago);
+                // ======================================================================
 
                 // Filas del detalle (A: con y sin IVA)
                 string filas = string.Empty;
@@ -1304,14 +1357,14 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                     var descMonto = Convert.ToDecimal(row.Cells["Descuento"].Value ?? 0m);
 
                     filas += $@"
-<tr>
-  <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
-  <td class='money'>{Mon(unitSinIva)}</td>
-  <td class='num'>{Num(cant)}</td>
-  <td class='money'>{Mon(descMonto)}</td>
-  <td class='money'>{Mon(totSinIva)}</td>
-  <td class='money'>{Mon(totConIva)}</td>
-</tr>";
+                <tr>
+                  <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
+                  <td class='money'>{Mon(unitSinIva)}</td>
+                  <td class='num'>{Num(cant)}</td>
+                  <td class='money'>{Mon(descMonto)}</td>
+                  <td class='money'>{Mon(totSinIva)}</td>
+                  <td class='money'>{Mon(totConIva)}</td>
+                </tr>";
 
                     total += totConIva;
                 }
