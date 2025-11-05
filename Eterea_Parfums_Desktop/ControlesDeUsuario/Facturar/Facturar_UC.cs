@@ -913,6 +913,10 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             MessageBox.Show("Pago realizado exitosamente", "Confirmación", MessageBoxButtons.OK, MessageBoxIcon.Information);
             btn_imprimir.Visible = true;
             btn_pago.Visible = false;
+
+            // Reusar el flujo de generación y entrega de factura (PDF + imprimir/mail)
+            // Simulamos el click del botón de imprimir que genera el PDF y muestra el chooser
+            btn_imprimir_Click(sender, e);
         }
 
         private void combo_cuotas_SelectedIndexChanged(object sender, EventArgs e)
@@ -1394,29 +1398,66 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 stream.Close();
             }
 
+            // Abrir el PDF en el visor del SO (opcional, se muestra para visualizar como queda confeccionada la factura)
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
                 FileName = rutaArchivo,
                 UseShellExecute = true
             });
 
-            DialogResult resultado = MessageBox.Show("¿Desea imprimir la factura ahora?", "Factura impresa",
-                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-
-            if (resultado == DialogResult.Yes)
-            {
-                ImprimirPdf(rutaArchivo);
-            }
-
-            CrearFactura();
-            CrearDetalleFactura();
+            // ==== NUEVA LÓGICA DE ENTREGA (imprimir / mail) ====
+            bool hizoAccion = false;
 
             if (!string.IsNullOrWhiteSpace(txt_email.Text))
             {
-                CorreoHelper.EnviarCorreoFactura(filePath, txt_email.Text.Trim());
-                MessageBox.Show("Factura enviada a " + txt_email.Text + " correctamente");
+                // Sí = enviar por mail, No = imprimir, Cancel = nada
+                var elegir = MessageBox.Show(
+                    $"¿Cómo querés entregar la factura?\n\nSí = Enviar por mail a {txt_email.Text}\nNo = Imprimir en impresora\nCancelar = No hacer nada",
+                    "Entregar factura",
+                    MessageBoxButtons.YesNoCancel,
+                    MessageBoxIcon.Question
+                );
+
+                if (elegir == DialogResult.Yes)
+                {
+                    try
+                    {
+                        CorreoHelper.EnviarCorreoFactura(rutaArchivo, txt_email.Text.Trim());
+                        MessageBox.Show("Factura enviada a " + txt_email.Text + " correctamente.");
+                        hizoAccion = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("No se pudo enviar el mail: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                else if (elegir == DialogResult.No)
+                {
+                    ImprimirPdf(rutaArchivo);
+                    hizoAccion = true;
+                }
+                // Cancel: no hace nada
+            }
+            else
+            {
+                // No hay mail: sólo ofrecer imprimir (OK = imprimir, Cancel = nada)
+                var confirmar = MessageBox.Show(
+                    "No hay email cargado para el cliente.\n\n¿Imprimir la factura?",
+                    "Imprimir factura",
+                    MessageBoxButtons.OKCancel,
+                    MessageBoxIcon.Question
+                );
+
+                if (confirmar == DialogResult.OK)
+                {
+                    ImprimirPdf(rutaArchivo);
+                    hizoAccion = true;
+                }
             }
 
+            // Guardar en BD y limpiar SIEMPRE (independiente de la acción elegida)
+            CrearFactura();
+            CrearDetalleFactura();
             ReiniciarFormulario();
         }
 
