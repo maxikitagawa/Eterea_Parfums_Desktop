@@ -141,15 +141,24 @@ namespace Eterea_Parfums_Desktop
 
             txt_nombre.Text = cliente.nombre ?? "";
             txt_apellido.Text = cliente.apellido ?? "";
+
+            // 1) Seteamos el documento
             txt_dni.Text = cliente.dni.ToString();
 
-            // IVA segun DNI/CUIT (se recalcula en txt_dni_TextChanged)
-            combo_con_iva.Items.Clear();
-            combo_con_iva.Items.Add("Consumidor Final");
-            combo_con_iva.Items.Add("Responsable Inscripto");
-            combo_con_iva.Items.Add("Exento");
-            combo_con_iva.Items.Add("Monotributista");
-            combo_con_iva.Text = cliente.condicion_frente_al_iva ?? "";
+            // Sincronizar etiquetas/mascaras e IVA según el documento precargado
+            var docInit = txt_dni.Text.Trim();
+            ActualizarEtiquetasYMascarasPorDocumento(docInit);
+            ActualizarOpcionesIVAporDocumento(docInit);
+
+            // 3) Se intenta respetar la condición de IVA previa, si aplica
+            if (combo_con_iva.Enabled)
+            {
+                var ivaPrevio = cliente.condicion_frente_al_iva ?? "";
+                int idx = combo_con_iva.Items.Cast<object>()
+                             .ToList()
+                             .FindIndex(it => string.Equals(it.ToString(), ivaPrevio, StringComparison.OrdinalIgnoreCase));
+                if (idx >= 0) combo_con_iva.SelectedIndex = idx;
+            }
 
             // Fecha nacimiento: si es null, mostrar vacío
             if (cliente.fecha_nacimiento.HasValue)
@@ -188,6 +197,34 @@ namespace Eterea_Parfums_Desktop
             richTextBox_comentario.Text = cliente.comentarios_domicilio ?? "";
 
             combo_activo.SelectedItem = (cliente.activo == true) ? "Activo" : "Inactivo";
+
+
+            // TextBoxes -> ocultan su label de error al modificar
+            HookTextHideError(txt_usuario, lbl_usuarioE);
+            HookTextHideError(txt_clave, lbl_claveE);      // si permitís edición de clave
+            HookTextHideError(txt_nombre, lbl_nombreE);
+            HookTextHideError(txt_apellido, lbl_apellidoE);
+            HookTextHideError(txt_dni, lbl_dniE);
+            HookTextHideError(txt_celular, lbl_celularE);
+            HookTextHideError(txt_email, lbl_emailE);
+            HookTextHideError(txt_cp, lbl_cpE);
+            HookTextHideError(txt_num_calle, lbl_num_calleE);
+            HookTextHideError(txt_piso, lbl_pisoE);
+            HookTextHideError(txt_depto, lbl_deptoE);
+            HookTextHideError(richTextBox_comentario, lbl_comentariosE);
+
+            // Combos -> ocultan su label de error al seleccionar/cerrar autocompletado
+            HookComboHideError(combo_pais, lbl_paisE);
+            HookComboHideError(combo_provincia, lbl_provinciaE);
+            HookComboHideError(combo_localidad, lbl_localidadE);
+            HookComboHideError(combo_calle, lbl_calleE);
+            HookComboHideError(combo_activo, lbl_activoE);
+            HookComboHideError(combo_con_iva, lbl_cond_ivaE);
+
+            // DateTimePicker -> oculta su error al elegir fecha
+            HookDateHideError(dateTime_nac, lbl_nacE);
+
+
 
             // ====== Botones ======
             btn_confirmar.Click += btn_confirmar_Click;
@@ -285,6 +322,111 @@ namespace Eterea_Parfums_Desktop
             finally { _suspendComboEvents = false; }
         }
 
+        // ===== Helpers de validación =====
+        private static bool SoloLetras(string s) =>
+            Regex.IsMatch(s ?? "", @"^[A-Za-zÁÉÍÓÚáéíóúÑñÜü]+$");
+
+        private static bool LetrasYPunto(string s) =>
+            Regex.IsMatch(s ?? "", @"^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s\.]+$");
+
+        private static bool AlfanumericoRazonSocial(string s) =>
+            Regex.IsMatch(s ?? "", @"^[A-Za-z0-9ÁÉÍÓÚáéíóúÑñÜü\s\.\-&/()']+$");
+
+        // ===== KeyPress dinámicos según DNI/CUIT =====
+        // DNI: Nombre/Apellido → solo letras y espacios
+        private void Nombre_KeyPress_DNI(object sender, KeyPressEventArgs e)
+        {
+            if (char.IsControl(e.KeyChar)) return;
+            if (!(char.IsLetter(e.KeyChar) || char.IsWhiteSpace(e.KeyChar))) e.Handled = true;
+        }
+        private void Apellido_KeyPress_DNI(object sender, KeyPressEventArgs e)
+        {
+            if (char.IsControl(e.KeyChar)) return;
+            if (!(char.IsLetter(e.KeyChar) || char.IsWhiteSpace(e.KeyChar))) e.Handled = true;
+        }
+
+        // CUIT: Razón social → letras, números y . - & / ( ) '
+        private void Nombre_KeyPress_CUIT_RazonSocial(object sender, KeyPressEventArgs e)
+        {
+            if (char.IsControl(e.KeyChar)) return;
+            bool ok = char.IsLetterOrDigit(e.KeyChar) || char.IsWhiteSpace(e.KeyChar)
+                      || ".-&/()'".Contains(e.KeyChar);
+            if (!ok) e.Handled = true;
+        }
+
+        // CUIT: Tipo → solo letras, espacios y .
+        private void Tipo_KeyPress_CUIT(object sender, KeyPressEventArgs e)
+        {
+            if (char.IsControl(e.KeyChar)) return;
+            bool ok = char.IsLetter(e.KeyChar) || char.IsWhiteSpace(e.KeyChar) || e.KeyChar == '.';
+            if (!ok) e.Handled = true;
+        }
+
+        // --- Etiquetas y máscaras según documento ---
+        private void ActualizarEtiquetasYMascarasPorDocumento(string doc)
+        {
+            // Evitar acumular handlers
+            txt_nombre.KeyPress -= Nombre_KeyPress_DNI;
+            txt_apellido.KeyPress -= Apellido_KeyPress_DNI;
+            txt_nombre.KeyPress -= Nombre_KeyPress_CUIT_RazonSocial;
+            txt_apellido.KeyPress -= Tipo_KeyPress_CUIT;
+
+            if (doc?.Length == 11)
+            {
+                // MODO CUIT
+                lbl_nombre.Text = "Razón social";
+                lbl_apellido.Text = "Tipo";
+
+                txt_nombre.KeyPress += Nombre_KeyPress_CUIT_RazonSocial; // alfanumérico + símbolos
+                txt_apellido.KeyPress += Tipo_KeyPress_CUIT;             // letras + espacio + .
+            }
+            else if (doc?.Length == 8)
+            {
+                // MODO DNI
+                lbl_nombre.Text = "Nombre";
+                lbl_apellido.Text = "Apellido";
+
+                txt_nombre.KeyPress += Nombre_KeyPress_DNI;
+                txt_apellido.KeyPress += Apellido_KeyPress_DNI;
+            }
+            else
+            {
+                // Longitud intermedia → rótulos por defecto
+                lbl_nombre.Text = "Nombre";
+                lbl_apellido.Text = "Apellido";
+            }
+        }
+
+        // --- Opciones de IVA según documento ---
+        private void ActualizarOpcionesIVAporDocumento(string doc)
+        {
+            combo_con_iva.BeginUpdate();
+            combo_con_iva.Items.Clear();
+
+            if (doc?.Length == 8)
+            {
+                // DNI → 3 opciones y habilitado
+                combo_con_iva.Items.AddRange(new object[] { "Consumidor Final", "Exento", "Monotributista" });
+                combo_con_iva.Enabled = true;
+                if (combo_con_iva.SelectedIndex < 0) combo_con_iva.SelectedIndex = 0; // por defecto CF
+            }
+            else if (doc?.Length == 11 && CuitValido(doc))
+            {
+                // CUIT → solo Responsable Inscripto (si querés cambiar, este es el lugar)
+                combo_con_iva.Items.Add("Responsable Inscripto");
+                combo_con_iva.Enabled = true;
+                combo_con_iva.SelectedIndex = 0;
+            }
+            else
+            {
+                // Longitud intermedia o CUIT inválido
+                combo_con_iva.Enabled = false;
+            }
+
+            combo_con_iva.EndUpdate();
+        }
+
+
         private void PrepararComboAutocompletable(ComboBox combo)
         {
             combo.DropDownStyle = ComboBoxStyle.DropDown; // permite escribir
@@ -361,42 +503,21 @@ namespace Eterea_Parfums_Desktop
                 txt_dni.SelectionStart = txt_dni.Text.Length;
             }
 
-            string dni = txt_dni.Text.Trim();
+            string doc = txt_dni.Text.Trim();
 
-            if (dni.Length == 8)
-            {
-                combo_con_iva.Items.Clear();
-                combo_con_iva.Items.Add("Consumidor Final");
-                combo_con_iva.SelectedIndex = 0;
-                combo_con_iva.Enabled = false;
-                lbl_dniE.Hide();
-            }
-            else if (dni.Length == 11)
-            {
-                if (!CuitValido(dni))
-                {
-                    lbl_dniE.Text = "CUIT inválido (falló verificación).";
-                    lbl_dniE.Show();
-                    combo_con_iva.Enabled = false;
-                    combo_con_iva.Items.Clear();
-                    return;
-                }
+            // 1) Etiquetas + máscaras
+            ActualizarEtiquetasYMascarasPorDocumento(doc);
 
-                combo_con_iva.Items.Clear();
-                combo_con_iva.Items.Add("Responsable Inscripto");
-                combo_con_iva.Items.Add("Exento");
-                combo_con_iva.Items.Add("Monotributista");
-                combo_con_iva.SelectedIndex = 0;
-                combo_con_iva.Enabled = true;
-                lbl_dniE.Hide();
-            }
+            // 2) IVA
+            ActualizarOpcionesIVAporDocumento(doc);
+
+            // 3) Feedback visual CUIT inválido (si querés mantenerlo aquí)
+            if (doc.Length == 11 && !CuitValido(doc))
+                lbl_dniE.Show();
             else
-            {
-                combo_con_iva.Items.Clear();
-                combo_con_iva.Enabled = false;
                 lbl_dniE.Hide();
-            }
         }
+
 
         // ====== Confirmar edición ======
         private void btn_confirmar_Click(object sender, EventArgs e)
@@ -504,17 +625,70 @@ namespace Eterea_Parfums_Desktop
                 lbl_claveE.Show(); errorMsg += lbl_claveE.Text + Environment.NewLine;
             }
 
-            // Nombre / Apellido
-            if (txt_nombre.Text.Trim().Length < 2 || txt_nombre.Text.Trim().Length > 45)
+            // --- Nombre / Razón social y Apellido / Tipo ---
+            bool esCUIT = (txt_dni.Text.Trim().Length == 11);
+            var nombre = txt_nombre.Text?.Trim() ?? "";
+            var apeTipo = txt_apellido.Text?.Trim() ?? "";
+
+
+
+            // Nombre / Razón social
+
+            if (string.IsNullOrWhiteSpace(nombre) || nombre.Length < 2 || nombre.Length > 45)
             {
-                lbl_nombreE.Text = "El nombre debe tener entre 2 y 45 caracteres.";
+                lbl_nombreE.Text = esCUIT
+                    ? "Debe ingresar la razón social (entre 2 y 45 caracteres)."
+                    : "El nombre debe tener entre 2 y 45 caracteres.";
                 lbl_nombreE.Show(); errorMsg += lbl_nombreE.Text + Environment.NewLine;
             }
-            if (txt_apellido.Text.Trim().Length < 2 || txt_apellido.Text.Trim().Length > 45)
+            else
             {
-                lbl_apellidoE.Text = "El apellido debe tener entre 2 y 45 caracteres.";
+                if (esCUIT)
+                {
+                    if (!AlfanumericoRazonSocial(nombre))
+                    {
+                        lbl_nombreE.Text = "La razón social solo puede tener letras, números y . - & / ( ) '.";
+                        lbl_nombreE.Show(); errorMsg += lbl_nombreE.Text + Environment.NewLine;
+                    }
+                }
+                else
+                {
+                    if (!SoloLetras(nombre))
+                    {
+                        lbl_nombreE.Text = "El nombre solo puede contener letras.";
+                        lbl_nombreE.Show(); errorMsg += lbl_nombreE.Text + Environment.NewLine;
+                    }
+                }
+            }
+
+            // Apellido / Tipo
+            if (string.IsNullOrWhiteSpace(apeTipo) || apeTipo.Length < 2 || apeTipo.Length > 45)
+            {
+                lbl_apellidoE.Text = esCUIT
+                    ? "Debe ingresar el tipo de sociedad (entre 2 y 45 caracteres)."
+                    : "El apellido debe tener entre 2 y 45 caracteres.";
                 lbl_apellidoE.Show(); errorMsg += lbl_apellidoE.Text + Environment.NewLine;
             }
+            else
+            {
+                if (esCUIT)
+                {
+                    if (!LetrasYPunto(apeTipo))
+                    {
+                        lbl_apellidoE.Text = "El tipo solo puede tener letras, espacios y punto (.).";
+                        lbl_apellidoE.Show(); errorMsg += lbl_apellidoE.Text + Environment.NewLine;
+                    }
+                }
+                else
+                {
+                    if (!SoloLetras(apeTipo))
+                    {
+                        lbl_apellidoE.Text = "El apellido solo puede contener letras.";
+                        lbl_apellidoE.Show(); errorMsg += lbl_apellidoE.Text + Environment.NewLine;
+                    }
+                }
+            }
+
 
             // DNI/CUIT
             if (string.IsNullOrWhiteSpace(txt_dni.Text) || !txt_dni.Text.All(char.IsDigit))
@@ -839,5 +1013,44 @@ namespace Eterea_Parfums_Desktop
             lbl_calleE.Hide();
             lbl_activoE.Hide();
         }
+
+        private void HookTextHideError(TextBoxBase tb, Label errorLabel)
+        {
+            if (tb == null || errorLabel == null) return;
+            tb.TextChanged += (s, e) => errorLabel.Hide();
+        }
+
+        private void HookComboHideError(ComboBox combo, Label errorLabel)
+        {
+            if (combo == null || errorLabel == null) return;
+
+            // Ocultar al elegir con mouse/teclado
+            combo.SelectionChangeCommitted += (s, e) => errorLabel.Hide();
+
+            // También ocultar si el texto coincide con un ítem (auto-complete)
+            combo.TextChanged += (s, e) =>
+            {
+                var txt = combo.Text?.Trim() ?? "";
+                if (string.IsNullOrEmpty(txt)) return;
+
+                bool match = combo.Items
+                    .Cast<object>()
+                    .Select(i => i?.ToString() ?? "")
+                    .Any(it => string.Equals(it, txt, StringComparison.OrdinalIgnoreCase));
+
+                if (match) errorLabel.Hide();
+            };
+        }
+
+        private void HookDateHideError(DateTimePicker dtp, Label errorLabel)
+        {
+            if (dtp == null || errorLabel == null) return;
+            dtp.ValueChanged += (s, e) =>
+            {
+                errorLabel.Hide();
+                dtp.Format = DateTimePickerFormat.Short; // ya lo usás
+            };
+        }
+
     }
 }
