@@ -20,6 +20,15 @@ namespace Eterea_Parfums_Desktop
 
         private long _dni;
 
+        private static bool SoloLetras(string s) =>
+            Regex.IsMatch(s ?? "", @"^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]+$");
+
+        private static bool AlfanumericoRazonSocial(string s) =>
+            Regex.IsMatch(s ?? "", @"^[A-Za-z0-9ÁÉÍÓÚáéíóúÑñÜü\s\.\-&/()']+$");
+
+        private static bool LetrasYPunto(string s) =>
+    Regex.IsMatch(s ?? "", @"^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s\.]+$");
+
         public Cliente ClienteCreado { get; private set; }
 
         public FormCrearClienteFactura(long dni)
@@ -29,9 +38,9 @@ namespace Eterea_Parfums_Desktop
             _dni = dni;
             this.Load += FormCrearClienteFactura_Load; // ✅ SUSCRIPCIÓN AL EVENTO
 
-            
 
-            
+
+
         }
         private void FormCrearClienteFactura_Load(object sender, EventArgs e)
         {
@@ -151,113 +160,149 @@ namespace Eterea_Parfums_Desktop
             errorMsg = "";
             limpiarMensajesError();
 
-            if (string.IsNullOrEmpty(txt_nombre.Text))
+            bool esCUIT = (_dni.ToString().Length == 11);
+
+            // --- NOMBRE / RAZÓN SOCIAL ---
+            if (string.IsNullOrWhiteSpace(txt_nombre.Text))
             {
-              
+                lbl_nombreE.Text = esCUIT ? "Debe ingresar la razón social." : "Debe ingresar un nombre.";
                 lbl_nombreE.Show();
-            }
-            else if (!Regex.IsMatch(txt_nombre.Text, @"^[a-zA-Z]+$"))
-            {
-                errorMsg += "El nombre solo puede contener letras" + Environment.NewLine;
-                lbl_nombreE.Text = "El nombre solo puede contener letras";
-                lbl_nombreE.Show();
+                errorMsg += lbl_nombreE.Text + Environment.NewLine;
             }
             else
             {
-
-                lbl_nombreE.Visible = false;
-
-            }
-
-
-            if (string.IsNullOrEmpty(txt_apellido.Text))
-            {
-              
-                lbl_apellidoE.Show();
-
-            }
-            // Verifica si el campo txt_apellido contiene solo letras y tiene como máximo 45 caracteres
-            else if (!Regex.IsMatch(txt_apellido.Text, @"^[a-zA-Z]+$") || txt_apellido.Text.Length > 45)
-            {
-                if (!Regex.IsMatch(txt_apellido.Text, @"^[a-zA-Z]+$"))
+                if (esCUIT)
                 {
-                    errorMsg += "Solo puede contener letras" + Environment.NewLine;
-                    lbl_apellidoE.Text = "Solo puede contener letras";
+                    // Razón social: letras, números y . - & / ( ) '
+                    if (!AlfanumericoRazonSocial(txt_nombre.Text))
+                    {
+                        lbl_nombreE.Text = "La razón social solo puede tener letras, números y . - & / ( ) '.";
+                        lbl_nombreE.Show();
+                        errorMsg += lbl_nombreE.Text + Environment.NewLine;
+                    }
+                    else
+                    {
+                        lbl_nombreE.Visible = false;
+                    }
                 }
-                if (txt_apellido.Text.Length > 45)
+                else
                 {
-                    errorMsg += "No puede tener más de 45 caracteres" + Environment.NewLine;
-                    lbl_apellidoE.Text = "No puede tener más de 45 caracteres";
+                    // DNI: solo letras y espacios, máx 45
+                    if (!SoloLetras(txt_nombre.Text))
+                    {
+                        lbl_nombreE.Text = "El nombre solo puede contener letras.";
+                        lbl_nombreE.Show();
+                        errorMsg += lbl_nombreE.Text + Environment.NewLine;
+                    }
+                    else
+                    {
+                        lbl_nombreE.Visible = false;
+                    }
                 }
-                lbl_apellidoE.Show();
             }
 
+            // --- APELLIDO / TIPO ---
+            if (string.IsNullOrWhiteSpace(txt_apellido.Text))
+            {
+                lbl_apellidoE.Text = esCUIT ? "Debe ingresar el tipo de sociedad." : "Debe ingresar un apellido.";
+                lbl_apellidoE.Show();
+                errorMsg += lbl_apellidoE.Text + Environment.NewLine;
+            }
             else
             {
-
-                lbl_apellidoE.Visible = false;
-
+                if (esCUIT)
+                {
+                    // Tipo: SOLO letras, espacios y punto ".", máx 45
+                    if (!LetrasYPunto(txt_apellido.Text) || txt_apellido.Text.Length > 45)
+                    {
+                        lbl_apellidoE.Text = txt_apellido.Text.Length > 45
+                            ? "No puede tener más de 45 caracteres."
+                            : "El tipo solo puede tener letras y punto (.).";
+                        lbl_apellidoE.Show();
+                        errorMsg += lbl_apellidoE.Text + Environment.NewLine;
+                    }
+                    else
+                    {
+                        lbl_apellidoE.Visible = false;
+                    }
+                }
+                else
+                {
+                    // DNI: solo letras y espacios, máx 45
+                    if (!SoloLetras(txt_apellido.Text) || txt_apellido.Text.Length > 45)
+                    {
+                        lbl_apellidoE.Text = !SoloLetras(txt_apellido.Text)
+                            ? "El apellido solo puede contener letras."
+                            : "No puede tener más de 45 caracteres.";
+                        lbl_apellidoE.Show();
+                        errorMsg += lbl_apellidoE.Text + Environment.NewLine;
+                    }
+                    else
+                    {
+                        lbl_apellidoE.Visible = false;
+                    }
+                }
             }
 
-
-
-
-            if (string.IsNullOrEmpty(txt_email.Text))
+            // --- EMAIL: requerido + formato + longitud ---
+            if (string.IsNullOrWhiteSpace(txt_email.Text))
             {
-                errorMsg += "Debes ingresar una dirección de correo electrónico" + Environment.NewLine;
-                lbl_emailE.Text = "Debes ingresar una dirección de correo electrónico";
+                lbl_emailE.Text = "Debes ingresar una dirección de correo electrónico.";
                 lbl_emailE.Show();
-
+                errorMsg += lbl_emailE.Text + Environment.NewLine;
             }
-            // Verifica si el campo txt_mail tiene un formato de correo electrónico válido y tiene como máximo 80 caracteres
             else if (!Regex.IsMatch(txt_email.Text, @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$") || txt_email.Text.Length > 80)
             {
                 if (!Regex.IsMatch(txt_email.Text, @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"))
-                {
-                    errorMsg += "Debes ingresar una dirección de correo electrónico válida" + Environment.NewLine;
-                    lbl_emailE.Text = "Debes ingresar una dirección de correo electrónico válida";
-                }
+                    errorMsg += "Debes ingresar una dirección de correo electrónico válida." + Environment.NewLine;
                 if (txt_email.Text.Length > 80)
-                {
-                    errorMsg += "La dirección de correo electrónico no puede tener más de 80 caracteres" + Environment.NewLine;
-                    lbl_emailE.Text = "La dirección de correo electrónico no puede tener más de 80 caracteres";
-                }
+                    errorMsg += "La dirección de correo electrónico no puede tener más de 80 caracteres." + Environment.NewLine;
+
+                lbl_emailE.Text = "Email inválido.";
                 lbl_emailE.Show();
             }
             else
             {
+                // Unicidad en BD
+                var emailNormalizado = txt_email.Text.Trim().ToLowerInvariant();
+                bool existe = ClienteControlador.ExisteEmail(emailNormalizado); // bool
 
-                lbl_emailE.Visible = false;
-
+                if (existe)
+                {
+                    lbl_emailE.Text = "Este email ya está registrado. Ingresá otro.";
+                    lbl_emailE.Show();
+                    errorMsg += "El email ingresado ya se encuentra registrado. Ingresa otro." + Environment.NewLine;
+                }
+                else
+                {
+                    lbl_emailE.Visible = false;
+                }
             }
 
-
-
+            // --- CONDICIÓN IVA ---
             if (combo_con_iva.SelectedItem == null)
             {
-                errorMsg += "Debe seleccionar una condición frente al IVA" + Environment.NewLine;
-                lbl_cond_ivaE.Text = "Debe seleccionar una condición frente al IVA";
+                lbl_cond_ivaE.Text = "Debe seleccionar una condición frente al IVA.";
                 lbl_cond_ivaE.Show();
-
+                errorMsg += lbl_cond_ivaE.Text + Environment.NewLine;
             }
             else
             {
                 lbl_cond_ivaE.Visible = false;
             }
 
-
+            // --- LIMPIEZA VISUAL SI NO HAY ERRORES ---
             if (string.IsNullOrEmpty(errorMsg))
             {
                 lbl_nombreE.Visible = false;
                 lbl_apellidoE.Visible = false;
                 lbl_emailE.Visible = false;
                 lbl_cond_ivaE.Visible = false;
-
-
             }
 
             return string.IsNullOrEmpty(errorMsg);
         }
+
 
         private void limpiarMensajesError()
         {
