@@ -89,6 +89,19 @@ namespace Eterea_Parfums_Desktop
 
             situacion = "Creacion";
 
+            // === Auto-clear de errores ===
+            // Textos
+            HookTextHideError(txt_nomb_promo, lbl_error_nombP);
+            HookTextHideError(txt_descripcion_promo, lbl_error_desc_promo);
+
+            // Combos
+            HookComboHideError(combo_tipo_promo, lbl_error_tipo_promo);
+            HookComboHideError(combo_activo_promo, lbl_error_promo_act);
+
+            // Fechas
+            HookDateHideError(dateTime_inicio_promo, lbl_error_fecha_iniP);
+            HookDateHideError(dateTime_fin_promo, lbl_error_fecha_finP);
+
             //Diseño del combo box
             combo_tipo_promo.DrawMode = DrawMode.OwnerDrawFixed;
             combo_tipo_promo.DrawItem += comboBoxdiseño_DrawItem;
@@ -259,6 +272,7 @@ namespace Eterea_Parfums_Desktop
 
         private void dateTime_inicio_promo_ValueChanged(object sender, EventArgs e)
         {
+            lbl_error_fecha_iniP.Hide(); 
 
             // Establece el formato estándar para mostrar la fecha
             dateTime_inicio_promo.Format = DateTimePickerFormat.Short;
@@ -292,6 +306,7 @@ namespace Eterea_Parfums_Desktop
 
         private void dateTime_fin_promo_ValueChanged(object sender, EventArgs e)
         {
+            lbl_error_fecha_finP.Hide();
 
             // Establece el formato estándar para mostrar la fecha
             dateTime_fin_promo.Format = DateTimePickerFormat.Short;
@@ -560,6 +575,21 @@ namespace Eterea_Parfums_Desktop
             perfumes = controladorPerfume.CargarPerfumesPorIdPromocion(idPromo);
 
             cargarPerfumesDePromo(perfumes);
+
+
+            // === Auto-clear de errores ===
+            // Textos
+            HookTextHideError(txt_nomb_promo, lbl_error_nombP);
+            HookTextHideError(txt_descripcion_promo, lbl_error_desc_promo);
+
+            // Combos
+            HookComboHideError(combo_tipo_promo, lbl_error_tipo_promo);
+            HookComboHideError(combo_activo_promo, lbl_error_promo_act);
+
+            // Fechas
+            HookDateHideError(dateTime_inicio_promo, lbl_error_fecha_iniP);
+            HookDateHideError(dateTime_fin_promo, lbl_error_fecha_finP);
+
 
             // Cargar el combo box para activo
             combo_activo_promo.Items.Clear();
@@ -1552,6 +1582,47 @@ namespace Eterea_Parfums_Desktop
             lbl.Visible = false;
         }
 
+        // Oculta el label de error cuando cambia el texto (TextBox, RichTextBox)
+        private void HookTextHideError(System.Windows.Forms.TextBoxBase tb, Label errorLabel)
+        {
+            if (tb == null || errorLabel == null) return;
+            tb.TextChanged += (s, e) => errorLabel.Hide();
+        }
+
+        // Oculta el label de error al seleccionar un ítem en el combo o cuando el texto coincide con un ítem
+        private void HookComboHideError(ComboBox combo, Label errorLabel)
+        {
+            if (combo == null || errorLabel == null) return;
+
+            combo.SelectionChangeCommitted += (s, e) => errorLabel.Hide();
+
+            combo.TextChanged += (s, e) =>
+            {
+                var txt = combo.Text?.Trim() ?? "";
+                if (string.IsNullOrEmpty(txt)) return;
+
+                bool match = combo.Items
+                    .Cast<object>()
+                    .Select(i => i is KeyValuePair<int, string> kv ? kv.Value : i?.ToString())
+                    .Any(it => string.Equals(it ?? "", txt, StringComparison.OrdinalIgnoreCase));
+
+                if (match) errorLabel.Hide();
+            };
+        }
+
+        // Oculta el label de error al elegir fecha
+        private void HookDateHideError(DateTimePicker dtp, Label errorLabel)
+        {
+            if (dtp == null || errorLabel == null) return;
+            dtp.ValueChanged += (s, e) =>
+            {
+                errorLabel.Hide();
+                dtp.Format = DateTimePickerFormat.Short;
+            };
+        }
+
+
+
         // ✅ MÉTODO AUXILIAR PARA VALIDAR CARACTERES PERMITIDOS
 
         private bool EsTextoValido(string texto, string caracteresPermitidos)
@@ -1849,6 +1920,8 @@ namespace Eterea_Parfums_Desktop
                     pictBox_banner.Image = new Bitmap(banner);       // y clon para el PictureBox
 
                     nuevaImagenCargada = true;
+
+                    lbl_error_banner.Hide();
                 }
             }
         }

@@ -49,6 +49,13 @@ namespace Eterea_Parfums_Desktop
 
             this.Load += new System.EventHandler(this.FormCrearPerfume2_Load);
             //checkedListBoxAroma.ItemCheck += checkedListBoxAroma_ItemCheck;
+
+            // === Auto-clear de errores ===
+            HookTextHideError(txt_nota, lbl_error_seleccion_nota);
+            HookCheckedListBoxHideError(checkedListBoxNota, lbl_error_seleccion_nota);
+            HookCheckedListBoxHideError(checkedListBoxAroma, lbl_error_seleccion_aroma);
+
+
         }
 
         private void cargarTipoDeAromas()
@@ -196,6 +203,8 @@ namespace Eterea_Parfums_Desktop
             }
             else if (!(string.IsNullOrEmpty(lbl_nota.Text) || lbl_nota.Text == "Nota"))
             {
+                //Ocultar
+                lbl_error_seleccion_nota.Hide();
 
                 nombre_nota = lbl_nota.Text;
                 nombre_tipoDeNota_marcado = checkedListBoxNota.CheckedItems[0].ToString();
@@ -260,6 +269,10 @@ namespace Eterea_Parfums_Desktop
                 lbl_error_seleccion_aroma.Visible = true;
                 return;
             }
+
+            // ✅ Hay al menos un aroma seleccionado → ocultar el error (auto-clear)
+            lbl_error_seleccion_aroma.Hide();
+
             //Guardo la nueva imagen
             await formProducto.guardarNuevaImg();
             //Actualizar el perfume con los datos que se han modificado
@@ -499,6 +512,29 @@ namespace Eterea_Parfums_Desktop
             checkedListBoxAroma.KeyUp += (s, ev) => checkedListBoxAroma.ClearSelected();
             checkedListBoxNota.KeyUp += (s, ev) => checkedListBoxNota.ClearSelected();
         }
+
+        private void HookTextHideError(System.Windows.Forms.TextBoxBase tb, Label errorLabel)
+        {
+            if (tb == null || errorLabel == null) return;
+            tb.TextChanged += (s, e) => errorLabel.Hide();
+        }
+
+        // Para CheckedListBox: oculta el error cuando el usuario tilda/destilda o “toca” la lista
+        private void HookCheckedListBoxHideError(CheckedListBox clb, Label errorLabel)
+        {
+            if (clb == null || errorLabel == null) return;
+
+            clb.ItemCheck += (s, e) =>
+            {
+                // Con BeginInvoke esperamos a que se aplique el cambio visual
+                this.BeginInvoke(new Action(() => errorLabel.Hide()));
+            };
+
+            clb.SelectedIndexChanged += (s, e) => errorLabel.Hide();
+            clb.MouseUp += (s, e) => errorLabel.Hide();
+            clb.KeyUp += (s, e) => errorLabel.Hide();
+        }
+
 
 
     }

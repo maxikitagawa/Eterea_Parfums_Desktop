@@ -96,6 +96,35 @@ namespace Eterea_Parfums_Desktop
             dateTime_nac.Format = DateTimePickerFormat.Short;
             dateTime_ing.Format = DateTimePickerFormat.Short;
 
+
+            // TextBoxes / RichTextBox
+            HookTextHideError(txt_usuario, lbl_usuarioE);
+            HookTextHideError(txt_contraseña, lbl_claveE);
+            HookTextHideError(txt_nombre, lbl_nombreE);
+            HookTextHideError(txt_apellido, lbl_apellidoE);
+            HookTextHideError(txt_dni, lbl_dniE);
+            HookTextHideError(txt_celular, lbl_celularE);
+            HookTextHideError(txt_e_mail, lbl_e_mailE);
+            HookTextHideError(txt_sueldo, lbl_sueldoE);
+            HookTextHideError(txt_cp, lbl_cpE);
+            HookTextHideError(txt_num_calle, lbl_num_calleE);
+            HookTextHideError(txt_piso, lbl_pisoE);
+            HookTextHideError(txt_departamento, lbl_departamentoE);
+            HookTextHideError(richTextBox_comentario, lbl_comentarios_domicilioE);
+
+            // Combos (agregá los que uses en Empleado)
+            HookComboHideError(combo_pais, lbl_paisE);
+            HookComboHideError(combo_provincia, lbl_provinciaE);
+            HookComboHideError(combo_localidad, lbl_localidadE);
+            HookComboHideError(combo_calle, lbl_calleE);
+            HookComboHideError(combo_activo, lbl_activoE);
+            HookComboHideError(combo_sucursal, lbl_sucursalE);
+            HookComboHideError(combo_rol, lbl_rolE);
+
+            // DateTimePicker
+            HookDateHideError(dateTime_nac, lbl_nacE);
+            HookDateHideError(dateTime_ing, lbl_ingE);
+
             // ---- Combos (estilo) ----
             combo_activo.DrawMode = DrawMode.OwnerDrawFixed;
             combo_activo.DrawItem += comboBoxdiseño_DrawItem;
@@ -609,6 +638,47 @@ namespace Eterea_Parfums_Desktop
             lbl_activoE.Hide();
             lbl_rolE.Hide();
         }
+
+        // Oculta el label de error cuando cambia el texto (TextBox, RichTextBox, MaskedTextBox)
+        private void HookTextHideError(TextBoxBase tb, Label errorLabel)
+        {
+            if (tb == null || errorLabel == null) return;
+            tb.TextChanged += (s, e) => errorLabel.Hide();
+        }
+
+        // Oculta el label de error al seleccionar un ítem en el combo o cuando el texto coincide con un ítem (auto-complete)
+        private void HookComboHideError(ComboBox combo, Label errorLabel)
+        {
+            if (combo == null || errorLabel == null) return;
+
+            combo.SelectionChangeCommitted += (s, e) => errorLabel.Hide();
+
+            combo.TextChanged += (s, e) =>
+            {
+                var txt = combo.Text?.Trim() ?? "";
+                if (string.IsNullOrEmpty(txt)) return;
+
+                bool match = combo.Items
+                    .Cast<object>()
+                    .Select(i => i?.ToString() ?? "")
+                    .Any(it => string.Equals(it, txt, StringComparison.OrdinalIgnoreCase));
+
+                if (match) errorLabel.Hide();
+            };
+        }
+
+        // Oculta el label de error al elegir fecha
+        private void HookDateHideError(DateTimePicker dtp, Label errorLabel)
+        {
+            if (dtp == null || errorLabel == null) return;
+            dtp.ValueChanged += (s, e) =>
+            {
+                errorLabel.Hide();
+                dtp.Format = DateTimePickerFormat.Short;
+            };
+        }
+
+
 
         private void PrepararComboAutocompletable(ComboBox combo)
         {
