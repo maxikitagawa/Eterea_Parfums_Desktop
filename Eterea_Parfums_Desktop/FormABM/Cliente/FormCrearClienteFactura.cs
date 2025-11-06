@@ -38,6 +38,9 @@ namespace Eterea_Parfums_Desktop
             _dni = dni;
             this.Load += FormCrearClienteFactura_Load; // ✅ SUSCRIPCIÓN AL EVENTO
 
+            txt_nombre.TextChanged += (s, e) => lbl_nombreE.Hide();
+            txt_apellido.TextChanged += (s, e) => lbl_apellidoE.Hide();
+            txt_email.TextChanged += (s, e) => lbl_emailE.Hide();
 
 
 
@@ -354,5 +357,6 @@ namespace Eterea_Parfums_Desktop
             // Evitar problemas visuales
             e.DrawFocusRectangle();
         }
+
     }
 }
