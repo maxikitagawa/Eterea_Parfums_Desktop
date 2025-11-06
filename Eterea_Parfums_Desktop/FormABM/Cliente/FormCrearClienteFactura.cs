@@ -20,6 +20,7 @@ namespace Eterea_Parfums_Desktop
 
         private long _dni;
 
+        public Cliente ClienteCreado { get; private set; }
 
         public FormCrearClienteFactura(long dni)
         {
@@ -40,7 +41,10 @@ namespace Eterea_Parfums_Desktop
             lbl_cond_ivaE.Hide();
             lbl_emailE.Hide();
 
-            if (_dni.ToString().Length == 11)
+            bool esCUIT = _dni.ToString().Length == 11;
+            bool esDNI = _dni.ToString().Length == 8;
+
+            if (esCUIT)
             {
                 lbl_dni.Text = "CUIT";
                 lbl_nombre.Text = "Empresa";
@@ -49,32 +53,44 @@ namespace Eterea_Parfums_Desktop
                 lbl_nombreE.Text = "Debe ingresar la razón social.";
                 lbl_apellidoE.Text = "Debe ingresar el tipo de sociedad.";
             }
-            else if (_dni.ToString().Length == 8)
+            else if (esDNI)
             {
                 lbl_dni.Text = "DNI";
                 lbl_nombre.Text = "Nombre";
                 lbl_apellido.Text = "Apellido";
 
-
                 lbl_nombreE.Text = "Debe ingresar un nombre.";
                 lbl_apellidoE.Text = "Debe ingresar un apellido.";
             }
-           
 
-            txt_dni.Text = _dni.ToString(); // ✅ Esta es la línea correcta
+            txt_dni.Text = _dni.ToString();
             txt_dni.ReadOnly = true;
 
-            combo_con_iva.Items.Clear();
-            combo_con_iva.Items.Add("Consumidor Final");
-            combo_con_iva.Items.Add("Responsable Inscripto");
-            combo_con_iva.Items.Add("Exento");
-            combo_con_iva.Items.Add("Monotributista");
+            CargarOpcionesIVA(esDNI, esCUIT);
 
             combo_con_iva.DrawMode = DrawMode.OwnerDrawFixed;
             combo_con_iva.DrawItem += comboBoxdiseño_DrawItem;
             combo_con_iva.DropDownStyle = ComboBoxStyle.DropDownList;
+        }
 
-            
+        private void CargarOpcionesIVA(bool esDNI, bool esCUIT)
+        {
+            combo_con_iva.Items.Clear();
+
+            if (esDNI)
+            {
+                combo_con_iva.Items.Add("Consumidor Final");
+                combo_con_iva.Items.Add("Exento");
+                combo_con_iva.Items.Add("Monotributista");
+                combo_con_iva.SelectedIndex = 0; // por defecto CF
+            }
+            else if (esCUIT)
+            {
+                combo_con_iva.Items.Add("Responsable Inscripto");
+                combo_con_iva.SelectedIndex = 0; // única opción
+            }
+
+
         }
 
 
@@ -124,7 +140,9 @@ namespace Eterea_Parfums_Desktop
 
                 if (ClienteControlador.crearCliente(cliente))
                 {
-                    this.DialogResult = DialogResult.OK;
+                    this.ClienteCreado = cliente;            // devolver el cliente
+                    this.DialogResult = DialogResult.OK;     // informar OK al padre
+                    this.Close();
                 }
             }
         }

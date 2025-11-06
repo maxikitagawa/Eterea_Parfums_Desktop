@@ -359,6 +359,35 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
         }
 
 
+        private void BuscarYSeleccionarClientePorDocumento(long documento)
+        {
+            var cli = ClienteControlador.obtenerPorDni(documento); // si tenés otro método que admite CUIT, podés reemplazar acá
+
+            if (cli == null)
+            {
+                // si no está, no habilitamos nada
+                btn_imprimir_habilitado = false;
+                return;
+            }
+
+            // guardo el cliente activo en el campo que ya usás en CrearFactura()
+            clientefactura = cli;
+
+            // reflejo datos en la UI
+            txt_dni.Text = documento.ToString();
+            txt_nombre_cliente.Text = $"{cli.nombre} {cli.apellido}".Trim();
+            txt_condicion_iva.Text = cli.condicion_frente_al_iva ?? "Consumidor Final";
+            txt_email.Text = cli.e_mail ?? "";
+
+            // habilito imprimir (esto es lo que hoy controlás para permitir facturar)
+            btn_imprimir_habilitado = true;
+
+            // actualizo numeración y totales, como cuando termina tu btn_buscar_Click
+            Num_factura_máximo();
+            ActualizarTotales();
+        }
+
+
         private void btn_buscar_Click(object sender, EventArgs e)
         {
             string numero = Program.NumeroCajaActual;
@@ -397,58 +426,47 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                     return;
                 }
 
+                long doc = long.Parse(txt_dni.Text);
 
-
-                long dni = long.Parse(txt_dni.Text);
-                Cliente cliente = ClienteControlador.obtenerPorDni(dni);
+                // 1) intento buscar en BD
+                var cliente = ClienteControlador.obtenerPorDni(doc);
                 if (cliente != null)
                 {
-                    clientefactura = cliente;
-                    //}
-                    //if (cliente != null)
-                    //{
-                    // Si se encuentra el cliente, llenar los campos en el formulario actual
-                    txt_nombre_cliente.Text = cliente.nombre + " " + cliente.apellido;
-                    txt_condicion_iva.Text = cliente.condicion_frente_al_iva;
-                    txt_email.Text = cliente.e_mail;
-
-                    btn_imprimir_habilitado = true;
+                    // ✅ simulo "Buscar encontrado"
+                    BuscarYSeleccionarClientePorDocumento(doc);
+                    return;
                 }
-                else
+
+                // 2) no existe → abrir alta abreviada
+                using (var formCrearClienteFactura = new FormCrearClienteFactura(doc))
                 {
-                    long dniIngresado = long.Parse(txt_dni.Text);
-                    // Si no se encuentra el cliente, abrir el formulario para agregar un nuevo cliente
-                    FormCrearClienteFactura formCrearClienteFactura = new FormCrearClienteFactura(dni);
+                    // si usás el helper con fondo (ModalHelper), mantenelo:
+                    var dr = ModalHelper.MostrarModalConFondoOscuro(formCrearClienteFactura);
 
-
-                    // ✅ Mostrar con fondo oscuro sin preocuparte por el form padre
-                    DialogResult dr = ModalHelper.MostrarModalConFondoOscuro(formCrearClienteFactura);
-
-
-
-                    // Luego de cerrar el formulario de clientes, verifica si se creó un nuevo cliente
-                    Cliente nuevoCliente = ClienteControlador.obtenerPorDni(dniIngresado);
-                    if (nuevoCliente != null)
+                    if (dr == DialogResult.OK)
                     {
-                        // Asigna los datos del nuevo cliente al formulario actual
-                        txt_nombre_cliente.Text = nuevoCliente.nombre + " " + nuevoCliente.apellido;
-                        txt_condicion_iva.Text = nuevoCliente.condicion_frente_al_iva;
-                        txt_email.Text = nuevoCliente.e_mail;
-                        
+                        // ✅ si tu FormCrearClienteFactura expone ClienteCreado, usalo:
+                        var creado = formCrearClienteFactura.ClienteCreado ?? ClienteControlador.obtenerPorDni(doc);
+
+                        if (creado != null)
+                        {
+                            // ✅ simulo "Buscar encontrado"
+                            BuscarYSeleccionarClientePorDocumento(doc);
+                            return;
+                        }
+
+                        // Si por algún motivo no vuelve creado, re-verifico igual:
+                        BuscarYSeleccionarClientePorDocumento(doc);
                     }
                 }
-
-
-                Num_factura_máximo();
-                ActualizarTotales();
             }
             else
             {
-                // No hay caja asignada, mostrar FormNumeroDeCaja para elegirla
                 MessageBox.Show("Debes ingresar un número de caja.\n Haz click en 'Abrir Caja' ", "Número de Caja", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
         }
+
 
         private void txt_dni_KeyDown(object sender, KeyEventArgs e)
         {
@@ -1230,7 +1248,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
                     filas += $@"
                 <tr>
-                 <td class='num'>{Num(cant)}</td>
+                 <td class='cant'>{Num(cant)}</td>
                  <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
                  <td class='money'>{Mon(unit)}</td>
                  <td class='money'>{Mon(descMonto)}</td>
@@ -1636,6 +1654,8 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             descuentoUnitario();
             ActualizarTotales();
         }
+
+
 
 
     }
