@@ -21,7 +21,7 @@ namespace Eterea_Parfums_Desktop
         private long _dni;
 
         private static bool SoloLetras(string s) =>
-            Regex.IsMatch(s ?? "", @"^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]+$");
+            Regex.IsMatch(s ?? "", @"^[A-Za-zÁÉÍÓÚáéíóúÑñÜü]+$");
 
         private static bool AlfanumericoRazonSocial(string s) =>
             Regex.IsMatch(s ?? "", @"^[A-Za-z0-9ÁÉÍÓÚáéíóúÑñÜü\s\.\-&/()']+$");
@@ -187,7 +187,7 @@ namespace Eterea_Parfums_Desktop
                 }
                 else
                 {
-                    // DNI: solo letras y espacios, máx 45
+                    // DNI: solo letras, máx 45
                     if (!SoloLetras(txt_nombre.Text))
                     {
                         lbl_nombreE.Text = "El nombre solo puede contener letras.";
@@ -217,7 +217,7 @@ namespace Eterea_Parfums_Desktop
                     {
                         lbl_apellidoE.Text = txt_apellido.Text.Length > 45
                             ? "No puede tener más de 45 caracteres."
-                            : "El tipo solo puede tener letras y punto (.).";
+                            : "El tipo solo puede tener letras, espacios y punto.";
                         lbl_apellidoE.Show();
                         errorMsg += lbl_apellidoE.Text + Environment.NewLine;
                     }
