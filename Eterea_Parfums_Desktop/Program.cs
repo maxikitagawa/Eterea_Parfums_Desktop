@@ -102,7 +102,7 @@ namespace Eterea_Parfums_Desktop
             switch (usuario.ToLower())
             {
                 case "servidor":
-                    Ruta_Web = "https://etereaparfums.com.ar/imagenes/";
+                    Ruta_Web = "https://etereaparfums.com.ar/imagenes";
                     Ruta_Base = @"C:\Users\intersan\Desktop\TESIS_New\Eterea_Parfums_Desktop\Eterea_Parfums_Desktop\Resources\";
                     //Ruta_Base_Mini = @"C:\Users\intersan\Desktop\TESIS_New\Eterea_Parfums_Desktop\Eterea_Parfums_Desktop\Resources\Mini\";
                     //Ruta_Web = @"C:\Users\intersan\source\repos\Eterea_Web\Eterea_Web\Content\ImgPerfumes\";

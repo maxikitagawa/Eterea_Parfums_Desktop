@@ -1,5 +1,6 @@
 ﻿using Eterea_Parfums_Desktop.Controladores;
 using Eterea_Parfums_Desktop.ControlesDeUsuario;
+using Eterea_Parfums_Desktop.Helpers;
 using Eterea_Parfums_Desktop.Modelos;
 using System;
 using System.Collections.Generic;
@@ -53,12 +54,14 @@ namespace Eterea_Parfums_Desktop
         // ==================== Carga de catálogos ====================
         private void cargarTipoDeAromas()
         {
-            tipo_de_aromas = TipoDeAromaControlador.getAll();
-            if (tipo_de_aromas != null)
-            {
-                foreach (TipoDeAroma tipo_de_aroma in tipo_de_aromas)
-                    checkedListBoxAroma.Items.Add(tipo_de_aroma.nombre);
-            }
+            tipo_de_aromas = TipoDeAromaControlador.getAll() ?? new List<TipoDeAroma>();
+
+            checkedListBoxAroma.Items.Clear();
+            // Mostramos el campo 'nombre' pero guardamos el objeto completo
+            checkedListBoxAroma.DisplayMember = "nombre";
+
+            foreach (var ta in tipo_de_aromas)
+                checkedListBoxAroma.Items.Add(ta, false);
         }
 
         private void cargarTipoDeNotas()
@@ -73,20 +76,23 @@ namespace Eterea_Parfums_Desktop
 
         private void CargarDatosCheckBoxListAromas()
         {
-            var aromasDelPerfume = AromaDelPerfumeControlador.getAllByIDPerfume(perfume.id) ?? new List<AromaDelPerfume>();
-            foreach (AromaDelPerfume aromaDelPerfume in aromasDelPerfume)
-            {
-                var tipoDeAroma = TipoDeAromaControlador.getById(aromaDelPerfume.tipoDeAroma.id);
-                if (tipoDeAroma == null) continue;
+            var aromasDelPerfume = AromaDelPerfumeControlador.getAllByIDPerfume(perfume.id)
+                                   ?? new List<AromaDelPerfume>();
 
-                for (int index = 0; index < checkedListBoxAroma.Items.Count; index++)
+            // Marcamos por ID (no por texto)
+            foreach (var ap in aromasDelPerfume)
+            {
+                int idx = -1;
+                for (int i = 0; i < checkedListBoxAroma.Items.Count; i++)
                 {
-                    if (string.Equals(checkedListBoxAroma.Items[index].ToString(), tipoDeAroma.nombre, StringComparison.Ordinal))
+                    var item = checkedListBoxAroma.Items[i] as TipoDeAroma;
+                    if (item != null && item.id == ap.tipoDeAroma.id)
                     {
-                        checkedListBoxAroma.SetItemChecked(index, true);
+                        idx = i;
                         break;
                     }
                 }
+                if (idx >= 0) checkedListBoxAroma.SetItemChecked(idx, true);
             }
         }
 
@@ -107,22 +113,17 @@ namespace Eterea_Parfums_Desktop
 
         private void filtrar()
         {
-            List<Nota> notas = NotaControlador.getAll() ?? new List<Nota>();
+            var notas = NotaControlador.getAll() ?? new List<Nota>();
+            string textoFiltro = txt_nota.Text;
 
-            if (!string.IsNullOrWhiteSpace(filtro))
+            if (!string.IsNullOrWhiteSpace(textoFiltro))
             {
-                var cmp = CultureInfo.CurrentCulture.CompareInfo;
-                string pref = filtro.Trim();
+                string match = NotaFiltroHelper.MejorCoincidencia(textoFiltro, notas);
 
-                var notas_filtradas = notas
-                    .Where(x => !string.IsNullOrEmpty(x.nombre) &&
-                                cmp.IsPrefix(x.nombre, pref,
-                                    CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace))
-                    .ToList();
-
-                if (notas_filtradas.Count > 0)
+                if (match != null)
                 {
-                    lbl_nota.Text = notas_filtradas.First().nombre;
+                    lbl_nota.Text = match;
+                    lbl_buscar_nota.Text = match; // si usás este label como sugerencia
                 }
                 else
                 {
@@ -135,6 +136,7 @@ namespace Eterea_Parfums_Desktop
             else
             {
                 lbl_buscar_nota.Text = "";
+                lbl_nota.Text = "Nota";
             }
         }
 
@@ -258,11 +260,10 @@ namespace Eterea_Parfums_Desktop
             notas_con_tipo_de_nota.Add(notaConTipo);
             notas_del_perfume.Add(notasDelPerfume);
 
-            // desmarcar y limpiar
-            if (checkedListBoxNota.SelectedIndex >= 0)
-                checkedListBoxNota.SetItemChecked(checkedListBoxNota.SelectedIndex, false);
+            // limpiar sin perder el tilde del tipo
             txt_nota.Clear();
             lbl_nota.Text = "Nota";
+            checkedListBoxNota.ClearSelected(); // solo quita la selección visual
 
             cargarDataGridViewNotasDePerfume(notas_con_tipo_de_nota);
         }
@@ -291,7 +292,7 @@ namespace Eterea_Parfums_Desktop
                 PerfumeControlador.update(perfume);
 
                 // 3) Aromas: sincronización (borra los que ya no están, agrega los nuevos)
-                var marcados = checkedListBoxAroma.CheckedItems.Cast<string>().ToList();
+                var marcados = checkedListBoxAroma.CheckedItems.Cast<TipoDeAroma>().ToList();
                 var existentes = AromaDelPerfumeControlador.getAllByIDPerfume(perfume.id) ?? new List<AromaDelPerfume>();
 
                 // borrar los que no están marcados
@@ -300,14 +301,15 @@ namespace Eterea_Parfums_Desktop
                     string nombreAromaExistente = TipoDeAromaControlador.getById(aromaExistente.tipoDeAroma.id)?.nombre;
                     if (string.IsNullOrEmpty(nombreAromaExistente)) continue;
 
-                    if (!marcados.Contains(nombreAromaExistente))
-                        AromaDelPerfumeControlador.deleteBYTipoDePerfume(aromaExistente.tipoDeAroma.id);
+                    bool sigueMarcado = marcados.Any(m => m.id == aromaExistente.tipoDeAroma.id);
+                    if (!sigueMarcado)
+                        AromaDelPerfumeControlador.DeleteByPerfumeAndTipo(perfume.id, aromaExistente.tipoDeAroma.id);
                 }
 
                 // agregar los nuevos
                 foreach (var nombreAroma in marcados)
                 {
-                    var tipo = TipoDeAromaControlador.getByNombre(nombreAroma);
+                    var tipo = nombreAroma; // ya es TipoDeAroma
                     if (tipo == null) continue;
 
                     bool yaExiste = existentes.Any(a => a.tipoDeAroma.id == tipo.id);
@@ -317,7 +319,6 @@ namespace Eterea_Parfums_Desktop
                         AromaDelPerfumeControlador.create(aromaDelPerfume);
                     }
                 }
-
                 // 4) Notas: reemplazo completo (más simple y seguro)
                 NotasDelPerfumeControlador.delete(perfume.id);
                 if (notas_del_perfume != null)
@@ -345,25 +346,28 @@ namespace Eterea_Parfums_Desktop
         // ==================== UI/Handlers ====================
         private void checkedListBoxNota_ItemCheck(object sender, ItemCheckEventArgs e)
         {
+            // Seguridad
+            if (e.Index < 0) return;
+
+            // 1) Forzar selección única (destildar todos menos el clickeado)
+            for (int i = 0; i < checkedListBoxNota.Items.Count; i++)
+            {
+                if (i != e.Index && checkedListBoxNota.GetItemChecked(i))
+                    checkedListBoxNota.SetItemChecked(i, false);
+            }
+
+            // 2) Actualizar etiqueta con el estado final y quitar resaltado azul
             this.BeginInvoke(new Action(() =>
             {
-                if (checkedListBoxNota.CheckedItems.Count == 0)
-                {
-                    lbl_tipo_de_nota.Text = "";
-                }
-                else
-                {
-                    for (int i = 0; i < checkedListBoxNota.Items.Count; i++)
-                    {
-                        if (i != checkedListBoxNota.SelectedIndex)
-                            checkedListBoxNota.SetItemChecked(i, false);
-                    }
+                bool quedoChequeado = checkedListBoxNota.GetItemChecked(e.Index);
+                lbl_tipo_de_nota.Text = quedoChequeado
+                    ? checkedListBoxNota.Items[e.Index].ToString()
+                    : "";
 
-                    if (checkedListBoxNota.SelectedItem != null)
-                        lbl_tipo_de_nota.Text = checkedListBoxNota.SelectedItem.ToString();
-                }
+                checkedListBoxNota.ClearSelected(); // sin azul
             }));
         }
+
 
         private void btn_x_cerrar_Click(object sender, EventArgs e)
         {
@@ -421,36 +425,56 @@ namespace Eterea_Parfums_Desktop
             // (opcional) feedback visual
         }
 
-        private void checkedListBoxAroma_DrawItem(object sender, DrawItemEventArgs e)
+        private void CheckedListBox_DrawItem(object sender, DrawItemEventArgs e)
         {
-            e.DrawBackground();
+            var clb = (CheckedListBox)sender;
+            if (e.Index < 0 || e.Index >= clb.Items.Count) return;
 
-            string itemText = checkedListBoxAroma.Items[e.Index].ToString();
-            bool isChecked = checkedListBoxAroma.GetItemChecked(e.Index);
+            bool isChecked = clb.GetItemChecked(e.Index);
 
-            Color textColor = Color.Black;
-            Color backgroundColor = Color.White;
+            Color backgroundColor = isChecked ? Color.FromArgb(232, 186, 197) : Color.White;
+            Color textColor = isChecked ? Color.White : Color.Black;
 
-            if ((e.State & DrawItemState.Selected) == DrawItemState.Selected || isChecked)
+            using (var bg = new SolidBrush(backgroundColor))
+            using (var fg = new SolidBrush(textColor))
             {
-                backgroundColor = Color.FromArgb(232, 186, 197);
-                textColor = Color.White;
-            }
+                e.Graphics.FillRectangle(bg, e.Bounds);
 
-            using (SolidBrush backgroundBrush = new SolidBrush(backgroundColor))
-            using (SolidBrush textBrush = new SolidBrush(textColor))
-            {
-                e.Graphics.FillRectangle(backgroundBrush, e.Bounds);
-                e.Graphics.DrawString(itemText, e.Font, textBrush, e.Bounds);
-            }
+                string text;
+                if (clb.Items[e.Index] is TipoDeAroma ta && !string.IsNullOrWhiteSpace(ta.nombre))
+                    text = ta.nombre;
+                else
+                    text = clb.Items[e.Index]?.ToString() ?? string.Empty;
 
-            e.DrawFocusRectangle();
+                e.Graphics.DrawString(text, e.Font, fg, e.Bounds);
+            }
         }
 
         private void FormEditarPerfume2_Load(object sender, EventArgs e)
         {
+            // OwnerDraw en ambos
             checkedListBoxAroma.DrawMode = DrawMode.OwnerDrawFixed;
-            checkedListBoxAroma.DrawItem += checkedListBoxAroma_DrawItem;
+            checkedListBoxAroma.DrawItem -= CheckedListBox_DrawItem;
+            checkedListBoxAroma.DrawItem += CheckedListBox_DrawItem;
+
+            checkedListBoxNota.DrawMode = DrawMode.OwnerDrawFixed;
+            checkedListBoxNota.DrawItem -= CheckedListBox_DrawItem;
+            checkedListBoxNota.DrawItem += CheckedListBox_DrawItem;
+
+            // Tilde al hacer click
+            checkedListBoxAroma.CheckOnClick = true;
+            checkedListBoxNota.CheckOnClick = true;
+
+            // Limpiar selección para que no quede azul
+            checkedListBoxAroma.SelectedIndexChanged += (s, ev) => checkedListBoxAroma.ClearSelected();
+            checkedListBoxNota.SelectedIndexChanged += (s, ev) => checkedListBoxNota.ClearSelected();
+
+            // Blindaje extra (mouse/teclado)
+            checkedListBoxAroma.MouseUp += (s, ev) => checkedListBoxAroma.ClearSelected();
+            checkedListBoxNota.MouseUp += (s, ev) => checkedListBoxNota.ClearSelected();
+            checkedListBoxAroma.KeyUp += (s, ev) => checkedListBoxAroma.ClearSelected();
+            checkedListBoxNota.KeyUp += (s, ev) => checkedListBoxNota.ClearSelected();
         }
+    
     }
 }

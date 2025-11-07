@@ -101,6 +101,24 @@ namespace Eterea_Parfums_Desktop
                 pictureBoxProducto2.LoadAsync();
             };
 
+            // === Auto-clear de errores ===
+            // Entradas de texto
+            HookTextHideError(txt_codigo, lbl_error_codigo);
+            HookTextHideError(txt_nombre, lbl_error_nombre);
+            HookTextHideError(txt_presentacion, lbl_error_presentacion);
+            HookTextHideError(txt_anio_de_lanzamiento, lbl_error_anio);
+            HookTextHideError(txt_precio, lbl_error_precio);
+            HookTextHideError(richTextBox_descripcion, lbl_error_descripcion);
+
+            // Combos
+            HookComboHideError(combo_marca, lbl_error_marca);
+            HookComboHideError(combo_tipo_de_perfume, lbl_error_tipo);
+            HookComboHideError(combo_genero, lbl_error_genero);
+            HookComboHideError(combo_pais, lbl_error_pais);
+            HookComboHideError(combo_spray, lbl_error_spray);
+            HookComboHideError(combo_recargable, lbl_error_recargable);
+
+
             // Diseño combos
             combo_activo.DrawMode = DrawMode.OwnerDrawFixed;
             combo_activo.DrawItem += comboBoxdiseño_DrawItem;
@@ -809,6 +827,36 @@ namespace Eterea_Parfums_Desktop
 
             return $"{slug}-{num}-{sufijo}";
         }
+
+
+        // Oculta error cuando cambia texto (TextBox o RichTextBox)
+        private void HookTextHideError(System.Windows.Forms.TextBoxBase tb, Label errorLabel)
+        {
+            if (tb == null || errorLabel == null) return;
+            tb.TextChanged += (s, e) => errorLabel.Hide();
+        }
+
+        // Oculta error cuando seleccionan algo en ComboBox o cuando el texto coincide con un ítem
+        private void HookComboHideError(ComboBox combo, Label errorLabel)
+        {
+            if (combo == null || errorLabel == null) return;
+
+            combo.SelectionChangeCommitted += (s, e) => errorLabel.Hide();
+
+            combo.TextChanged += (s, e) =>
+            {
+                var txt = combo.Text?.Trim() ?? "";
+                if (string.IsNullOrEmpty(txt)) return;
+
+                bool match = combo.Items
+                    .Cast<object>()
+                    .Select(i => i?.ToString())
+                    .Any(it => string.Equals(it ?? "", txt, StringComparison.OrdinalIgnoreCase));
+
+                if (match) errorLabel.Hide();
+            };
+        }
+
 
 
     }

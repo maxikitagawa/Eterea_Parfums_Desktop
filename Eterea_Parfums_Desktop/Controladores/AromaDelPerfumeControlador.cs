@@ -1,6 +1,7 @@
 ﻿using Eterea_Parfums_Desktop.Modelos;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 
 namespace Eterea_Parfums_Desktop.Controladores
@@ -83,6 +84,34 @@ namespace Eterea_Parfums_Desktop.Controladores
             }
 
             return result;
+        }
+
+
+        public static bool DeleteByPerfumeAndTipo(int perfumeId, int tipoDeAromaId)
+        {
+            const string sql = @"
+        DELETE FROM dbo.perfume_tipo_de_aroma
+        WHERE perfume_id = @perfumeId
+          AND tipo_de_aroma_id = @tipoDeAromaId;";
+
+            try
+            {
+                using (var cn = new SqlConnection(DB_Controller.GetConnectionString()))
+                using (var cmd = new SqlCommand(sql, cn))
+                {
+                    cmd.Parameters.Add("@perfumeId", SqlDbType.Int).Value = perfumeId;
+                    cmd.Parameters.Add("@tipoDeAromaId", SqlDbType.Int).Value = tipoDeAromaId;
+
+                    cn.Open();
+                    int rows = cmd.ExecuteNonQuery();
+                    return rows > 0; // true si borró al menos 1 fila
+                }
+            }
+            catch (SqlException ex)
+            {
+                // Logueá o re-lanzá si querés tratarlo arriba
+                throw new Exception("Error eliminando aroma del perfume: " + ex.Message, ex);
+            }
         }
 
         public static List<int> getPerfumeIdsPorAroma(int aromaId)

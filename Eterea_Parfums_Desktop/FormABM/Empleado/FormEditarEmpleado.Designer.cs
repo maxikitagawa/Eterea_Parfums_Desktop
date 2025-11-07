@@ -1280,7 +1280,7 @@
             this.Name = "FormEditarEmpleado";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "FormEditarEmpleado";
-            this.Load += new System.EventHandler(this.FormEditarEmpleado_Load);
+            //this.Load += new System.EventHandler(this.FormEditarEmpleado_Load);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox7)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox13)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox10)).EndInit();
