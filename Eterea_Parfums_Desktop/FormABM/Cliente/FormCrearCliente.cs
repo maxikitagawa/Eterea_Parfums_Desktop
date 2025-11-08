@@ -17,6 +17,10 @@ namespace Eterea_Parfums_Desktop
         private List<Localidad> _localidades = new List<Localidad>();
         private List<Calle> _calles = new List<Calle>();
 
+        // --- Color de tu diseño ---
+        private static readonly Color Rose = Color.FromArgb(195, 156, 164);
+
+
         // ====== Flags / debounce ======
         private bool _suspendComboEvents = false;
         private Timer _debPais, _debProv, _debLoc;
@@ -209,6 +213,8 @@ namespace Eterea_Parfums_Desktop
             // Botones
             btn_crear_cliente.Click += btn_crear_cliente_Click;
             button2.Click += button1_Click; // cerrar
+
+
         }
 
         // =================== Debounce wrappers ===================
