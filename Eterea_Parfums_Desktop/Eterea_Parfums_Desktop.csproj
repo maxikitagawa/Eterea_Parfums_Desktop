@@ -458,6 +458,7 @@
     <Compile Include="Helpers\CorreoHelper.cs" />
     <Compile Include="Helpers\GoogleDriveUploader.cs" />
     <Compile Include="Helpers\ModalHelper.cs" />
+    <Compile Include="Helpers\UiTheme.cs" />
     <Compile Include="Modelos\AromaDelPerfume.cs" />
     <Compile Include="Modelos\Calle.cs" />
     <Compile Include="Modelos\Cliente.cs" />

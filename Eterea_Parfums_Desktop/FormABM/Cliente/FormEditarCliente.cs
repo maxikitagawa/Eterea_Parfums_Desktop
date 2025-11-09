@@ -1,5 +1,6 @@
 ﻿using Eterea_Parfums_Desktop.Controladores;
 using Eterea_Parfums_Desktop.Modelos;
+using Eterea_Parfums_Desktop.UI;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -33,6 +34,11 @@ namespace Eterea_Parfums_Desktop
         private static readonly Regex _rxPisoDpto_Final = new Regex(@"^(?:\d{1,3}|[A-Z]{1,3})$");
         private string _lastValidPiso = "";
         private string _lastValidDepto = "";
+
+        // Busca el TextBox interno del ComboBox (en DropDown)
+        private static TextBox GetComboEditBox(ComboBox combo)
+            => combo?.Controls?.OfType<TextBox>()?.FirstOrDefault();
+
 
         // ==== CTOR ====
         public FormEditarCliente(Cliente cliente)
@@ -104,10 +110,23 @@ namespace Eterea_Parfums_Desktop
             combo_con_iva.DropDownStyle = ComboBoxStyle.DropDownList;
             combo_con_iva.Enabled = false; // se habilita con CUIT válido
 
-            PrepararComboAutocompletable(combo_pais);
-            PrepararComboAutocompletable(combo_provincia);
-            PrepararComboAutocompletable(combo_localidad);
-            PrepararComboAutocompletable(combo_calle);
+            // País / Provincia / Localidad / Calle con escritura y autocompletar
+            UiTheme.PrepareAutocompleteCombo(combo_pais, UiTheme.DrawItemRose);
+            UiTheme.PrepareAutocompleteCombo(combo_provincia, UiTheme.DrawItemRose);
+            UiTheme.PrepareAutocompleteCombo(combo_localidad, UiTheme.DrawItemRose);
+            UiTheme.PrepareAutocompleteCombo(combo_calle, UiTheme.DrawItemRose);
+
+            // 2) Aplicar tema al área editable
+            UiTheme.ApplyEditableComboTheme(combo_pais);
+            UiTheme.ApplyEditableComboTheme(combo_provincia);
+            UiTheme.ApplyEditableComboTheme(combo_localidad);
+            UiTheme.ApplyEditableComboTheme(combo_calle);
+
+            // 3) Borde temático al foco
+            UiTheme.AttachFocusBorder(combo_pais);
+            UiTheme.AttachFocusBorder(combo_provincia);
+            UiTheme.AttachFocusBorder(combo_localidad);
+            UiTheme.AttachFocusBorder(combo_calle);
 
             // ====== Datos base ======
             _paises = PaisControlador.getAll() ?? new List<Pais>();
@@ -1051,6 +1070,9 @@ namespace Eterea_Parfums_Desktop
                 dtp.Format = DateTimePickerFormat.Short; // ya lo usás
             };
         }
+
+       
+
 
     }
 }
