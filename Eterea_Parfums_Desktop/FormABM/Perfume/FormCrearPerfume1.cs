@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Text.RegularExpressions;
 
 namespace Eterea_Parfums_Desktop
 {
@@ -46,6 +47,40 @@ namespace Eterea_Parfums_Desktop
             CargarOpciones(combo_spray);
             CargarOpciones(combo_recargable);
             //CargarOpciones(combo_activo);
+
+            // ===== LIMITES Y VALIDACIONES DE ENTRADA =====
+
+            // Longitudes máximas coherentes con tus validaciones
+            txt_codigo.MaxLength = 13;          // EAN-13
+            txt_nombre.MaxLength = 80;          // tu validación ya usa 80
+            richTextBox_descripcion.MaxLength = 1100; // tu validación ya usa 1100
+            txt_anio_de_lanzamiento.MaxLength = 4;    // año (YYYY)
+            txt_presentacion.MaxLength = 4;           // ej. 30, 50, 100
+                                                      // txt_precio: lo dejamos sin MaxLength estricto por si necesitás precios grandes
+
+            // === Teclado: KeyPress ===
+            // Solo dígitos
+            txt_codigo.KeyPress += OnlyDigits_KeyPress;
+            txt_presentacion.KeyPress += OnlyDigits_KeyPress;
+            txt_anio_de_lanzamiento.KeyPress += OnlyDigits_KeyPress;
+
+            // Letras, números y los caracteres especiales permitidos: ", #, &, (, ), !, ¡, ?, ¿, *, =
+            txt_nombre.KeyPress += NameAllowed_KeyPress;
+            richTextBox_descripcion.KeyPress += NameAllowed_KeyPress;
+
+            // Precio: dígitos + un único separador decimal (',' o '.')
+            txt_precio.KeyPress += Price_KeyPress;
+
+            // === Pegado / Limpieza: TextChanged ===
+            // (si pegan contenido inválido, se limpia)
+            txt_codigo.TextChanged += (s, e) => SanitizeDigitsOnly(txt_codigo);
+            txt_presentacion.TextChanged += (s, e) => SanitizeDigitsOnly(txt_presentacion);
+            txt_anio_de_lanzamiento.TextChanged += (s, e) => SanitizeDigitsOnly(txt_anio_de_lanzamiento);
+
+            txt_nombre.TextChanged += (s, e) => SanitizeWithPredicate(txt_nombre, IsAllowedNameChar);
+            richTextBox_descripcion.TextChanged += (s, e) => SanitizeWithPredicate(richTextBox_descripcion, IsAllowedNameChar);
+
+            txt_precio.TextChanged += (s, e) => SanitizePrice(txt_precio);
 
             //Diseño del combo box
             /*combo_activo.DrawMode = DrawMode.OwnerDrawFixed;
@@ -197,6 +232,8 @@ namespace Eterea_Parfums_Desktop
 
 
 
+
+
         internal async Task guardarNuevaImg()
         {
             try
@@ -259,10 +296,10 @@ namespace Eterea_Parfums_Desktop
                 if (dr == DialogResult.OK)
                 {
                     Trace.WriteLine("OK");
-                 
+
                 }
 
-               
+
             }
 
         }
@@ -715,6 +752,152 @@ namespace Eterea_Parfums_Desktop
             // Evitar problemas visuales
             e.DrawFocusRectangle();
         }
+
+        // Flag para evitar recursión al sanitizar
+        private bool _sanitizing = false;
+
+        // ====== PREDICADO DE CARACTERES PERMITIDOS PARA NOMBRE/DESCRIPCIÓN ======
+        private static readonly HashSet<char> _allowedSpecials = new HashSet<char>
+{
+    '"', '#', '&', '(', ')', '!', '¡', '?', '¿', '*', '=', ';', ' '  // incluye espacio
+};
+
+        private static bool IsAllowedNameChar(char c)
+        {
+            // Letras (incluye acentos), números o caracteres especiales definidos
+            return char.IsLetterOrDigit(c) || _allowedSpecials.Contains(c);
+        }
+
+        // ====== KEYPRESS HANDLERS ======
+        private void OnlyDigits_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            // Permitir teclas de control (Backspace, etc.)
+            if (char.IsControl(e.KeyChar)) return;
+
+            // Solo dígitos
+            if (!char.IsDigit(e.KeyChar))
+                e.Handled = true;
+        }
+
+        private void NameAllowed_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (char.IsControl(e.KeyChar)) return;
+
+            if (!IsAllowedNameChar(e.KeyChar))
+                e.Handled = true;
+        }
+
+        private void Price_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (char.IsControl(e.KeyChar)) return;
+
+            var tb = sender as TextBox;
+            if (tb == null) return;
+
+            // Aceptar dígitos
+            if (char.IsDigit(e.KeyChar)) return;
+
+            // Aceptar un único separador decimal (coma o punto)
+            if (e.KeyChar == ',' || e.KeyChar == '.')
+            {
+                if (tb.Text.Contains(",") || tb.Text.Contains("."))
+                    e.Handled = true; // ya hay separador
+                return;
+            }
+
+            // Bloquear todo lo demás
+            e.Handled = true;
+        }
+
+        // ====== SANITIZADORES (para pegado / set programático) ======
+        private void SanitizeDigitsOnly(TextBox tb)
+        {
+            if (_sanitizing) return;
+            _sanitizing = true;
+            try
+            {
+                if (tb == null) return;
+                var digits = new string(tb.Text.Where(char.IsDigit).ToArray());
+                if (digits != tb.Text)
+                {
+                    int sel = tb.SelectionStart;
+                    tb.Text = digits;
+                    tb.SelectionStart = Math.Min(sel, tb.Text.Length);
+                }
+            }
+            finally { _sanitizing = false; }
+        }
+
+        private void SanitizeWithPredicate(TextBoxBase tb, Func<char, bool> predicate)
+        {
+            if (_sanitizing) return;
+            _sanitizing = true;
+            try
+            {
+                if (tb == null) return;
+                string original = tb.Text ?? "";
+                string cleaned = new string(original.Where(predicate).ToArray());
+                if (cleaned != original)
+                {
+                    int sel = (tb as TextBox)?.SelectionStart ?? (tb as RichTextBox)?.SelectionStart ?? cleaned.Length;
+                    tb.Text = cleaned;
+
+                    if (tb is TextBox t1)
+                        t1.SelectionStart = Math.Min(sel, t1.Text.Length);
+                    else if (tb is RichTextBox r1)
+                        r1.SelectionStart = Math.Min(sel, r1.Text.Length);
+                }
+            }
+            finally { _sanitizing = false; }
+        }
+
+        private void SanitizePrice(TextBox tb)
+        {
+            if (_sanitizing) return;
+            _sanitizing = true;
+            try
+            {
+                if (tb == null) return;
+
+                // Mantener solo dígitos y separadores ',' '.'
+                string onlyAllowed = new string(tb.Text.Where(ch => char.IsDigit(ch) || ch == ',' || ch == '.').ToArray());
+
+                // Si hay más de un separador, conservar el primero y eliminar los restantes
+                int firstSep = -1;
+                var chars = new List<char>(onlyAllowed.Length);
+                for (int i = 0; i < onlyAllowed.Length; i++)
+                {
+                    char c = onlyAllowed[i];
+                    if (c == ',' || c == '.')
+                    {
+                        if (firstSep == -1)
+                        {
+                            firstSep = i;
+                            chars.Add(c);
+                        }
+                        // else: omitir separadores extra
+                    }
+                    else
+                    {
+                        chars.Add(c);
+                    }
+                }
+
+                string cleaned = new string(chars.ToArray());
+
+                // Normalizamos: si preferís, podés dejar coma; tu validador acepta reemplazo de coma por punto
+                // Acá no reemplazo nada, solo limpio múltiples separadores.
+
+                if (cleaned != tb.Text)
+                {
+                    int sel = tb.SelectionStart;
+                    tb.Text = cleaned;
+                    tb.SelectionStart = Math.Min(sel, tb.Text.Length);
+                }
+            }
+            finally { _sanitizing = false; }
+        }
+
 
     }
 }
