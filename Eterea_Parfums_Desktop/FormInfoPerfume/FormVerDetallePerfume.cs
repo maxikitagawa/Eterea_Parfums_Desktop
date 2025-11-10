@@ -11,12 +11,13 @@ namespace Eterea_Parfums_Desktop
     {
         //public static txt_porciento_rec fv = new txt_porciento_rec();
 
+
         //RECARGOS DE CUOTAS PARA LAS TARJETAS DE CREDITO
-        private static string recargoUnPagoTarjeta = "10";
-        private static string recargoTresCuotas = "15";
-        private static string recargoSeisCuotas = "20";
-        private static string recargoNueveCuotas = "28";
-        private static string recargoDoceCuotas = "40";
+        private static string recargoUnPagoTarjeta = "0";
+        private static string recargoTresCuotas = "0";
+        private static string recargoSeisCuotas = "10";
+        private static string recargoNueveCuotas = "15";
+        private static string recargoDoceCuotas = "20";
 
 
         private Perfume perfume;
@@ -401,7 +402,7 @@ namespace Eterea_Parfums_Desktop
             combo_cuotas.SelectedIndex = 0;
             combo_descuento.SelectedIndex = 0;
 
-            CalcularRecargo(formaPago);
+            RecalcularTodo(); 
 
         }
 
@@ -411,30 +412,17 @@ namespace Eterea_Parfums_Desktop
 
             if (formaPago == "Visa Crédito" || formaPago == "Mastercard" || formaPago == "Amex")
             {
-                if (cantidadCuotas == 1)
-                {
-                    txt_recargo.Text = recargoUnPagoTarjeta;
-                }
-                else if (cantidadCuotas == 3)
-                {
-                    txt_recargo.Text = recargoTresCuotas;
-                }
-                else if (cantidadCuotas == 6)
-                {
-                    txt_recargo.Text = recargoSeisCuotas;
-                }
-                else if (cantidadCuotas == 9)
-                {
-                    txt_recargo.Text = recargoNueveCuotas;
-                }
-                else if (cantidadCuotas == 12)
-                {
-                    txt_recargo.Text = recargoDoceCuotas;
-                }
+                if (cantidadCuotas == 1) txt_recargo.Text = recargoUnPagoTarjeta;
+                else if (cantidadCuotas == 3) txt_recargo.Text = recargoTresCuotas;
+                else if (cantidadCuotas == 6) txt_recargo.Text = recargoSeisCuotas;
+                else if (cantidadCuotas == 9) txt_recargo.Text = recargoNueveCuotas;
+                else if (cantidadCuotas == 12) txt_recargo.Text = recargoDoceCuotas;
 
-                CalcularImporteRecargo(float.Parse(txt_precio_lista.Text), float.Parse(txt_recargo.Text));
-                precioFinal(float.Parse(txt_precio_lista.Text), float.Parse(txt_valor_recargo.Text), float.Parse(txt_valor_descuento.Text));
-                CalcularValorCuota(float.Parse(txt_recargo.Text), float.Parse(txt_precio_lista.Text));
+                // === Cambios clave: usar precio base ===
+                float precioBase = PrecioParaCalculos();
+                CalcularImporteRecargo(float.Parse(txt_recargo.Text), precioBase);
+                precioFinal(precioBase, float.Parse(txt_valor_recargo.Text), float.Parse(txt_valor_descuento.Text));
+                CalcularValorCuota(float.Parse(txt_recargo.Text), precioBase);
             }
             else
             {
@@ -456,46 +444,27 @@ namespace Eterea_Parfums_Desktop
 
         private void combo_descuento_SelectedIndexChanged_1(object sender, EventArgs e)
         {
-            if (combo_descuento.SelectedItem != null)
-            {
-                desc();
-                float preciolista, recargo, descuento;
+            if (combo_descuento.SelectedItem == null) return;
 
-                // Verificar que los valores sean válidos antes de llamar a sumaFinal
-                if (float.TryParse(txt_precio_lista.Text, out preciolista) &&
-                    float.TryParse(txt_valor_recargo.Text, out recargo) &&
-                    float.TryParse(txt_valor_descuento.Text, out descuento))
-                {
-                    precioFinal(preciolista, recargo, descuento);
-                }
-                else
-                {
-
-                    // Se pueden agregar opciones
-                }
-            }
+            desc();            // actualiza txt_valor_descuento
+            RecalcularTodo();  // recalcula recargo, total y cuotas usando PrecioParaCalculos()
         }
+
 
         private void desc()
         {
-            string descuentoStr = combo_descuento.SelectedItem.ToString();
+            string descuentoStr = combo_descuento.SelectedItem?.ToString();
+            if (!int.TryParse(descuentoStr, out int descuento))
+            {
+                txt_valor_descuento.Text = "0,00";
+                return;
+            }
 
-            if (int.TryParse(descuentoStr, out int descuento))
-            {
-                if (float.TryParse(txt_precio_lista.Text, out float preciolista))
-                {
-                    CalcularDescuento(descuento, preciolista);
-                }
-                else
-                {
-                    // Si no se puede convertir a float, simplemente establecer el monto de descuento en cero
-                    txt_valor_descuento.Text = "0,00";
-                }
-            }
+            float precioBase = PrecioParaCalculos(); // usa txt_precio_con_descuento si está visible
+            if (precioBase > 0)
+                txt_valor_descuento.Text = (precioBase * descuento / 100f).ToString("N2");
             else
-            {
-                MessageBox.Show("El valor de descuento no es válido.");
-            }
+                txt_valor_descuento.Text = "0,00";
         }
 
         private void precioFinal(float preciolista, float recargo, float descuento)
@@ -510,7 +479,6 @@ namespace Eterea_Parfums_Desktop
 
         private void combo_cuotas_SelectedIndexChanged(object sender, EventArgs e)
         {
-            // Si el perfume no está activo, no hacemos cálculos
             if (perfume == null || perfume.activo == false)
             {
                 txt_recargo.Text = "0,00";
@@ -520,23 +488,22 @@ namespace Eterea_Parfums_Desktop
 
                 lbl_medios_pago.ForeColor = Color.LightGray;
                 lbl_cuotas.ForeColor = Color.LightGray;
-
                 return;
             }
-          
-            // Si está activo, procedemos con el cálculo normalmente
+
             string formaPago = combo_medios_pago.SelectedItem.ToString();
 
             CalcularRecargo(formaPago);
-            CalcularValorCuota(float.Parse(txt_recargo.Text), float.Parse(txt_precio_lista.Text));
-            CalcularImporteRecargo(float.Parse(txt_precio_lista.Text), float.Parse(txt_recargo.Text));
 
-            // Restaurar colores por si se reactivó desde un perfume activo
+            // === Cambios clave: usar precio base ===
+            float precioBase = PrecioParaCalculos();
+            CalcularValorCuota(float.Parse(txt_recargo.Text), precioBase);
+            CalcularImporteRecargo(float.Parse(txt_recargo.Text), precioBase); // mismo orden de params
+
             lbl_medios_pago.ForeColor = Color.Brown;
             lbl_cuotas.ForeColor = Color.Brown;
-
-
         }
+
 
 
         private void CalcularValorCuota(float recargo, float precio)
@@ -687,6 +654,90 @@ namespace Eterea_Parfums_Desktop
             CalcularValorCuota(ParsearFloat(txt_recargo.Text), precioBase);
         }
 
+        private void ConfigurarPromosYPrecioBase()
+        {
+            // Reset UI
+            lbl_desc_10.Visible = false;
+            checkBox_10.Visible = false;
+            checkBox_2x.Visible = false;
+            txt_precio_con_descuento.Visible = false;
+            SetPrecioListaTachado(false);
+
+            var promos = PerfumeEnPromoControlador.getByIDPerfume(perfume.id) ?? new List<Promocion>();
+
+            // Caso "sin promo": si no hay promos o todas son id=1
+            promoSoloSinPromo = promos.Count == 0 || promos.All(p => p.id == 1);
+
+            // Detectar 10% y una 2x (cualquier descuento distinto de 10 e id!=1 lo tomamos como “2x”)
+            promo10 = promos.Any(p => p.id != 1 && p.descuento == 10);
+            promo2x = promos.FirstOrDefault(p => p.id != 1 && p.descuento != 10);
+
+            float precioLista = ParsearFloat(txt_precio_lista.Text);
+
+            // CASO 1: solo sin promo
+            if (promoSoloSinPromo)
+            {
+                lbl_desc_10.Text = "Perfume sin promoción";
+                lbl_desc_10.Visible = true;
+                // nada más visible
+                RecalcularTodo();
+                return;
+            }
+
+            // CASO 2: solo 10%
+            if (promo10 && promo2x == null)
+            {
+                lbl_desc_10.Text = "Descuento 10%";
+                lbl_desc_10.Visible = true;
+
+                // mostrar precio con 10%
+                // Usamos float puro y redondeamos con Math.Round sobre double
+                float precio10 = (float)Math.Round(precioLista * 0.90, 2, MidpointRounding.AwayFromZero);
+                txt_precio_con_descuento.Text = precio10.ToString("N2");
+                txt_precio_con_descuento.Visible = true;
+
+                SetPrecioListaTachado(true);
+                RecalcularTodo();
+                return;
+            }
+
+            // CASO 3: 10% + 2x
+            if (promo10 && promo2x != null)
+            {
+                // ocultar label 10% y mostrar checkboxes
+                lbl_desc_10.Visible = false;
+                checkBox_10.Visible = true;
+                checkBox_2x.Visible = true;
+
+                // por defecto, que quede 10% activo
+                checkBox_10.Checked = true;
+                checkBox_2x.Checked = false;
+
+                AplicarEleccionPromo();
+                return;
+            }
+
+            // CASO especial: solo 2x (si llegara a pasar)
+            if (!promo10 && promo2x != null)
+            {
+                lbl_desc_10.Visible = false;
+                // checkboxes no hacen falta (solo hay una promo efectiva)
+
+                float d = promo2x.descuento; // e.g., 40 => 40% al par
+                                             // (precio*2) * (1 - d/100)
+                float precioPar = (float)Math.Round((precioLista * 2f) * (1f - d / 100f), 2, MidpointRounding.AwayFromZero);
+
+                txt_precio_con_descuento.Text = precioPar.ToString("N2");
+                txt_precio_con_descuento.Visible = true;
+
+                SetPrecioListaTachado(true);
+                RecalcularTodo();
+                return;
+            }
+        }
+
+
+
 
         private void AplicarEleccionPromo()
         {
@@ -695,14 +746,14 @@ namespace Eterea_Parfums_Desktop
             if (checkBox_10.Checked && !checkBox_2x.Checked)
             {
                 // 10%
-                float precio10 = (float)Math.Round(precioLista * 0.90m, 2, MidpointRounding.AwayFromZero);
+                float precio10 = (float)Math.Round(precioLista * 0.90, 2, MidpointRounding.AwayFromZero);
                 txt_precio_con_descuento.Text = precio10.ToString("N2");
                 txt_precio_con_descuento.Visible = true;
                 SetPrecioListaTachado(true);
             }
             else if (!checkBox_10.Checked && checkBox_2x.Checked && promo2x != null)
             {
-                // 2x: (precio*2) - (descuento% de ese total)
+                // 2x: (precio*2) * (1 - d/100)
                 float d = promo2x.descuento;
                 float precioPar = (float)Math.Round((precioLista * 2f) * (1f - d / 100f), 2, MidpointRounding.AwayFromZero);
                 txt_precio_con_descuento.Text = precioPar.ToString("N2");
@@ -725,7 +776,6 @@ namespace Eterea_Parfums_Desktop
 
             RecalcularTodo();
         }
-
 
 
     }
