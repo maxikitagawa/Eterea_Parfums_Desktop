@@ -1,5 +1,6 @@
 ﻿using Eterea_Parfums_Desktop.Controladores;
 using Eterea_Parfums_Desktop.Modelos;
+using Eterea_Parfums_Desktop.UI;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -170,10 +171,23 @@ namespace Eterea_Parfums_Desktop
                 combo_sucursal.Items.Add(s.nombre);
 
             // País/Prov/Loc/Calle con escritura + autocompletar dependiente
-            PrepararComboAutocompletable(combo_pais);
-            PrepararComboAutocompletable(combo_provincia);
-            PrepararComboAutocompletable(combo_localidad);
-            PrepararComboAutocompletable(combo_calle);
+            // 1) Preparar combos editables y dueño de dibujo
+            UiTheme.PrepareAutocompleteCombo(combo_pais, UiTheme.DrawItemRose);
+            UiTheme.PrepareAutocompleteCombo(combo_provincia, UiTheme.DrawItemRose);
+            UiTheme.PrepareAutocompleteCombo(combo_localidad, UiTheme.DrawItemRose);
+            UiTheme.PrepareAutocompleteCombo(combo_calle, UiTheme.DrawItemRose);
+
+            // 2) Aplicar tema al área editable
+            UiTheme.ApplyEditableComboTheme(combo_pais);
+            UiTheme.ApplyEditableComboTheme(combo_provincia);
+            UiTheme.ApplyEditableComboTheme(combo_localidad);
+            UiTheme.ApplyEditableComboTheme(combo_calle);
+
+            // 3) Borde temático al foco
+            UiTheme.AttachFocusBorder(combo_pais);
+            UiTheme.AttachFocusBorder(combo_provincia);
+            UiTheme.AttachFocusBorder(combo_localidad);
+            UiTheme.AttachFocusBorder(combo_calle);
 
             // Cargar Países
             _paises = PaisControlador.getAll() ?? new List<Pais>();
