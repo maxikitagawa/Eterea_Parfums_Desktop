@@ -58,7 +58,6 @@
             this.img_perfume = new System.Windows.Forms.PictureBox();
             this.btn_buscar_perfumes_simi = new System.Windows.Forms.Button();
             this.richTextBox_descripcion = new System.Windows.Forms.RichTextBox();
-            this.lbl_detalles_perfumes = new System.Windows.Forms.Label();
             this.lbl_descripcion = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
@@ -121,6 +120,11 @@
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.pictureBox16 = new System.Windows.Forms.PictureBox();
             this.txt_precio_lista = new System.Windows.Forms.TextBox();
+            this.checkBox_10 = new System.Windows.Forms.CheckBox();
+            this.checkBox_2x = new System.Windows.Forms.CheckBox();
+            this.label9 = new System.Windows.Forms.Label();
+            this.txt_precio_con_desc = new System.Windows.Forms.TextBox();
+            this.lbl_desc_10 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox3)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.img_perfume)).BeginInit();
@@ -149,7 +153,7 @@
             this.combo_medios_pago.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.combo_medios_pago.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.combo_medios_pago.FormattingEnabled = true;
-            this.combo_medios_pago.Location = new System.Drawing.Point(990, 122);
+            this.combo_medios_pago.Location = new System.Drawing.Point(990, 162);
             this.combo_medios_pago.MaximumSize = new System.Drawing.Size(290, 0);
             this.combo_medios_pago.MaxLength = 20;
             this.combo_medios_pago.MinimumSize = new System.Drawing.Size(200, 0);
@@ -165,7 +169,7 @@
             this.lbl_precio_lista.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_precio_lista.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lbl_precio_lista.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
-            this.lbl_precio_lista.Location = new System.Drawing.Point(877, 94);
+            this.lbl_precio_lista.Location = new System.Drawing.Point(877, 69);
             this.lbl_precio_lista.Name = "lbl_precio_lista";
             this.lbl_precio_lista.Size = new System.Drawing.Size(91, 15);
             this.lbl_precio_lista.TabIndex = 282;
@@ -199,7 +203,7 @@
             this.lbl_medios_pago.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_medios_pago.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lbl_medios_pago.ForeColor = System.Drawing.Color.Brown;
-            this.lbl_medios_pago.Location = new System.Drawing.Point(877, 116);
+            this.lbl_medios_pago.Location = new System.Drawing.Point(878, 160);
             this.lbl_medios_pago.Name = "lbl_medios_pago";
             this.lbl_medios_pago.Size = new System.Drawing.Size(110, 30);
             this.lbl_medios_pago.TabIndex = 288;
@@ -211,7 +215,7 @@
             this.combo_cuotas.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.combo_cuotas.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.combo_cuotas.FormattingEnabled = true;
-            this.combo_cuotas.Location = new System.Drawing.Point(990, 194);
+            this.combo_cuotas.Location = new System.Drawing.Point(990, 198);
             this.combo_cuotas.Name = "combo_cuotas";
             this.combo_cuotas.Size = new System.Drawing.Size(200, 28);
             this.combo_cuotas.TabIndex = 0;
@@ -224,7 +228,7 @@
             this.lbl_cuotas.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_cuotas.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lbl_cuotas.ForeColor = System.Drawing.Color.Brown;
-            this.lbl_cuotas.Location = new System.Drawing.Point(877, 190);
+            this.lbl_cuotas.Location = new System.Drawing.Point(877, 195);
             this.lbl_cuotas.Name = "lbl_cuotas";
             this.lbl_cuotas.Size = new System.Drawing.Size(109, 30);
             this.lbl_cuotas.TabIndex = 290;
@@ -371,18 +375,6 @@
             this.richTextBox_descripcion.TabStop = false;
             this.richTextBox_descripcion.Text = "";
             // 
-            // lbl_detalles_perfumes
-            // 
-            this.lbl_detalles_perfumes.AutoSize = true;
-            this.lbl_detalles_perfumes.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
-            this.lbl_detalles_perfumes.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lbl_detalles_perfumes.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
-            this.lbl_detalles_perfumes.Location = new System.Drawing.Point(877, 63);
-            this.lbl_detalles_perfumes.Name = "lbl_detalles_perfumes";
-            this.lbl_detalles_perfumes.Size = new System.Drawing.Size(121, 15);
-            this.lbl_detalles_perfumes.TabIndex = 302;
-            this.lbl_detalles_perfumes.Text = "Detalles de Pago:";
-            // 
             // lbl_descripcion
             // 
             this.lbl_descripcion.AutoSize = true;
@@ -401,7 +393,7 @@
             this.label3.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(249)))), ((int)(((byte)(225)))), ((int)(((byte)(230)))));
             this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label3.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
-            this.label3.Location = new System.Drawing.Point(996, 93);
+            this.label3.Location = new System.Drawing.Point(996, 69);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(15, 15);
             this.label3.TabIndex = 305;
@@ -583,7 +575,7 @@
             this.txt_fecha.TabIndex = 320;
             this.txt_fecha.TabStop = false;
             this.txt_fecha.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            
+            // 
             // lbl_ml
             // 
             this.lbl_ml.AutoSize = true;
@@ -787,10 +779,10 @@
             // 
             this.pictureBox8.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.pictureBox8.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
-            this.pictureBox8.Location = new System.Drawing.Point(873, 163);
+            this.pictureBox8.Location = new System.Drawing.Point(873, 137);
             this.pictureBox8.Margin = new System.Windows.Forms.Padding(2);
             this.pictureBox8.Name = "pictureBox8";
-            this.pictureBox8.Size = new System.Drawing.Size(326, 106);
+            this.pictureBox8.Size = new System.Drawing.Size(326, 132);
             this.pictureBox8.TabIndex = 339;
             this.pictureBox8.TabStop = false;
             // 
@@ -801,7 +793,7 @@
             this.pictureBox9.Location = new System.Drawing.Point(873, 57);
             this.pictureBox9.Margin = new System.Windows.Forms.Padding(2);
             this.pictureBox9.Name = "pictureBox9";
-            this.pictureBox9.Size = new System.Drawing.Size(326, 102);
+            this.pictureBox9.Size = new System.Drawing.Size(326, 76);
             this.pictureBox9.TabIndex = 340;
             this.pictureBox9.TabStop = false;
             // 
@@ -1036,11 +1028,11 @@
             this.lbl_detalles_cuotas.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_detalles_cuotas.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lbl_detalles_cuotas.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
-            this.lbl_detalles_cuotas.Location = new System.Drawing.Point(877, 167);
+            this.lbl_detalles_cuotas.Location = new System.Drawing.Point(877, 142);
             this.lbl_detalles_cuotas.Name = "lbl_detalles_cuotas";
-            this.lbl_detalles_cuotas.Size = new System.Drawing.Size(132, 15);
+            this.lbl_detalles_cuotas.Size = new System.Drawing.Size(165, 15);
             this.lbl_detalles_cuotas.TabIndex = 355;
-            this.lbl_detalles_cuotas.Text = "Detalles de Cuotas:";
+            this.lbl_detalles_cuotas.Text = "Forma de pago - Cuotas:";
             // 
             // lbl_detalles_recargo
             // 
@@ -1222,7 +1214,7 @@
             this.txt_precio_lista.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txt_precio_lista.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.txt_precio_lista.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
-            this.txt_precio_lista.Location = new System.Drawing.Point(990, 88);
+            this.txt_precio_lista.Location = new System.Drawing.Point(990, 63);
             this.txt_precio_lista.Name = "txt_precio_lista";
             this.txt_precio_lista.ReadOnly = true;
             this.txt_precio_lista.Size = new System.Drawing.Size(200, 26);
@@ -1230,12 +1222,75 @@
             this.txt_precio_lista.TabStop = false;
             this.txt_precio_lista.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             // 
+            // checkBox_10
+            // 
+            this.checkBox_10.AutoSize = true;
+            this.checkBox_10.ForeColor = System.Drawing.Color.Brown;
+            this.checkBox_10.Location = new System.Drawing.Point(881, 94);
+            this.checkBox_10.Name = "checkBox_10";
+            this.checkBox_10.Size = new System.Drawing.Size(101, 17);
+            this.checkBox_10.TabIndex = 371;
+            this.checkBox_10.Text = "Descuento 10%";
+            this.checkBox_10.UseVisualStyleBackColor = true;
+            // 
+            // checkBox_2x
+            // 
+            this.checkBox_2x.AutoSize = true;
+            this.checkBox_2x.ForeColor = System.Drawing.Color.Brown;
+            this.checkBox_2x.Location = new System.Drawing.Point(880, 113);
+            this.checkBox_2x.Name = "checkBox_2x";
+            this.checkBox_2x.Size = new System.Drawing.Size(86, 17);
+            this.checkBox_2x.TabIndex = 372;
+            this.checkBox_2x.Text = "LLevá 2 por:";
+            this.checkBox_2x.UseVisualStyleBackColor = true;
+            // 
+            // label9
+            // 
+            this.label9.AutoSize = true;
+            this.label9.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(249)))), ((int)(((byte)(225)))), ((int)(((byte)(230)))));
+            this.label9.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label9.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
+            this.label9.Location = new System.Drawing.Point(996, 103);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(15, 15);
+            this.label9.TabIndex = 374;
+            this.label9.Text = "$";
+            // 
+            // txt_precio_con_desc
+            // 
+            this.txt_precio_con_desc.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(249)))), ((int)(((byte)(225)))), ((int)(((byte)(230)))));
+            this.txt_precio_con_desc.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txt_precio_con_desc.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txt_precio_con_desc.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
+            this.txt_precio_con_desc.Location = new System.Drawing.Point(990, 97);
+            this.txt_precio_con_desc.Name = "txt_precio_con_desc";
+            this.txt_precio_con_desc.ReadOnly = true;
+            this.txt_precio_con_desc.Size = new System.Drawing.Size(200, 26);
+            this.txt_precio_con_desc.TabIndex = 373;
+            this.txt_precio_con_desc.TabStop = false;
+            this.txt_precio_con_desc.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            // 
+            // lbl_desc_10
+            // 
+            this.lbl_desc_10.AutoSize = true;
+            this.lbl_desc_10.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
+            this.lbl_desc_10.Location = new System.Drawing.Point(878, 105);
+            this.lbl_desc_10.Name = "lbl_desc_10";
+            this.lbl_desc_10.Size = new System.Drawing.Size(77, 13);
+            this.lbl_desc_10.TabIndex = 375;
+            this.lbl_desc_10.Text = "Decuento 10%";
+            // 
             // FormVerDetallePerfume
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(249)))), ((int)(((byte)(225)))), ((int)(((byte)(230)))));
             this.ClientSize = new System.Drawing.Size(1208, 552);
+            this.Controls.Add(this.lbl_desc_10);
+            this.Controls.Add(this.label9);
+            this.Controls.Add(this.txt_precio_con_desc);
+            this.Controls.Add(this.checkBox_2x);
+            this.Controls.Add(this.checkBox_10);
             this.Controls.Add(this.lbl_descripcion);
             this.Controls.Add(this.button1);
             this.Controls.Add(this.dataGridViewAromas);
@@ -1283,7 +1338,6 @@
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.label3);
-            this.Controls.Add(this.lbl_detalles_perfumes);
             this.Controls.Add(this.richTextBox_descripcion);
             this.Controls.Add(this.btn_buscar_perfumes_simi);
             this.Controls.Add(this.img_perfume);
@@ -1361,7 +1415,6 @@
         private System.Windows.Forms.PictureBox img_perfume;
         private System.Windows.Forms.Button btn_buscar_perfumes_simi;
         private System.Windows.Forms.RichTextBox richTextBox_descripcion;
-        private System.Windows.Forms.Label lbl_detalles_perfumes;
         private System.Windows.Forms.Label lbl_descripcion;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Label label1;
@@ -1424,5 +1477,10 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn idaroma;
         private System.Windows.Forms.DataGridViewTextBoxColumn aroma;
         private System.Windows.Forms.TextBox txt_precio_lista;
+        private System.Windows.Forms.CheckBox checkBox_10;
+        private System.Windows.Forms.CheckBox checkBox_2x;
+        private System.Windows.Forms.Label label9;
+        private System.Windows.Forms.TextBox txt_precio_con_desc;
+        private System.Windows.Forms.Label lbl_desc_10;
     }
 }

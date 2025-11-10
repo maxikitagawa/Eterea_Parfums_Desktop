@@ -21,6 +21,10 @@ namespace Eterea_Parfums_Desktop
 
         private Perfume perfume;
 
+        private bool promoSoloSinPromo;     // id = 1 o ninguna
+        private bool promo10;               // descuento == 10
+        private Promocion promo2x;          // segunda unidad (descuento > 10, p.ej. 25/35/40/etc.)
+
         public FormVerDetallePerfume(Perfume perfumeSeleccionado)
         {
             InitializeComponent();
@@ -144,6 +148,10 @@ namespace Eterea_Parfums_Desktop
             ConfigurarDescuentos();
             cargarDataGridViewNotasDePerfume();
             CargarDataGridViewAromas();
+
+            ConfigurarPromosYPrecioBase();   
+            checkBox_10.CheckedChanged += (s, e) => AplicarEleccionPromo();
+            checkBox_2x.CheckedChanged += (s, e) => AplicarEleccionPromo();
         }
 
         private static string ObtenerRutaFallback()
@@ -637,6 +645,87 @@ namespace Eterea_Parfums_Desktop
         {
             this.Close();
         }
+
+        private float ParsearFloat(string s)
+        {
+            if (float.TryParse(s, out var v)) return v;
+            // Permitir coma como separador
+            s = s.Replace('.', ',');
+            if (float.TryParse(s, out v)) return v;
+            return 0f;
+        }
+
+        // Devuelve el precio base para todos los cálculos (si hay promo visible usa txt_precio_con_descuento)
+        private float PrecioParaCalculos()
+        {
+            if (txt_precio_con_descuento.Visible)
+                return ParsearFloat(txt_precio_con_descuento.Text);
+            return ParsearFloat(txt_precio_lista.Text);
+        }
+
+        // Aplica/quita tachado al precio de lista
+        private void SetPrecioListaTachado(bool tachar)
+        {
+            txt_precio_lista.Font = new Font(txt_precio_lista.Font,
+                tachar ? FontStyle.Strikeout : FontStyle.Regular);
+        }
+
+        // Recalcular todo usando el precio base actual (llamalo tras cualquier cambio de selección)
+        private void RecalcularTodo()
+        {
+            // Rehace recargo/valor cuota/total respetando tu flujo actual
+            string formaPago = combo_medios_pago.SelectedItem?.ToString() ?? "Efectivo";
+            CalcularRecargo(formaPago); // esta ya setea txt_recargo y llama precioFinal/valor cuota en varios lugares
+
+            // Donde uses txt_precio_lista para cálculos, pasá a usar PrecioParaCalculos()
+            // Ajustes mínimos en los llamados puntuales:
+            float precioBase = PrecioParaCalculos();
+
+            // Reemplazos seguros:
+            CalcularImporteRecargo(ParsearFloat(txt_recargo.Text), precioBase);
+            precioFinal(precioBase, ParsearFloat(txt_valor_recargo.Text), ParsearFloat(txt_valor_descuento.Text));
+            CalcularValorCuota(ParsearFloat(txt_recargo.Text), precioBase);
+        }
+
+
+        private void AplicarEleccionPromo()
+        {
+            float precioLista = ParsearFloat(txt_precio_lista.Text);
+
+            if (checkBox_10.Checked && !checkBox_2x.Checked)
+            {
+                // 10%
+                float precio10 = (float)Math.Round(precioLista * 0.90m, 2, MidpointRounding.AwayFromZero);
+                txt_precio_con_descuento.Text = precio10.ToString("N2");
+                txt_precio_con_descuento.Visible = true;
+                SetPrecioListaTachado(true);
+            }
+            else if (!checkBox_10.Checked && checkBox_2x.Checked && promo2x != null)
+            {
+                // 2x: (precio*2) - (descuento% de ese total)
+                float d = promo2x.descuento;
+                float precioPar = (float)Math.Round((precioLista * 2f) * (1f - d / 100f), 2, MidpointRounding.AwayFromZero);
+                txt_precio_con_descuento.Text = precioPar.ToString("N2");
+                txt_precio_con_descuento.Visible = true;
+                SetPrecioListaTachado(true);
+            }
+            else
+            {
+                // Si los dos están desmarcados o ambos marcados, default a 10% si existe
+                if (promo10)
+                {
+                    checkBox_10.Checked = true;
+                    checkBox_2x.Checked = false;
+                    return;
+                }
+                // Si no hay 10%, ocultar descuento
+                txt_precio_con_descuento.Visible = false;
+                SetPrecioListaTachado(false);
+            }
+
+            RecalcularTodo();
+        }
+
 
 
     }
