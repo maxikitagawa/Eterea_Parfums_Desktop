@@ -104,10 +104,10 @@ namespace Eterea_Parfums_Desktop
 
             combo_descuento.Items.Clear();
             combo_descuento.Items.Add("0");
-            combo_descuento.Items.Add("5");
+            //combo_descuento.Items.Add("5");
             combo_descuento.Items.Add("10");
             combo_descuento.Items.Add("15");
-            combo_descuento.Items.Add("20");
+            //combo_descuento.Items.Add("20");
             combo_descuento.SelectedIndex = 0;
 
             CargarImagenPerfume(perfumeSeleccionado);
