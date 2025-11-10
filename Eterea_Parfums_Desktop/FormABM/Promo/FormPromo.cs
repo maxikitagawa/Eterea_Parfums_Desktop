@@ -181,9 +181,11 @@ namespace Eterea_Parfums_Desktop
         public void cargarComboBoxDescuentos()
         {
             combo_tipo_promo.Items.Clear(); // Limpia cualquier ítem anterior
-            foreach (var item in textosDescuento)
+
+            // Excluir "sin promo" (descuento = 0)
+            foreach (var kv in textosDescuento.Where(kv => kv.Key != 0))
             {
-                combo_tipo_promo.Items.Add(new KeyValuePair<int, string>(item.Key, item.Value));
+                combo_tipo_promo.Items.Add(new KeyValuePair<int, string>(kv.Key, kv.Value));
             }
 
             combo_tipo_promo.DisplayMember = "Value"; // Texto visible
