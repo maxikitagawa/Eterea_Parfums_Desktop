@@ -264,6 +264,12 @@ namespace Eterea_Parfums_Desktop
 
             // Botones
             btn_crear.Click += btn_crear_Click;
+
+            //se habilita el helper para validar ingreso de texto en los combos
+            new ComboPrefixGuard(combo_pais);
+            new ComboPrefixGuard(combo_provincia);
+            new ComboPrefixGuard(combo_localidad);
+            new ComboPrefixGuard(combo_calle);
         }
 
         // =================== Debounce wrappers ===================
