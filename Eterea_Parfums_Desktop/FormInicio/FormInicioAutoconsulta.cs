@@ -117,8 +117,8 @@ namespace Eterea_Parfums_Desktop
             filtro.activo = true; // Esto asegura que al inicio solo se muestren los perfumes activos
             filtrar();
 
-            
 
+            dataGridViewConsultas.CellPainting += dataGridViewConsultas_CellPainting;
 
 
 
@@ -363,100 +363,50 @@ namespace Eterea_Parfums_Desktop
 
 
 
-        private void paginar(List<Perfume> perfumeMostrar)
+        private void paginar(List<Perfume> listaDefinitiva)
         {
-            Perfumes_Paginados = perfumeMostrar.Skip(current).Take(paginador).ToList();
+            Perfumes_Paginados = listaDefinitiva.Skip(current).Take(paginador).ToList();
             VisualizarPerfumes(Perfumes_Paginados);
-            lbl_paginacion_Info.Text = "Mostrando: " + (current + 1) + " a " + (current + Perfumes_Paginados.Count) + "  de  " + total;
 
-            if (current_pag == 1)
-            {
-                btn_anterior.Hide();
-            }
-            else
-            {
-                btn_anterior.Show();
-                btn_posterior.Show();
-            }
-            if (current_pag == last_pag)
-            {
-                btn_posterior.Hide();
-            }
-            else
-            {
-                btn_posterior.Show();
-            }
+            lbl_paginacion_Info.Text = $"Mostrando: {(total == 0 ? 0 : current + 1)} a {current + Perfumes_Paginados.Count} de {total}";
+
+            btn_anterior.Visible = current_pag > 1;
+            btn_posterior.Visible = current_pag < last_pag;
         }
 
-
-
-        private void VisualizarPerfumes(List<Perfume> perfumeMostrar)
+        private void VisualizarPerfumes(List<Perfume> perfumesPagina)
         {
-            //Se oculta la primera columna de la tabla (es una columna de seleccion de fila)
             dataGridViewConsultas.RowHeadersVisible = false;
-
             dataGridViewConsultas.Rows.Clear();
 
-            var stockPorPerfume = StockControlador.ObtenerTodosLosStocksPorSucursal();
-
-
-            foreach (Perfume perfume in perfumeMostrar)
+            foreach (var perfume in perfumesPagina)
             {
-                int stockDisponible = stockPorPerfume
-                     .Where(kvp => kvp.Key.perfumeId == perfume.id)
-                     .Sum(kvp => kvp.Value);
-                 
+                int rowIndex = dataGridViewConsultas.Rows.Add();
+                var row = dataGridViewConsultas.Rows[rowIndex];
+                row.Tag = perfume;
 
-                bool mostrarPerfume = false;
+                // Precio “Sin stock” si corresponde (solo a modo visual)
+                string precioMostrado = (perfume.activo == true)
+                  ? perfume.precio_en_pesos.ToString("C", CultureInfo.CurrentCulture)
+                  : "Sin Stock";
 
-                if (combo_filtro_articulos.SelectedIndex == 0)
+                dataGridViewConsultas.Rows[rowIndex].Cells[0].Value = perfume.nombre;
+                dataGridViewConsultas.Rows[rowIndex].Cells[1].Value = perfume.presentacion_ml + "ml";
+                dataGridViewConsultas.Rows[rowIndex].Cells[2].Value = MarcaControlador.getById(perfume.marca.id).nombre;
+                dataGridViewConsultas.Rows[rowIndex].Cells[3].Value = GeneroControlador.getById(perfume.genero.id).genero;
+                dataGridViewConsultas.Rows[rowIndex].Cells[4].Value = precioMostrado;
+
+                if (precioMostrado == "Sin Stock")
                 {
-                    // Perfumes a la venta: activos y con stock
-                    mostrarPerfume = perfume.activo == true && stockDisponible > 0;
-                }
-                else if (combo_filtro_articulos.SelectedIndex == 1)
-                {
-                    // Todos los perfumes
-                    mostrarPerfume = true;
-                }
-                else if (combo_filtro_articulos.SelectedIndex == 2)
-                {
-                    // Sin stock: inactivos o stock <= 0
-                    mostrarPerfume = perfume.activo == false || stockDisponible <= 0;
+                    var c = dataGridViewConsultas.Rows[rowIndex].Cells[4];
+                    c.Style.ForeColor = Color.Red;
+                    c.Style.Font = new Font(dataGridViewConsultas.DefaultCellStyle.Font, FontStyle.Bold);
                 }
 
-                if (mostrarPerfume)
-                {
-                    int rowIndex = dataGridViewConsultas.Rows.Add();
-                    DataGridViewRow row = dataGridViewConsultas.Rows[rowIndex];
-                    row.Tag = perfume; // ✅ Asocia el objeto perfume a la fila
-
-                    string precioMostrado = (perfume.activo == false || stockDisponible <= 0)
-                        ? "Sin Stock"
-                        : perfume.precio_en_pesos.ToString("C", CultureInfo.CurrentCulture);
-
-                    dataGridViewConsultas.Rows[rowIndex].Cells[0].Value = perfume.nombre;
-                    dataGridViewConsultas.Rows[rowIndex].Cells[1].Value = perfume.presentacion_ml.ToString() + "ml";
-                    dataGridViewConsultas.Rows[rowIndex].Cells[2].Value = MarcaControlador.getById(perfume.marca.id).nombre;
-                    dataGridViewConsultas.Rows[rowIndex].Cells[3].Value = GeneroControlador.getById(perfume.genero.id).genero;
-                    dataGridViewConsultas.Rows[rowIndex].Cells[4].Value = precioMostrado;
-                    if (precioMostrado == "Sin Stock")
-                    {
-                        dataGridViewConsultas.Rows[rowIndex].Cells[4].Style.ForeColor = Color.Red;
-                        dataGridViewConsultas.Rows[rowIndex].Cells[4].Style.Font = new Font(dataGridViewConsultas.DefaultCellStyle.Font, FontStyle.Bold);
-                    }
-                    else
-                    {
-                        dataGridViewConsultas.Rows[rowIndex].Cells[4].Style.ForeColor = Color.Black;
-                        dataGridViewConsultas.Rows[rowIndex].Cells[4].Style.Font = dataGridViewConsultas.DefaultCellStyle.Font;
-                    }
-
-                    dataGridViewConsultas.Rows[rowIndex].Cells[5].Value = "Ver";
-                }
-                dataGridViewConsultas.ClearSelection();
-
-                dataGridViewConsultas.CellPainting += dataGridViewConsultas_CellPainting;
+                dataGridViewConsultas.Rows[rowIndex].Cells[5].Value = "Ver";
             }
+
+            dataGridViewConsultas.ClearSelection();
         }
 
         private void btn_anterior_Click(object sender, EventArgs e)
@@ -578,53 +528,48 @@ namespace Eterea_Parfums_Desktop
 
 
 
-       
+
 
         private void filtrar()
         {
+            // 1) Base
             Perfumes_Filtrado = Perfumes_Completo;
 
+            // 2) Filtros por marca / genero
             if (filtro.marca != null)
-            {
                 Perfumes_Filtrado = Perfumes_Filtrado.Where(x => x.marca.id == filtro.marca.id).ToList();
-            }
 
             if (filtro.genero != null)
-            {
                 Perfumes_Filtrado = Perfumes_Filtrado.Where(x => x.genero.id == filtro.genero.id).ToList();
-            }
 
-            // Filtrado por estado activo (ahora es un bool)
-            if (filtro.activo.HasValue)// Si el filtro no es "todos los perfumes"
-            {
-                Perfumes_Filtrado = Perfumes_Filtrado.Where(x => x.activo == filtro.activo).ToList();
-            }
-          
+            // 3) Filtro por activo (solo cuando corresponde)
+            if (filtro.activo.HasValue)
+                Perfumes_Filtrado = Perfumes_Filtrado.Where(x => x.activo == filtro.activo.Value).ToList();
 
-          
+            // 4) Filtro por nombre
+            if (!string.IsNullOrWhiteSpace(filtro.nombre))
+                Perfumes_Filtrado = Perfumes_Filtrado
+                    .Where(x => x.nombre != null && x.nombre.ToLower().Contains(filtro.nombre))
+                    .ToList();
 
-            if (filtro.nombre != null)
-            {
-                Perfumes_Filtrado = Perfumes_Filtrado.Where(x => x.nombre.ToLower().Contains(filtro.nombre)).ToList();
-                //Perfumes_Filtrado = PerfumeController.filtrarPorNombre(filtro.nombre);
-            }
-
+            // 5) Filtro por aroma (si corresponde)
             if (aromaIdSeleccionado != null)
             {
                 List<int> perfumesConAroma = AromaDelPerfumeControlador.getPerfumeIdsPorAroma(aromaIdSeleccionado.Value);
-                Perfumes_Filtrado = Perfumes_Filtrado
-                    .Where(p => perfumesConAroma.Contains(p.id))
-                    .ToList();
+                Perfumes_Filtrado = Perfumes_Filtrado.Where(p => perfumesConAroma.Contains(p.id)).ToList();
             }
 
+            // 6) **Filtro final “a la venta / todos / sin stock” (usa stock)**
+            var visibles = AplicarFiltroStockYActivo(Perfumes_Filtrado);
 
-
-            total = Perfumes_Filtrado.Count;
+            // 7) Paginar sobre la lista ya DEFINITIVA
+            total = visibles.Count;
             last_pag = (int)Math.Ceiling((double)total / paginador);
             current = 0;
             current_pag = 1;
-            paginar(Perfumes_Filtrado);
             lbl_numero_pagina.Text = current_pag.ToString();
+
+            paginar(visibles);
         }
 
         private void dataGridViewConsultas_CellContentClick(object sender, DataGridViewCellEventArgs e)
@@ -820,6 +765,37 @@ namespace Eterea_Parfums_Desktop
             lbl_codigoBarras.Visible = false;  // Ocultar lbl_codigoBarras
         }
 
-  
+        private List<Perfume> AplicarFiltroStockYActivo(List<Perfume> listaBase)
+        {
+            // Mapa de stock por perfume (id -> total)
+            var stockPorPerfume = StockControlador
+                .ObtenerTodosLosStocksPorSucursal()
+                .GroupBy(k => k.Key.perfumeId)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Value));
+
+            bool Mostrar(Perfume p)
+            {
+                int stock = stockPorPerfume.TryGetValue(p.id, out var s) ? s : 0;
+
+                switch (combo_filtro_articulos.SelectedIndex)
+                {
+                    case 0: // Perfumes a la venta: activos y con stock
+                        return p.activo == true && stock > 0;
+
+                    case 1: // Todos los perfumes
+                        return true;
+
+                    case 2: // Perfumes sin stock: inactivos o stock <= 0
+                        return p.activo == false || stock <= 0;
+
+                    default:
+                        return true;
+                }
+            }
+
+            return listaBase.Where(Mostrar).ToList();
+        }
+
+
     }
 }
