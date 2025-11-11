@@ -157,9 +157,7 @@ namespace Eterea_Parfums_Desktop
             cargarDataGridViewNotasDePerfume();
             CargarDataGridViewAromas();
 
-            combo_medios_pago.DropDownWidth = combo_medios_pago.Width + 5;
-            combo_medios_pago.FlatStyle = FlatStyle.Standard;
-
+          
             // --- Importante: configurar promos y recalcular con la base correcta ---
             if (perfumeSeleccionado.activo == true)
                 ConfigurarPromosYPrecioBase();  // acá adentro, si corresponde, ya se llama a RecalcularTodo()
