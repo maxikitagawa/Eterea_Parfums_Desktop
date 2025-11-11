@@ -454,6 +454,7 @@
     </Compile>
     <Compile Include="Helpers\ApiImageUploader.cs" />
     <Compile Include="Helpers\AsignarNombreImagenHelper.cs" />
+    <Compile Include="Helpers\ComboPrefixGuard.cs" />
     <Compile Include="Helpers\NotaFiltroHelper.cs" />
     <Compile Include="Helpers\CorreoHelper.cs" />
     <Compile Include="Helpers\GoogleDriveUploader.cs" />

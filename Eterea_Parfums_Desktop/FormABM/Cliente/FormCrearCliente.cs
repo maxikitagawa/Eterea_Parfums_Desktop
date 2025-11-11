@@ -228,6 +228,12 @@ namespace Eterea_Parfums_Desktop
             btn_crear_cliente.Click += btn_crear_cliente_Click;
             button2.Click += button1_Click; // cerrar
 
+            //se habilita el helper para validar ingreso de texto en los combos
+            new ComboPrefixGuard(combo_pais);
+            new ComboPrefixGuard(combo_provincia);
+            new ComboPrefixGuard(combo_localidad);
+            new ComboPrefixGuard(combo_calle);
+
 
         }
 

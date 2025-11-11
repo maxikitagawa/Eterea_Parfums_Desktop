@@ -149,6 +149,12 @@ namespace Eterea_Parfums_Desktop
             combo_provincia.TextChanged += combo_provincia_TextChanged_Debounced;
             combo_localidad.TextChanged += combo_localidad_TextChanged_Debounced;
 
+            //se habilita el helper para validar ingreso de texto en los combos
+            new ComboPrefixGuard(combo_pais);
+            new ComboPrefixGuard(combo_provincia);
+            new ComboPrefixGuard(combo_localidad);
+            new ComboPrefixGuard(combo_calle);
+
             // ====== Cargar cliente en UI ======
             id_editar = cliente.id;
 
