@@ -57,11 +57,13 @@ namespace Eterea_Parfums_Desktop
             // Clave: opcional (si se escribe, valida fuerte)
             txt_clave.MaxLength = 100;
 
-            // Nombre/Apellido
+            // Nombre/razon social
             txt_nombre.MaxLength = 45;
+           
+            //Apellido/tipo
             txt_apellido.MaxLength = 45;
-            txt_nombre.KeyPress += SoloLetrasEspacios_KeyPress;
-            txt_apellido.KeyPress += SoloLetrasEspacios_KeyPress;
+         
+
 
             // DNI/CUIT: solo números, máx 11
             txt_dni.MaxLength = 11;
@@ -278,6 +280,24 @@ namespace Eterea_Parfums_Desktop
         private void RestartDebounce(Timer t) { t.Stop(); t.Start(); }
 
         // ====== Lógica dependiente (idéntica a CrearCliente) ======
+
+        // --- Helper: desengancha TODOS los handlers posibles de Nombre/Apellido (para no acumular) ---
+        private void UnhookNombreApellidoHandlers()
+        {
+            // Nombre
+            txt_nombre.KeyPress -= SoloLetrasEspacios_KeyPress;
+            txt_nombre.KeyPress -= Nombre_KeyPress_DNI;
+            txt_nombre.KeyPress -= Nombre_KeyPress_CUIT_RazonSocial;
+
+            // Apellido / Tipo
+            txt_apellido.KeyPress -= SoloLetrasEspacios_KeyPress;
+            txt_apellido.KeyPress -= Apellido_KeyPress_DNI;
+            txt_apellido.KeyPress -= Tipo_KeyPress_CUIT;
+        }
+
+        // --- Etiquetas y máscaras según documento ---
+       
+
         private void HandlePaisTextSettled()
         {
             if (_suspendComboEvents) return;
@@ -380,6 +400,7 @@ namespace Eterea_Parfums_Desktop
         }
 
         // CUIT: Tipo → solo letras, espacios y .
+
         private void Tipo_KeyPress_CUIT(object sender, KeyPressEventArgs e)
         {
             if (char.IsControl(e.KeyChar)) return;
@@ -387,23 +408,27 @@ namespace Eterea_Parfums_Desktop
             if (!ok) e.Handled = true;
         }
 
+        // --- Helper: desengancha TODOS los handlers posibles de Nombre/Apellido ---
+     
+
         // --- Etiquetas y máscaras según documento ---
         private void ActualizarEtiquetasYMascarasPorDocumento(string doc)
         {
-            // Evitar acumular handlers
-            txt_nombre.KeyPress -= Nombre_KeyPress_DNI;
-            txt_apellido.KeyPress -= Apellido_KeyPress_DNI;
-            txt_nombre.KeyPress -= Nombre_KeyPress_CUIT_RazonSocial;
-            txt_apellido.KeyPress -= Tipo_KeyPress_CUIT;
+            // 1) limpiar cualquier handler previo
+            UnhookNombreApellidoHandlers();
 
+            // 2) setear labels y handlers correctos
             if (doc?.Length == 11)
             {
                 // MODO CUIT
                 lbl_nombre.Text = "Razón social";
                 lbl_apellido.Text = "Tipo";
 
-                txt_nombre.KeyPress += Nombre_KeyPress_CUIT_RazonSocial; // alfanumérico + símbolos
-                txt_apellido.KeyPress += Tipo_KeyPress_CUIT;             // letras + espacio + .
+                // Razón social: letras, números y . - & / ( ) '
+                txt_nombre.KeyPress += Nombre_KeyPress_CUIT_RazonSocial;
+
+                // Tipo: solo letras, espacios y "."
+                txt_apellido.KeyPress += Tipo_KeyPress_CUIT;
             }
             else if (doc?.Length == 8)
             {
@@ -411,16 +436,18 @@ namespace Eterea_Parfums_Desktop
                 lbl_nombre.Text = "Nombre";
                 lbl_apellido.Text = "Apellido";
 
+                // Solo letras y espacios
                 txt_nombre.KeyPress += Nombre_KeyPress_DNI;
                 txt_apellido.KeyPress += Apellido_KeyPress_DNI;
             }
             else
             {
-                // Longitud intermedia → rótulos por defecto
+                // Longitud intermedia o vacío → rótulos por defecto (sin handlers restrictivos)
                 lbl_nombre.Text = "Nombre";
                 lbl_apellido.Text = "Apellido";
             }
         }
+
 
         // --- Opciones de IVA según documento ---
         private void ActualizarOpcionesIVAporDocumento(string doc)
@@ -506,7 +533,6 @@ namespace Eterea_Parfums_Desktop
             }
             finally
             {
-                combo.EndUpdate();
                 if (limpiarTexto) combo.Text = string.Empty;
                 combo.Enabled = habilitar;
                 _suspendComboEvents = false;

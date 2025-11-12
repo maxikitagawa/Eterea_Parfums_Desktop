@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Collections.Generic;
 
 namespace Eterea_Parfums_Desktop
 {
@@ -117,6 +118,40 @@ namespace Eterea_Parfums_Desktop
             HookComboHideError(combo_pais, lbl_error_pais);
             HookComboHideError(combo_spray, lbl_error_spray);
             HookComboHideError(combo_recargable, lbl_error_recargable);
+
+            // Longitudes máximas coherentes
+            txt_codigo.MaxLength = 13;                 // EAN-13
+            txt_nombre.MaxLength = 80;
+            richTextBox_descripcion.MaxLength = 1100;
+            txt_anio_de_lanzamiento.MaxLength = 4;
+            txt_presentacion.MaxLength = 4;
+            // txt_precio: sin MaxLength estricto
+
+            // === Teclado: KeyPress ===
+            // Solo dígitos
+            txt_codigo.KeyPress += OnlyDigits_KeyPress;
+            txt_presentacion.KeyPress += OnlyDigits_KeyPress;
+            txt_anio_de_lanzamiento.KeyPress += OnlyDigits_KeyPress;
+
+            // Letras, números y especiales permitidos
+            txt_nombre.KeyPress += NameAllowed_KeyPress;
+            richTextBox_descripcion.KeyPress += NameAllowed_KeyPress;
+
+            // Precio: dígitos + un único separador decimal (',' o '.')
+            txt_precio.KeyPress += Price_KeyPress;
+
+            // === Pegado / Limpieza: TextChanged ===
+            txt_codigo.TextChanged += (s, e) => SanitizeDigitsOnly(txt_codigo);
+            txt_presentacion.TextChanged += (s, e) => SanitizeDigitsOnly(txt_presentacion);
+            txt_anio_de_lanzamiento.TextChanged += (s, e) => SanitizeDigitsOnly(txt_anio_de_lanzamiento);
+
+            txt_nombre.TextChanged += (s, e) => SanitizeWithPredicate(txt_nombre, IsAllowedNameChar);
+            richTextBox_descripcion.TextChanged += (s, e) => SanitizeWithPredicate(richTextBox_descripcion, IsAllowedNameChar);
+
+            txt_precio.TextChanged += (s, e) => SanitizePrice(txt_precio);
+
+            // Auto-clear de errores faltante: combo_activo (se te había pasado)
+            HookComboHideError(combo_activo, lbl_error_activo);
 
 
             // Diseño combos
@@ -363,7 +398,7 @@ namespace Eterea_Parfums_Desktop
             else
                 lbl_error_codigo.Visible = false;
 
-            if (combo_genero.SelectedItem == null || string.IsNullOrEmpty(combo_marca.Text))
+            if (combo_marca.SelectedItem == null || string.IsNullOrEmpty(combo_marca.Text))
             {
                 errorMsg += "Debes seleccionar la marca del perfume" + Environment.NewLine;
                 lbl_error_marca.Text = "Debes seleccionar la marca del perfume";
@@ -856,6 +891,130 @@ namespace Eterea_Parfums_Desktop
                 if (match) errorLabel.Hide();
             };
         }
+
+        // ======== Restricciones de entrada / Sanitizadores (mismos que FormCrearPerfume1) ========
+
+        // Flag para evitar recursión al sanitizar
+        private bool _sanitizing = false;
+
+        // Conjunto de caracteres especiales permitidos para nombre/descripcion
+        private static readonly HashSet<char> _allowedSpecials = new HashSet<char>
+{
+    '"', '#', '&', '(', ')', '!', '¡', '?', '¿', '*', '=', ';', ' '  // incluye espacio
+};
+
+        private static bool IsAllowedNameChar(char c)
+        {
+            // Letras (incluye acentos), números o caracteres especiales definidos
+            return char.IsLetterOrDigit(c) || _allowedSpecials.Contains(c);
+        }
+
+        // ====== KeyPress handlers ======
+        private void OnlyDigits_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (char.IsControl(e.KeyChar)) return;
+            if (!char.IsDigit(e.KeyChar)) e.Handled = true;
+        }
+
+        private void NameAllowed_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (char.IsControl(e.KeyChar)) return;
+            if (!IsAllowedNameChar(e.KeyChar)) e.Handled = true;
+        }
+
+        private void Price_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (char.IsControl(e.KeyChar)) return;
+
+            var tb = sender as TextBox;
+            if (tb == null) return;
+
+            if (char.IsDigit(e.KeyChar)) return;                   // dígitos OK
+
+            if (e.KeyChar == ',' || e.KeyChar == '.')              // un solo separador decimal
+            {
+                if (tb.Text.Contains(",") || tb.Text.Contains(".")) e.Handled = true;
+                return;
+            }
+
+            e.Handled = true;                                      // bloquear lo demás
+        }
+
+        // ====== Sanitizadores (para pegado / set programático) ======
+        private void SanitizeDigitsOnly(TextBox tb)
+        {
+            if (_sanitizing) return;
+            _sanitizing = true;
+            try
+            {
+                if (tb == null) return;
+                var digits = new string(tb.Text.Where(char.IsDigit).ToArray());
+                if (digits != tb.Text)
+                {
+                    int sel = tb.SelectionStart;
+                    tb.Text = digits;
+                    tb.SelectionStart = Math.Min(sel, tb.Text.Length);
+                }
+            }
+            finally { _sanitizing = false; }
+        }
+
+        private void SanitizeWithPredicate(TextBoxBase tb, Func<char, bool> predicate)
+        {
+            if (_sanitizing) return;
+            _sanitizing = true;
+            try
+            {
+                if (tb == null) return;
+                string original = tb.Text ?? "";
+                string cleaned = new string(original.Where(predicate).ToArray());
+                if (cleaned != original)
+                {
+                    int sel = (tb as TextBox)?.SelectionStart ?? (tb as RichTextBox)?.SelectionStart ?? cleaned.Length;
+                    tb.Text = cleaned;
+
+                    if (tb is TextBox t1) t1.SelectionStart = Math.Min(sel, t1.Text.Length);
+                    else if (tb is RichTextBox r1) r1.SelectionStart = Math.Min(sel, r1.Text.Length);
+                }
+            }
+            finally { _sanitizing = false; }
+        }
+
+        private void SanitizePrice(TextBox tb)
+        {
+            if (_sanitizing) return;
+            _sanitizing = true;
+            try
+            {
+                if (tb == null) return;
+
+                // Mantener solo dígitos y separadores ',' '.'
+                string onlyAllowed = new string(tb.Text.Where(ch => char.IsDigit(ch) || ch == ',' || ch == '.').ToArray());
+
+                int firstSep = -1;
+                var chars = new List<char>(onlyAllowed.Length);
+                for (int i = 0; i < onlyAllowed.Length; i++)
+                {
+                    char c = onlyAllowed[i];
+                    if (c == ',' || c == '.')
+                    {
+                        if (firstSep == -1) { firstSep = i; chars.Add(c); }
+                        // separadores siguientes -> se omiten
+                    }
+                    else chars.Add(c);
+                }
+
+                string cleaned = new string(chars.ToArray());
+                if (cleaned != tb.Text)
+                {
+                    int sel = tb.SelectionStart;
+                    tb.Text = cleaned;
+                    tb.SelectionStart = Math.Min(sel, tb.Text.Length);
+                }
+            }
+            finally { _sanitizing = false; }
+        }
+
 
 
 

@@ -82,10 +82,7 @@ namespace Eterea_Parfums_Desktop
 
             txt_precio.TextChanged += (s, e) => SanitizePrice(txt_precio);
 
-            //Diseño del combo box
-            /*combo_activo.DrawMode = DrawMode.OwnerDrawFixed;
-            combo_activo.DrawItem += comboBoxdiseño_DrawItem;
-            combo_activo.DropDownStyle = ComboBoxStyle.DropDownList;*/
+           //combos
 
             combo_marca.DrawMode = DrawMode.OwnerDrawFixed;
             combo_marca.DrawItem += comboBoxdiseño_DrawItem;
@@ -273,7 +270,7 @@ namespace Eterea_Parfums_Desktop
             {
                 MessageBox.Show("Error subiendo imagen: " + ex.Message, "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
-                throw; // si querés abortar el guardado del perfume
+                throw; // si se quiere abortar el guardado del perfume
             }
         }
 
@@ -304,20 +301,7 @@ namespace Eterea_Parfums_Desktop
 
         }
 
-        /*private void saveImagenResources(out string nombreFoto, Image imagen, string sufijo)
-        {
-            try
-            {
-                int numero_aleatorio = numeroAleatorio();
-                Console.WriteLine(numero_aleatorio);
-                nombreFoto = txt_nombre.Text + " - " + numero_aleatorio + " - " + sufijo;
-                imagen.Save(Program.Ruta_Base + nombreFoto + ".jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception(ex.Message);
-            }
-        }*/
+      
         private void buildNombreImagen(out string nombreArchivoSinExtension, string sufijo)
         {
             int numero_aleatorio = numeroAleatorio();
