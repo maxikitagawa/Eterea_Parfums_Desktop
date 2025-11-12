@@ -1,6 +1,7 @@
 ﻿using Eterea_Parfums_Desktop.Controladores;
 using System;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -15,8 +16,28 @@ namespace Eterea_Parfums_Desktop
 
             this.StartPosition = FormStartPosition.CenterScreen;
 
-            string rutaCompletaImagen = Program.Ruta_Base + @"Diseño Logo2.png";
-            img_logo.Image = Image.FromFile(rutaCompletaImagen);
+            // Ruta segura (no importa si Ruta_Base termina o no con \)
+            var fileName = "Diseño Logo2.png";
+            var rutaCompletaImagen = Path.Combine(Program.Ruta_Base, fileName);
+
+            if (File.Exists(rutaCompletaImagen))
+            {
+                // Liberamos el archivo y se evitan locks
+                using (var fs = new FileStream(rutaCompletaImagen, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    var img = Image.FromStream(fs);
+                    // Si ya había una imagen, liberarla para evitar locks/mem leaks
+                    var anterior = img_logo.Image;
+                    img_logo.Image = (Image)img.Clone();
+                    anterior?.Dispose();
+                }
+            }
+            else
+            {
+                MessageBox.Show("No se encontró la imagen:\n" + rutaCompletaImagen,
+                                "Archivo faltante", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+
 
             lbl_error_user.Visible = false;
             lbl_error_pass.Visible = false;

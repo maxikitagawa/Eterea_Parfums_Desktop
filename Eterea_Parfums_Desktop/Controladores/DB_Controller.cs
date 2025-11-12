@@ -14,16 +14,10 @@ namespace Eterea_Parfums_Desktop.Controladores
         public static SqlConnection connection;
 
         // Llamar una sola vez al arrancar la app (Program.Main o FormStart_Load)
-        public static void InitializeFromConfig()
+        public static void InitializeFromConfig(AppConfig.ConfigModel cfg)
         {
-            var cfg = AppConfig.Load(); // lee %ProgramData%\EtereaParfums\EtereaDesktop\config.json
             connectionString = BuildConnectionStringFrom(cfg);
             connection = new SqlConnection(connectionString);
-
-            Trace.WriteLine("=================================");
-            Trace.WriteLine("DB_Controller.InitializeFromConfig()");
-            Trace.WriteLine($"ConnString: {connectionString}");
-            Trace.WriteLine("=================================");
         }
 
         // Mantengo tu API: permite forzar la conexión por “usuario”
@@ -57,8 +51,8 @@ namespace Eterea_Parfums_Desktop.Controladores
 
                 default:
                     // Si no coincide, caemos a config.json
-                    InitializeFromConfig();
-                    return; // ya configuró y logueó
+                    InitializeFromConfig(Eterea_Parfums_Desktop.AppConfigLoader.Load());
+                    return;// ya configuró y logueó
             }
 
             connection = new SqlConnection(connectionString);
@@ -75,7 +69,7 @@ namespace Eterea_Parfums_Desktop.Controladores
         public static SqlConnection GetOpenConnection()
         {
             if (connection == null)
-                InitializeFromConfig();
+                InitializeFromConfig(Eterea_Parfums_Desktop.AppConfigLoader.Load());
 
             if (connection.State != System.Data.ConnectionState.Open)
                 connection.Open();
@@ -144,7 +138,7 @@ namespace Eterea_Parfums_Desktop.Controladores
     }
 
     // ====== Config JSON minimal ======
-    internal static class AppConfig
+    public static class AppConfig
     {
         private const string Company = "EtereaParfums";
         private const string Product = "EtereaDesktop";

@@ -5,6 +5,7 @@ using Eterea_Parfums_Desktop.Helpers;
 using Eterea_Parfums_Desktop.Modelos;
 using System;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 
 namespace Eterea_Parfums_Desktop
@@ -25,11 +26,35 @@ namespace Eterea_Parfums_Desktop
             InitializeComponent();
 
             // Configurar las imágenes
-            string rutaLogo = Program.Ruta_Base + @"Diseño Logo2.png";
-            img_logo.Image = Image.FromFile(rutaLogo);
+            // --- Logo ---
+            string rutaLogo = Path.Combine(Program.Ruta_Base, "Diseño Logo2.png");
+            if (File.Exists(rutaLogo))
+            {
+                using (var fs = new FileStream(rutaLogo, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    img_logo.Image = Image.FromStream(fs);
+                }
+            }
+            else
+            {
+                MessageBox.Show("No se encontró la imagen del logo:\n" + rutaLogo,
+                                "Archivo faltante", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
 
-            string rutaCerrarSesion = Program.Ruta_Base + @"CerrarSesion.png";
-            btn_cerrar_sesion.Image = Image.FromFile(rutaCerrarSesion);
+            // --- Cerrar sesión ---
+            string rutaCerrarSesion = Path.Combine(Program.Ruta_Base, "CerrarSesion.png");
+            if (File.Exists(rutaCerrarSesion))
+            {
+                using (var fs = new FileStream(rutaCerrarSesion, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    btn_cerrar_sesion.Image = Image.FromStream(fs);
+                }
+            }
+            else
+            {
+                MessageBox.Show("No se encontró la imagen del botón Cerrar Sesión:\n" + rutaCerrarSesion,
+                                "Archivo faltante", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
 
             // Configurar el saludo
             txt_saludo.Text = Program.logueado.nombre + " " + Program.logueado.apellido;

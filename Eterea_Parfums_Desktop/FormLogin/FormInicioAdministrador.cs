@@ -6,6 +6,7 @@ using Eterea_Parfums_Desktop.Helpers;
 using Eterea_Parfums_Desktop.Modelos;
 using System;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 
 namespace Eterea_Parfums_Desktop
@@ -28,11 +29,38 @@ namespace Eterea_Parfums_Desktop
             InitializeComponent();
 
             // Configurar las imágenes
-            string rutaLogo = Program.Ruta_Base + @"Diseño Logo2.png";
-            img_logo.Image = Image.FromFile(rutaLogo);
+            var rutaLogo = Path.Combine(Program.Ruta_Base, "Diseño Logo2.png");
+            if (File.Exists(rutaLogo))
+            {
+                using (var fs = new FileStream(rutaLogo, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    var img = (Image)Image.FromStream(fs).Clone();
+                    var old = img_logo.Image;
+                    img_logo.Image = img;
+                    old?.Dispose();
+                }
+            }
+            else
+            {
+                MessageBox.Show("No se encontró: " + rutaLogo);
+            }
 
-            string rutaCerrarSesion = Program.Ruta_Base + @"CerrarSesion.png";
-            btn_cerrar_sesion.Image = Image.FromFile(rutaCerrarSesion);
+            // --- Cerrar sesión ---
+            var rutaCerrar = Path.Combine(Program.Ruta_Base, "CerrarSesion.png");
+            if (File.Exists(rutaCerrar))
+            {
+                using (var fs = new FileStream(rutaCerrar, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    var img = (Image)Image.FromStream(fs).Clone();
+                    var old = btn_cerrar_sesion.Image;
+                    btn_cerrar_sesion.Image = img;
+                    old?.Dispose();
+                }
+            }
+            else
+            {
+                MessageBox.Show("No se encontró: " + rutaCerrar);
+            }
 
             // Configurar el saludo
             txt_saludo.Text = Program.logueado.nombre + " " + Program.logueado.apellido;

@@ -1,9 +1,9 @@
 {
   "Sucursal": 1,
-  "RutaBase": "C:\\ProgramData\\EtereaParfums\\EtereaDesktop\\Resources\\",
+  "RutaBase": "C:\\Users\\intersan\\Desktop\\TESIS_New\\Eterea_Parfums_Desktop\\Eterea_Parfums_Desktop\\Resources\\",
   "RutaWeb": "https://etereaparfums.com.ar/imagenes",
   "Db": {
-    "Mode": "Server",
+    "Mode": "Local",
     "DataSource": "DESKTOP-12IG1S9\\MSSQLSERVER2025",
     "Database": "eterea",
     "IntegratedSecurity": true,

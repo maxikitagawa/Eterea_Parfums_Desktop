@@ -90,9 +90,23 @@ namespace Eterea_Parfums_Desktop
             }*/
 
 
-            string rutaCompletaImagen = Program.Ruta_Base + @"Diseño Logo2.png";
-            img_logo.Image = Image.FromFile(rutaCompletaImagen);
+            // Ruta completa (segura)
+            string rutaCompletaImagen = Path.Combine(Program.Ruta_Base, "Diseño Logo2.png");
 
+            // Verificar que el archivo exista antes de abrirlo
+            if (File.Exists(rutaCompletaImagen))
+            {
+                // Usamos FromStream para evitar que el archivo quede bloqueado
+                using (var fs = new FileStream(rutaCompletaImagen, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    img_logo.Image = Image.FromStream(fs);
+                }
+            }
+            else
+            {
+                MessageBox.Show("No se encontró la imagen:\n" + rutaCompletaImagen,
+                                "Archivo faltante", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
 
             CargarMarcas();
             CargarGeneros();

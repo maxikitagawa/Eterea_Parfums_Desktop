@@ -43,7 +43,7 @@ namespace Eterea_Parfums_Desktop
 
             // 4) Configurar conexión BD desde config.json
             // (usa la versión que hicimos: lee cfg.Db y arma el connection string)
-            DB_Controller.InitializeFromConfig();
+            DB_Controller.InitializeFromConfig(cfg);
 
             // 5) TLS
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
@@ -141,13 +141,18 @@ namespace Eterea_Parfums_Desktop
                 RutaWeb = "https://etereaparfums.com.ar/imagenes",
                 Db = new AppConfig.DbSettings
                 {
-                    Mode = "Local",
+                    
+                    Mode = "Server",
                     DataSource = @"DESKTOP-12IG1S9\MSSQLSERVER2025",
                     Database = "eterea",
-                    IntegratedSecurity = true
+                    IntegratedSecurity = true,
+                    UserId = "",
+                    Password = "",
+                    UseLocalDb = false,
+                    AttachDbFile = ""
+
                 }
             };
-    
         }
 
         // === modelos del JSON ===
