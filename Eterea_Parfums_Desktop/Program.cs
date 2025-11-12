@@ -1,145 +1,84 @@
 ﻿using Eterea_Parfums_Desktop.Controladores;
 using Eterea_Parfums_Desktop.Modelos;
+using Newtonsoft.Json;
 using System;
+using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading;
 using System.Windows.Forms;
-
-
 
 namespace Eterea_Parfums_Desktop
 {
     static class Program
     {
-
         public static BarcodeReceiver BarcodeService = new BarcodeReceiver();
 
-        /// <summary>
-        /// Punto de entrada principal para la aplicación.
-        /// </summary>
-        //public static int debug_mode = 1;
-
+        // Estado global que usás en otras partes
         public static Empleado logueado;
-
         public static int sucursal = 1;
-        //public static int sucursal = 2;
 
         public static string NumeroCajaActual = "Caja sin asignar";
         public static int IdHistorialCajaActual = 0;
 
-
-        //public static String Ruta_Base_Mini;
-        public static String Ruta_Base;
-        public static String Ruta_Web;
-        public static String entorno = "adri";
-
-        public static float ScaleFactor = 1.0f; // Valor por defecto
-
-
+        public static string Ruta_Base;
+        public static string Ruta_Web;     // opcional (imagenes CDN / sitio)
+        public static float ScaleFactor = 1.0f;
 
         [STAThread]
         static void Main()
         {
-            /* Codigo usado una vez para generar el password
-             del primer usuario administrador
-
-            // Define la contraseña original (por ejemplo, "123456")
-            string claveOriginal = "admin";
-
-            // Genera el hash utilizando PasswordHelper
-            string claveHasheada = PasswordHelper.CrearHash(claveOriginal);
-
-            // Muestra el hash generado en la consola
-            Console.WriteLine("Clave original: " + claveOriginal);
-            Console.WriteLine("Clave hasheada: " + claveHasheada);
-            */
-
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // Mostrar el formulario de selección de usuario
-            FormSeleccionarUsuario formSeleccionarUsuario = new FormSeleccionarUsuario();
-            if (formSeleccionarUsuario.ShowDialog() == DialogResult.OK)
+            // 1) Cargar configuración desde ProgramData (o defaults si no existe)
+            var cfg = AppConfigLoader.Load();
+
+            // 2) Variables globales
+            sucursal = cfg.Sucursal > 0 ? cfg.Sucursal : 1;
+            Ruta_Base = string.IsNullOrWhiteSpace(cfg.RutaBase) ? AppConfigLoader.DefaultProgramDataPath : cfg.RutaBase;
+            Ruta_Web = string.IsNullOrWhiteSpace(cfg.RutaWeb) ? "https://etereaparfums.com.ar/imagenes" : cfg.RutaWeb;
+
+            // 3) Asegurar carpeta de datos
+            EnsureDir(Ruta_Base);
+
+            // 4) Configurar conexión BD desde config.json
+            // (usa la versión que hicimos: lee cfg.Db y arma el connection string)
+            DB_Controller.InitializeFromConfig();
+
+            // 5) TLS
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+
+            // 6) Actualizar promos al inicio
+            PromocionService.ActualizarEstadoPromociones();
+
+            // 7) (Opcional) test de conexión
+            if (!DB_Controller.ProbarConexion(out var err))
             {
-                string usuarioSeleccionado = formSeleccionarUsuario.UsuarioSeleccionado;
-
-                // Configurar la conexión a la base de datos con el usuario seleccionado
-                DB_Controller.ConfigurarConexion(usuarioSeleccionado);
-
-                // Configurar rutas según el usuario
-                ConfigurarRutas(usuarioSeleccionado);
-
-                // Llamamos a ActualizarEstadoPromociones al inicio del programa
-                PromocionService.ActualizarEstadoPromociones();
-
-                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-                // (Opcional) Ver si necesitamos usar proxies/self-signed:
-                // ServicePointManager.ServerCertificateValidationCallback += (s, cert, chain, sslPolicyErrors) => true;
-
-
-                // Iniciar la aplicación principal
-
-                Application.Run(new FormStart());
-                //Application.Run(new FormInicioAdministrador());
-                //Application.Run(new MenuABM());
-                //Application.Run(new FormInicioAutoconsulta());
-            }
-            else
-            {
-                // Si el usuario no selecciona nada y cierra el formulario, salir de la aplicación
-                MessageBox.Show("Debe seleccionar un usuario para continuar.", "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                MessageBox.Show(
+                    "No se pudo conectar a la base de datos.\n\n" + err +
+                    "\n\nRevisá C:\\ProgramData\\EtereaParfums\\EtereaDesktop\\config.json",
+                    "Error de conexión", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // Podés abrir un Form de Configuración aquí si querés.
             }
 
+            // 8) Iniciar la aplicación
+            Application.Run(new FormStart());
         }
-           
 
-        // Método para configurar rutas según el usuario
-        private static void ConfigurarRutas(string usuario)
+        private static void EnsureDir(string path)
         {
-            switch (usuario.ToLower())
+            try
             {
-                case "servidor":
-                    Ruta_Web = "https://etereaparfums.com.ar/imagenes";
-                    Ruta_Base = @"C:\Users\intersan\Desktop\TESIS_New\Eterea_Parfums_Desktop\Eterea_Parfums_Desktop\Resources\";
-                    //Ruta_Base_Mini = @"C:\Users\intersan\Desktop\TESIS_New\Eterea_Parfums_Desktop\Eterea_Parfums_Desktop\Resources\Mini\";
-                    //Ruta_Web = @"C:\Users\intersan\source\repos\Eterea_Web\Eterea_Web\Content\ImgPerfumes\";
-                    break;
-                case "escuela":
-                    Ruta_Base = @"C:\Users\Alumno\Desktop\Eterea_Parfums\Eterea_Parfums\Resources\";
-                    Ruta_Web = @"C:\Users\Alumno\Desktop\Eterea_Web\Eterea_Web\Content\ImgPerfumes\";
-                    break;
-                case "dami":
-                    Ruta_Base = @"C:\Users\damim\source\repos\Eterea_Parfums_Desktop\Eterea_Parfums_Desktop\Resources\";
-                    Ruta_Web = @"C:\Users\damim\Source\Repos\Eterea_Parfums_Desktop\Eterea_Parfums_Desktop\Resources\";
-                    break;
-                case "adri":
-                    //Ruta_Web = "https://etereaparfums.com.ar/imagenes/";
-                    Ruta_Base = @"C:\Users\intersan\Desktop\TESIS_New\Eterea_Parfums_Desktop\Eterea_Parfums_Desktop\Resources\";
-                    //Ruta_Base_Mini = @"C:\Users\intersan\Desktop\TESIS_New\Eterea_Parfums_Desktop\Eterea_Parfums_Desktop\Resources\Mini\";
-                    //Ruta_Web = @"C:\Users\intersan\source\repos\Eterea_Web\Eterea_Web\Content\ImgPerfumes\";
-                    break;
-                case "luis":
-                    Ruta_Base = @"C:\Users\josel\source\repos\Eterea_Parfums_Desktop\Eterea_Parfums_Desktop\Resources\";
-                    Ruta_Web = @"C:\Users\intersan\source\repos\Eterea_Web\Eterea_Web\Content\ImgPerfumes\";
-                    break;
-                case "maxi":
-                        Ruta_Base = @"C:\Users\Maxi\source\repos\Eterea_Parfums_Desktop\Eterea_Parfums_Desktop\Resources\";
-                        Ruta_Web = @"C:\Users\usuario\source\repos\EEterea_Web\Eterea_Web\Content\ImgPerfumes\";
-                        break;
-                case "notebook adri":
-                    Ruta_Base = @"C:\Users\PC\source\repos\Eterea_Parfums_Desktop\Eterea_Parfums_Desktop\Resources\";
-                    Ruta_Web = @"C:\Users\intersan\source\repos\Eterea_Web\Eterea_Web\Content\ImgPerfumes\";
-                    break;
-                default:
-                        MessageBox.Show("Usuario no válido, no se configuraron rutas.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        break;
+                if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"No se pudo crear la carpeta de datos:\n{path}\n\n{ex.Message}",
+                                "Error de carpeta", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
+        // HttpClient compartido
         public static class Net
         {
             public static readonly HttpClient Http = new HttpClient
@@ -147,12 +86,89 @@ namespace Eterea_Parfums_Desktop
                 Timeout = TimeSpan.FromSeconds(10)
             };
         }
-
-
-
     }
 
+    /// <summary>
+    /// Loader mínimo para ProgramData\config.json con defaults seguros.
+    /// Si mañana agregás más campos, extendé esta clase (mantiene compatibilidad).
+    /// </summary>
+    internal static class AppConfigLoader
+    {
+        private const string Company = "EtereaParfums";
+        private const string Product = "EtereaDesktop";
 
+        public static string DefaultProgramDataPath =>
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                         Company, Product);
 
+        private static string ConfigPath => Path.Combine(DefaultProgramDataPath, "config.json");
 
+        public static AppConfig.ConfigModel Load()
+        {
+            try
+            {
+                Directory.CreateDirectory(DefaultProgramDataPath);
+                if (File.Exists(ConfigPath))
+                {
+                    var json = File.ReadAllText(ConfigPath);
+
+                    // ✅ Usamos Newtonsoft.Json y el tipo correcto
+                    var cfg = JsonConvert.DeserializeObject<AppConfig.ConfigModel>(json);
+
+                    if (cfg != null)
+                    {
+                        if (string.IsNullOrWhiteSpace(cfg.RutaBase))
+                            cfg.RutaBase = DefaultProgramDataPath;
+                        if (cfg.Sucursal <= 0)
+                            cfg.Sucursal = 1;
+                        if (cfg.Db == null)
+                            cfg.Db = new AppConfig.DbSettings();
+
+                        return cfg; // ✅ ahora coincide con AppConfig.ConfigModel
+                    }
+                }
+            }
+            catch
+            {
+                // Si falla, devolvemos defaults seguros
+            }
+
+            // ✅ Configuración por defecto
+            return new AppConfig.ConfigModel
+            {
+                Sucursal = 1,
+                RutaBase = DefaultProgramDataPath,
+                RutaWeb = "https://etereaparfums.com.ar/imagenes",
+                Db = new AppConfig.DbSettings
+                {
+                    Mode = "Local",
+                    DataSource = @"DESKTOP-12IG1S9\MSSQLSERVER2025",
+                    Database = "eterea",
+                    IntegratedSecurity = true
+                }
+            };
+    
+        }
+
+        // === modelos del JSON ===
+        public class AppConfigModel
+        {
+            public int Sucursal { get; set; }
+            public string RutaBase { get; set; }
+            public string RutaWeb { get; set; }     // opcional
+            public DbSettings Db { get; set; } = new DbSettings();
+        }
+
+        public class DbSettings
+        {
+            public string Mode { get; set; }                // "Local" | "Server"
+            public string DataSource { get; set; }
+            public string Database { get; set; }
+            public bool IntegratedSecurity { get; set; }
+            public string UserId { get; set; }
+            public string Password { get; set; }
+            public bool UseLocalDb { get; set; }
+            public string AttachDbFile { get; set; }
+        }
+    }
 }

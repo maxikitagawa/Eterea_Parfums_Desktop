@@ -1,0 +1,15 @@
+{
+  "Sucursal": 1,
+  "RutaBase": "C:\\ProgramData\\EtereaParfums\\EtereaDesktop\\Resources\\",
+  "RutaWeb": "https://etereaparfums.com.ar/imagenes",
+  "Db": {
+    "Mode": "Server",
+    "DataSource": "DESKTOP-12IG1S9\\MSSQLSERVER2025",
+    "Database": "eterea",
+    "IntegratedSecurity": true,
+    "UserId": "",
+    "Password": "",
+    "UseLocalDb": false,
+    "AttachDbFile": ""
+  }
+}
