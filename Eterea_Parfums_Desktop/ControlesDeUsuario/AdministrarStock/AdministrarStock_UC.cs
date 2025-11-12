@@ -55,6 +55,12 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario.AdministrarStock
             txt_codigo_producto.KeyPress += txt_codigo_producto_KeyPress;
             txt_codigo_producto.TextChanged += txt_codigo_producto_TextChanged;
 
+            // Solo números positivos
+            txt_cantidad_producto.KeyPress += TxtCantidad_KeyPress;       // bloquea al tipear
+            txt_cantidad_producto.TextChanged += TxtCantidad_TextChanged; // sanea al pegar/IME
+            txt_cantidad_producto.Leave += TxtCantidad_Leave;             // valida al salir
+            txt_cantidad_producto.MaxLength = 3;                          // opcional
+
             // Imagen inicial por defecto
             CargarImagenPorDefecto();
 
@@ -309,10 +315,65 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario.AdministrarStock
             }
         }
 
+        private void TxtCantidad_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            // permitir control (Backspace, etc.) y dígitos
+            if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            // evitar que empiece con '0'
+            if (!char.IsControl(e.KeyChar) && e.KeyChar == '0' && txt_cantidad_producto.SelectionStart == 0)
+            {
+                // si está vacío o el caret está al principio, no permitir 0 inicial
+                e.Handled = true;
+            }
+        }
+
+        private void TxtCantidad_TextChanged(object sender, EventArgs e)
+        {
+            var t = txt_cantidad_producto;
+            string original = t.Text;
+
+            // Dejar solo dígitos
+            string soloDigitos = new string(original.Where(char.IsDigit).ToArray());
+
+            // Quitar ceros a la izquierda (pero no dejar vacío si todo eran ceros)
+            if (soloDigitos.Length > 1)
+                soloDigitos = soloDigitos.TrimStart('0');
+
+            if (original != soloDigitos)
+            {
+                int caret = t.SelectionStart;
+                int delta = original.Length - soloDigitos.Length;
+
+                t.Text = soloDigitos;
+                t.SelectionStart = Math.Max(0, caret - delta);
+            }
+        }
+
+        private void TxtCantidad_Leave(object sender, EventArgs e)
+        {
+            // Asegurar > 0 al salir del control
+            if (string.IsNullOrWhiteSpace(txt_cantidad_producto.Text))
+            {
+                txt_cantidad_producto.Text = ""; // vacío permitido si querés forzar validación luego
+                return;
+            }
+
+            if (!int.TryParse(txt_cantidad_producto.Text, out int n) || n <= 0)
+            {
+                // fijar valor mínimo 1; podés mostrar un mensaje si preferís
+                txt_cantidad_producto.Text = "1";
+            }
+        }
+
 
 
     }
 
-        
-    
+
+
 }
