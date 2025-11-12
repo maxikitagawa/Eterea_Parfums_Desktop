@@ -1273,7 +1273,8 @@
             // lbl_desc_10
             // 
             this.lbl_desc_10.AutoSize = true;
-            this.lbl_desc_10.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
+            this.lbl_desc_10.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
+            this.lbl_desc_10.ForeColor = System.Drawing.Color.Brown;
             this.lbl_desc_10.Location = new System.Drawing.Point(878, 105);
             this.lbl_desc_10.Name = "lbl_desc_10";
             this.lbl_desc_10.Size = new System.Drawing.Size(77, 13);

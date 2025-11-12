@@ -73,12 +73,12 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
 
             combo_descuento.Items.Clear();
-            combo_descuento.Items.AddRange(new object[] { 0, 10, 20, 30 });
+            combo_descuento.Items.AddRange(new object[] { 0, 10, 15 });
             combo_descuento.SelectedItem = 0;
 
 
             combo_cuotas.Items.Clear();
-            combo_cuotas.Items.AddRange(new object[] { 1, 2, 3, 4, 5, 6 });
+            combo_cuotas.Items.AddRange(new object[] { 1, 3, 6, 9, 12 });
             combo_cuotas.SelectedIndex = 0;
 
             //txt_recargo.Hide();
@@ -852,53 +852,115 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
         {
             string formaPago = combo_forma_pago.SelectedItem.ToString();
 
+            // Reiniciamos combos
+            combo_cuotas.Items.Clear();
+            combo_descuento.Items.Clear();
+            combo_descuento.Items.AddRange(new object[] { 0, 10, 15 });
+
             if (formaPago == "Efectivo")
             {
+                // Efectivo: sin cuotas, permite descuentos
                 txt_desc.Text = "0";
-                combo_descuento.SelectedIndex = 0; // 0%
-                combo_cuotas.SelectedIndex = 0; // 1 cuota
+                combo_descuento.SelectedIndex = 0;
+                combo_cuotas.Items.Add(1);
+                combo_cuotas.SelectedIndex = 0;
                 combo_cuotas.Enabled = false;
-                combo_descuento.Enabled = true; // ✅ Habilitar solo en efectivo
+                combo_descuento.Enabled = true;
             }
             else if (formaPago == "Mercado Pago" || formaPago == "Visa Débito")
             {
+                // Débito / Mercado Pago: solo 1 cuota, sin descuentos
                 txt_desc.Text = "0";
-                combo_descuento.SelectedIndex = 0; // 0%
-                combo_cuotas.SelectedIndex = 0; // 1 cuota
-                combo_cuotas.SelectedItem = 1;
+                combo_descuento.SelectedIndex = 0;
+                combo_cuotas.Items.Add(1);
+                combo_cuotas.SelectedIndex = 0;
                 combo_cuotas.Enabled = false;
-                combo_descuento.Enabled = false; // ❌ Deshabilitar en otros medios
+                combo_descuento.Enabled = false;
             }
-            else // tarjeta: Visa Crédito, Mastercard, Amex
+            else if (formaPago == "Amex")
             {
-
+                // Amex: solo 1, 6 y 12 cuotas
                 txt_desc.Text = "0";
-                combo_descuento.SelectedIndex = 0; // 0%
+                combo_descuento.SelectedIndex = 0;
+                combo_cuotas.Items.AddRange(new object[] { 1, 6, 12 });
+                combo_cuotas.SelectedIndex = 0;
                 combo_cuotas.Enabled = true;
-                combo_descuento.Enabled = false; // ❌ Deshabilitar en tarjetas
+                combo_descuento.Enabled = false;
+            }
+            else if (formaPago == "Visa Crédito" || formaPago == "Mastercard")
+            {
+                // Visa crédito o Mastercard: todas las cuotas
+                txt_desc.Text = "0";
+                combo_descuento.SelectedIndex = 0;
+                combo_cuotas.Items.AddRange(new object[] { 1, 3, 6, 9, 12 });
+                combo_cuotas.SelectedIndex = 0;
+                combo_cuotas.Enabled = true;
+                combo_descuento.Enabled = false;
+            }
+            else
+            {
+                // Otros medios (por seguridad)
+                txt_desc.Text = "0";
+                combo_descuento.SelectedIndex = 0;
+                combo_cuotas.Items.Add(1);
+                combo_cuotas.SelectedIndex = 0;
+                combo_cuotas.Enabled = false;
+                combo_descuento.Enabled = false;
             }
         }
 
         // Método para calcular el recargo según las cuotas seleccionadas
         private void CalcularRecargo()
         {
-            if (combo_cuotas.SelectedItem != null)
+            if (combo_cuotas.SelectedItem == null)
+                return;
+
+            string cuotasStr = combo_cuotas.SelectedItem.ToString().Trim();
+            int cuotas;
+
+            if (!int.TryParse(cuotasStr, out cuotas))
             {
-                int cuotas = Convert.ToInt32(combo_cuotas.SelectedItem);
-                float recargo = (cuotas - 1) * 5; // 5% de recargo por cada cuota extra
-                txt_rec.Text = recargo.ToString();
-                // Obtener el subtotal desde el textbox
-                float subtotal;
-                if (float.TryParse(txt_subtotal.Text, out subtotal))
-                {
-                    CalcularImporteRecargo(subtotal, recargo);
-                }
-                else
-                {
-                    MessageBox.Show("El subtotal no es un número válido.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                MessageBox.Show("El valor de cuotas no es válido.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            decimal recargoPct = 0m; // valor por defecto
+
+            switch (cuotas)
+            {
+                case 1:
+                case 3:
+                    recargoPct = 0m;
+                    break;
+                case 6:
+                    recargoPct = 10m;
+                    break;
+                case 9:
+                    recargoPct = 15m;
+                    break;
+                case 12:
+                    recargoPct = 20m;
+                    break;
+                default:
+                    recargoPct = 0m;
+                    break;
+            }
+
+            // Mostrar el porcentaje en el textbox
+            txt_rec.Text = recargoPct.ToString("0.##");
+
+            // Obtener el subtotal desde el textbox
+            float subtotal;
+            if (float.TryParse(txt_subtotal.Text, out subtotal))
+            {
+                CalcularImporteRecargo(subtotal, (float)recargoPct);
+            }
+            else
+            {
+                MessageBox.Show("El subtotal no es un número válido.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
 
         private string tipo_de_factura()
         {
