@@ -60,6 +60,11 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             // válido: ocultar error
             lbl_orden_error.Visible = false;
 
+            // 👉 ACA limpiamos el textbox, porque el número ya fue interpretado:
+            txt_orden_n.Clear();
+            // (si querés que el cursor quede ahí listo para un nuevo nro)
+            txt_orden_n.Focus();
+
             var controlador = new OrdenControlador();
             DataTable resultado = controlador.BuscarOrdenPorNumero(numeroOrden);
 

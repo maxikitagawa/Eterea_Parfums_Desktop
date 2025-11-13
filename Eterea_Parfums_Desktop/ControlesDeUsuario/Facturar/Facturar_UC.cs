@@ -40,6 +40,19 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
         private static string Num(int v) => v.ToString(Ar);
 
 
+        private static string ObtenerCarpetaFacturas()
+        {
+            // Mis Documentos\Eterea Parfums\Facturas
+            string documentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string carpeta = Path.Combine(documentos, "Eterea Parfums", "Facturas");
+
+            if (!Directory.Exists(carpeta))
+                Directory.CreateDirectory(carpeta);
+
+            return carpeta;
+        }
+
+
         public Facturar_UC()
         {
             InitializeComponent();
@@ -170,10 +183,19 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             BarcodeReceiver.OnCodigoLeido += ProcesarCodigoLeido;
         }
 
-        private bool btn_imprimir_habilitado = false;
+        private bool btn_imprimir_habilitado = true;
         private void txt_dni_TextChanged(object sender, EventArgs e)
         {
-            btn_imprimir_habilitado = false;
+            // Si el campo DNI está vacío, permitimos facturar como "Consumidor Final".
+            // Si el usuario escribe algo, pedimos que primero busque el cliente.
+            if (string.IsNullOrWhiteSpace(txt_dni.Text))
+            {
+                btn_imprimir_habilitado = true;
+            }
+            else
+            {
+                btn_imprimir_habilitado = false;
+            }
         }
 
         private void FormFacturacion_Load(object sender, EventArgs e)
@@ -1217,11 +1239,11 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             string condicionCliente = txt_condicion_iva.Text.Trim();
             string PaginaHTML_Texto = "";
 
-            string carpetaFacturas = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "FacturasGeneradas");
-            if (!Directory.Exists(carpetaFacturas)) Directory.CreateDirectory(carpetaFacturas);
+            // Carpeta segura para guardar facturas (carpeta de usuario)
+            string carpetaFacturas = ObtenerCarpetaFacturas();
 
             string rutaFactura = Path.Combine(carpetaFacturas, $"Factura_Orden_{txt_numero_factura.Text}.pdf");
-            string filePath = rutaFactura;
+            string filePath = rutaFactura; // si lo usás más abajo
 
             // ---------------------------
             // FACTURA B (Consumidor Final / Exento / Monotributista)
@@ -1448,8 +1470,8 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@TOTAL", Mon((decimal)precioTotal));
             }
 
-            // GUARDAR FACTURA AUTOMÁTICAMENTE EN CARPETA
-            if (!Directory.Exists(carpetaFacturas)) Directory.CreateDirectory(carpetaFacturas);
+            // GUARDAR FACTURA AUTOMÁTICAMENTE EN CARPETA DE USUARIO
+           
             string rutaArchivo = Path.Combine(carpetaFacturas, $"Factura_Orden_{txt_numero_factura.Text}.pdf");
 
             using (FileStream stream = new FileStream(rutaArchivo, FileMode.Create))
@@ -1459,7 +1481,10 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 pdfDoc.Open();
 
                 // Logo
-                iTextSharp.text.Image img = iTextSharp.text.Image.GetInstance(Properties.Resources.LogoEtereaFactura, System.Drawing.Imaging.ImageFormat.Png);
+                iTextSharp.text.Image img = iTextSharp.text.Image.GetInstance(
+                    Properties.Resources.LogoEtereaFactura,
+                    System.Drawing.Imaging.ImageFormat.Png
+                );
                 img.ScaleToFit(60, 60);
                 img.Alignment = iTextSharp.text.Image.UNDERLYING;
                 img.SetAbsolutePosition(pdfDoc.LeftMargin + 12, pdfDoc.Top - 73);
@@ -1470,9 +1495,10 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 {
                     XMLWorkerHelper.GetInstance().ParseXHtml(writer, pdfDoc, sr);
                 }
+
                 pdfDoc.Close();
-                stream.Close();
             }
+
 
             // Abrir el PDF en el visor del SO (opcional, se muestra para visualizar como queda confeccionada la factura)
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
@@ -1540,21 +1566,28 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
         private void ReiniciarFormulario()
         {
+            // Volver a cliente "Consumidor Final"
+            clientefactura = new Cliente();
+
             txt_nombre_cliente.Text = "Consumidor Final";
             txt_condicion_iva.Text = "Consumidor Final";
+
+            // Este flag igualmente se va a corregir con txt_dni_TextChanged
             btn_imprimir_habilitado = true;
-            btn_imprimir_habilitado = true;
+
             txt_total.Text = "0,00";
             txt_subtotal.Text = "0,00";
             txt_monto_recargo.Text = "0,00";
             txt_monto_descuento.Text = "0,00";
             txt_iva.Text = "0,00";
             txt_email.Text = "";
-            txt_dni.Text = "";
+            txt_dni.Text = ""; // Esto dispara txt_dni_TextChanged → lo deja en true
+
             Factura.Rows.Clear();
             combo_forma_pago.SelectedIndex = 0;
             combo_descuento.SelectedIndex = 0;
             combo_cuotas.SelectedIndex = 0;
+
             int puntoDeVenta = Program.sucursal;
             txt_numero_factura.Text = Num_factura_máximo();
 

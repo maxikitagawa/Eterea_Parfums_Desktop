@@ -19,6 +19,19 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario.PrepararEnvios
         private string nombreSucursalActual;
         private bool mostrarBotonVolver;
 
+        private static string ObtenerCarpetaEtiquetas()
+        {
+            // Ej: C:\Users\TUUSUARIO\Documents\Eterea Parfums\Etiquetas
+            string documentos = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string carpeta = Path.Combine(documentos, "Eterea Parfums", "Etiquetas");
+
+            if (!Directory.Exists(carpeta))
+                Directory.CreateDirectory(carpeta);
+
+            return carpeta;
+        }
+
+
 
 
         public PrepararEnvios_UC(int? numeroOrden = null, int? estado = null, bool volverABuscarPedidos = false, bool mostrarBotonVolver = false)
@@ -66,6 +79,8 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario.PrepararEnvios
         {
             btn_volver.Visible = mostrarBotonVolver;
             CargarOrdenes();
+
+
         }
 
         private void CargarOrdenes()
@@ -320,13 +335,8 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario.PrepararEnvios
 
         private void CrearPdfEtiqueta(string contenidoTexto, Bitmap qrImage, int numeroOrden)
         {
-            string carpetaEtiquetas = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "EtiquetasGeneradas");
-
-            // Crear la carpeta si no existe
-            if (!Directory.Exists(carpetaEtiquetas))
-            {
-                Directory.CreateDirectory(carpetaEtiquetas);
-            }
+            // Carpeta segura para guardar etiquetas (en Mis Documentos del usuario)
+            string carpetaEtiquetas = ObtenerCarpetaEtiquetas();
 
             string rutaArchivo = Path.Combine(carpetaEtiquetas, $"Etiqueta_Orden_{numeroOrden}.pdf");
 
