@@ -64,6 +64,8 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             txt_scan_factura.Leave += Txt_scan_factura_Leave;
             txt_scan_factura.TextChanged += Txt_scan_factura_TextChanged;
             Factura.CellContentClick += DataGridViewFactura_CellContentClick;
+            Factura.CellValidating += Factura_CellValidating;
+            Factura.CellEndEdit += Factura_CellEndEdit;
             btn_pago.Visible = false;
 
            
@@ -551,21 +553,32 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                     ActualizarTotales();
                 }
             }
-            else if (e.RowIndex >= 0 && e.ColumnIndex == 2)
+            else if (e.RowIndex >= 0 && e.ColumnIndex == 2) // Botón +
             {
-                int cant = int.Parse(Factura.Rows[e.RowIndex].Cells[1].Value.ToString());
-                Factura.Rows[e.RowIndex].Cells[1].Value = cant + 1;
+                DataGridViewRow fila = Factura.Rows[e.RowIndex];
 
-                int rowIndex = e.RowIndex;
+                int perfumeId = Convert.ToInt32(fila.Cells["Id_Perfume"].Value);
+                int stockDisponible = ObtenerStockDisponible(perfumeId);
 
-                int valorMultiplicador = Convert.ToInt32(Factura.Rows[rowIndex].Cells[1].Value);
-                double precio = Convert.ToDouble(Factura.Rows[rowIndex].Cells[5].Value);
+                int cantActual = Convert.ToInt32(fila.Cells["Cantidad"].Value);
 
+                if (cantActual + 1 > stockDisponible)
+                {
+                    MessageBox.Show(
+                        $"No hay stock suficiente.\n" +
+                        $"Stock disponible: {stockDisponible}",
+                        "Stock insuficiente", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
 
-                Factura.Rows[e.RowIndex].Cells[7].Value = (precio * valorMultiplicador).ToString();
+                fila.Cells["Cantidad"].Value = cantActual + 1;
+
+                int valorMultiplicador = Convert.ToInt32(fila.Cells["Cantidad"].Value);
+                double precio = Convert.ToDouble(fila.Cells["Precio_Unitario"].Value);
+
+                fila.Cells["Tot"].Value = (precio * valorMultiplicador).ToString();
                 descuentoUnitario();
                 ActualizarTotales();
-
             }
             else if (e.RowIndex >= 0 && e.ColumnIndex == 3)
             {
@@ -1719,6 +1732,25 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             const string colDesc = "Descuento";
             const string colTot = "Tot";
 
+            int stockDisponible = ObtenerStockDisponible(perfume.id);
+            if (stockDisponible <= 0)
+            {
+                MessageBox.Show($"No hay stock disponible para {perfume.nombre}.",
+                    "Stock insuficiente", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            int cantidadActualEnFactura = ObtenerCantidadEnFactura(perfume.id);
+            if (cantidadActualEnFactura + cantidadInicial > stockDisponible)
+            {
+                MessageBox.Show(
+                    $"No hay stock suficiente para {perfume.nombre}.\n" +
+                    $"Stock disponible: {stockDisponible}\n" +
+                    $"Ya cargado en la factura: {cantidadActualEnFactura}",
+                    "Stock insuficiente", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             // 1) Si ya existe, incremento cantidad
             foreach (DataGridViewRow fila in Factura.Rows)
             {
@@ -1728,7 +1760,6 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                     int.TryParse(fila.Cells[colCantidad].Value?.ToString(), out cantActual);
                     fila.Cells[colCantidad].Value = cantActual + cantidadInicial;
 
-                    // recalcular totales/desc
                     descuentoUnitario();
                     ActualizarTotales();
                     return;
@@ -1738,18 +1769,96 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             // 2) Si no existe, agrego nueva fila
             string nombreMostrar = NombreConPresentacion(perfume.nombre, perfume.presentacion_ml);
 
-            // Asegurate de que estos índices coincidan con tu DGV:
-            // [0]=Id_Perfume, [1]=Cantidad, [2]=Btn+, [3]=Btn-, [4]=Nombre_Perfume, [5]=Precio_Unitario, [6]=Descuento, [7]=Tot, [8]=Eliminar
-            int rowIndex = Factura.Rows.Add(perfume.id, cantidadInicial, "", "", nombreMostrar, perfume.precio_en_pesos, 0m, perfume.precio_en_pesos * cantidadInicial, "");
+            int rowIndex = Factura.Rows.Add(
+                perfume.id,                             // Id_Perfume
+                cantidadInicial,                        // Cantidad
+                "",                                     // +
+                "",                                     // -
+                nombreMostrar,                          // Nombre_Perfume
+                perfume.precio_en_pesos,                // Precio_Unitario
+                0m,                                     // Descuento
+                perfume.precio_en_pesos * cantidadInicial, // Tot
+                ""                                      // Eliminar
+            );
+
             Factura.Rows[rowIndex].Cells[2] = new DataGridViewButtonCell() { Value = "➕" };
             Factura.Rows[rowIndex].Cells[3] = new DataGridViewButtonCell() { Value = "➖" };
             Factura.Rows[rowIndex].Cells[8] = new DataGridViewButtonCell() { Value = "Eliminar" };
 
-            // recalcular totales/desc
             descuentoUnitario();
             ActualizarTotales();
         }
 
+        // Devuelve el stock disponible del perfume en la sucursal actual
+        private int ObtenerStockDisponible(int perfumeId)
+        {
+            int sucursalId = Program.sucursal;
+
+            // Usamos tu método actual del StockControlador
+            int cantidad = StockControlador.getStock(perfumeId, sucursalId);
+
+            // Por las dudas, si devuelve -1 (no encontró registro), lo tomamos como 0
+            if (cantidad < 0)
+                cantidad = 0;
+
+            return cantidad;
+        }
+
+        // Cantidad TOTAL de ese perfume ya cargada en el DataGridView
+        private int ObtenerCantidadEnFactura(int perfumeId)
+        {
+            int total = 0;
+
+            foreach (DataGridViewRow fila in Factura.Rows)
+            {
+                if (fila.IsNewRow) continue;
+
+                if (Convert.ToInt32(fila.Cells["Id_Perfume"].Value) == perfumeId)
+                {
+                    int cant = 0;
+                    int.TryParse(Convert.ToString(fila.Cells["Cantidad"].Value), out cant);
+                    total += cant;
+                }
+            }
+
+            return total;
+        }
+
+
+        private void Factura_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
+        {
+            if (Factura.Columns[e.ColumnIndex].Name != "Cantidad" || Factura.Rows[e.RowIndex].IsNewRow)
+                return;
+
+            int nuevaCantidad;
+            if (!int.TryParse(Convert.ToString(e.FormattedValue), out nuevaCantidad) || nuevaCantidad <= 0)
+            {
+                e.Cancel = true;
+                MessageBox.Show("La cantidad debe ser un número entero positivo.",
+                    "Cantidad inválida", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            int perfumeId = Convert.ToInt32(Factura.Rows[e.RowIndex].Cells["Id_Perfume"].Value);
+            int stockDisponible = ObtenerStockDisponible(perfumeId);
+
+            if (nuevaCantidad > stockDisponible)
+            {
+                e.Cancel = true;
+                MessageBox.Show(
+                    $"La cantidad no puede superar el stock disponible ({stockDisponible}).",
+                    "Stock insuficiente", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void Factura_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            if (Factura.Columns[e.ColumnIndex].Name == "Cantidad")
+            {
+                descuentoUnitario();
+                ActualizarTotales();
+            }
+        }
 
 
 
