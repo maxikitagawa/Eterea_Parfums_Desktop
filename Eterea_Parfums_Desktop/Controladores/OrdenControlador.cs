@@ -83,7 +83,7 @@ namespace Eterea_Parfums_Desktop.Controladores
             }
         }
 
-        public int ObtenerCantidadOrdenesActivasEnRango19a19()
+        /*public int ObtenerCantidadOrdenesActivasEnRango19a19()
         {
             string query = @"
         SELECT COUNT(*) 
@@ -99,8 +99,36 @@ namespace Eterea_Parfums_Desktop.Controladores
                 int cantidad = (int)command.ExecuteScalar();
                 return cantidad;
             }
-        }
+        }*/
 
+        public int ObtenerCantidadOrdenesActivasEnRango19a19()
+        {
+            // Tomamos la hora local de la app
+            DateTime ahora = DateTime.Now;
+            DateTime hoy = ahora.Date;              // hoy a las 00:00
+            DateTime ayer = hoy.AddDays(-1);        // ayer a las 00:00
+
+            DateTime desde = ayer.AddHours(19);     // ayer 19:00
+            DateTime hasta = hoy.AddHours(19);      // hoy 19:00
+
+            string query = @"
+                SELECT COUNT(*)
+                FROM dbo.orden
+                WHERE estado = 1
+                  AND fecha_creacion >= @Desde
+                  AND fecha_creacion <  @Hasta;";
+
+            using (SqlConnection connection = new SqlConnection(DB_Controller.GetConnectionString()))
+            using (SqlCommand command = new SqlCommand(query, connection))
+            {
+                command.Parameters.Add("@Desde", SqlDbType.DateTime).Value = desde;
+                command.Parameters.Add("@Hasta", SqlDbType.DateTime).Value = hasta;
+
+                connection.Open();
+                int cantidad = (int)command.ExecuteScalar();
+                return cantidad;
+            }
+        }
 
 
 
@@ -204,35 +232,46 @@ namespace Eterea_Parfums_Desktop.Controladores
 
         public DataTable ObtenerOrdenesDeUltimas24HorasHasta19hs()
         {
+            // 1) Calcular rango [ayer 19:00, hoy 19:00) en C#
+            DateTime ahora = DateTime.Now;
+            DateTime hoy = ahora.Date;              // hoy 00:00
+            DateTime ayer = hoy.AddDays(-1);        // ayer 00:00
+
+            DateTime desde = ayer.AddHours(19);     // ayer 19:00
+            DateTime hasta = hoy.AddHours(19);      // hoy 19:00
+
             using (SqlConnection connection = new SqlConnection(DB_Controller.GetConnectionString()))
             {
                 connection.Open();
 
                 string query = @"
-            SELECT DISTINCT 
-                o.numero_de_orden, 
-                o.factura_id,
-                f.id AS num_factura, 
-                f.fecha, 
-                o.nombre_cliente, 
-                o.apellido_cliente, 
-                o.dni, 
-                o.e_mail_cliente, 
-                o.domicilio_de_envio, 
-                o.estado, 
-                o.codigo_despacho,
-                o.fecha_creacion,
-                f.fecha AS fecha_compra,
-                c.celular AS celular_cliente -- ✅ agregado
-            FROM dbo.orden o
-            JOIN dbo.factura f ON o.factura_id = f.id
-            JOIN dbo.cliente c ON f.cliente_id = c.id -- ✅ relación necesaria
-            WHERE o.estado = 1
-              AND o.fecha_creacion >= DATEADD(HOUR, 19, CAST(CAST(GETDATE() - 1 AS DATE) AS DATETIME))
-              AND o.fecha_creacion <  DATEADD(HOUR, 19, CAST(CAST(GETDATE() AS DATE) AS DATETIME))";
+                    SELECT DISTINCT 
+                        o.numero_de_orden, 
+                        o.factura_id,
+                        f.id AS num_factura, 
+                        f.fecha, 
+                        o.nombre_cliente, 
+                        o.apellido_cliente, 
+                        o.dni, 
+                        o.e_mail_cliente, 
+                        o.domicilio_de_envio, 
+                        o.estado, 
+                        o.codigo_despacho,
+                        o.fecha_creacion,
+                        f.fecha AS fecha_compra,
+                        c.celular AS celular_cliente
+                    FROM dbo.orden o
+                    JOIN dbo.factura f ON o.factura_id = f.id
+                    JOIN dbo.cliente c ON f.cliente_id = c.id
+                    WHERE o.estado = 1
+                      AND o.fecha_creacion >= @Desde
+                      AND o.fecha_creacion <  @Hasta;";
 
                 using (SqlCommand cmd = new SqlCommand(query, connection))
                 {
+                    cmd.Parameters.Add("@Desde", SqlDbType.DateTime).Value = desde;
+                    cmd.Parameters.Add("@Hasta", SqlDbType.DateTime).Value = hasta;
+
                     SqlDataAdapter da = new SqlDataAdapter(cmd);
                     DataTable dt = new DataTable();
                     da.Fill(dt);
@@ -240,8 +279,6 @@ namespace Eterea_Parfums_Desktop.Controladores
                 }
             }
         }
-
-
 
 
 
