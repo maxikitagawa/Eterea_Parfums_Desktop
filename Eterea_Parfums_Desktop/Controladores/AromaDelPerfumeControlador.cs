@@ -90,7 +90,7 @@ namespace Eterea_Parfums_Desktop.Controladores
         public static bool DeleteByPerfumeAndTipo(int perfumeId, int tipoDeAromaId)
         {
             const string sql = @"
-        DELETE FROM dbo.perfume_tipo_de_aroma
+        DELETE FROM dbo.aroma_del_perfume
         WHERE perfume_id = @perfumeId
           AND tipo_de_aroma_id = @tipoDeAromaId;";
 
