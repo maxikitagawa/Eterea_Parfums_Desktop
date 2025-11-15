@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using System.IO;
 
 namespace Eterea_Parfums_Desktop
 {
@@ -18,21 +19,41 @@ namespace Eterea_Parfums_Desktop
             txt_nombre_perfume.Text = perfumeSeleccionado.nombre;
             this.perfume = perfumeSeleccionado;
 
-            string nombreImagen = perfumeSeleccionado.imagen1_URL.ToString();
-            //string rutaCompletaImagen = Program.Ruta_Base + nombreImagen + ".jpg";
-            //img_perfume.Image = Image.FromFile(rutaCompletaImagen);
+            // Imagen principal del perfume
+            string imagenPerfume = perfumeSeleccionado.imagen1_URL ?? string.Empty;
+
             img_perfume.SizeMode = PictureBoxSizeMode.Zoom;
-            img_perfume.ImageLocation = nombreImagen;
 
-            /*string nombreImagen2 = perfumeSeleccionado.imagen1.ToString();
-            string rutaCompletaImagen2 = Program.Ruta_Base + nombreImagen + ".jpg";
-            pictureBox9.Image = Image.FromFile(rutaCompletaImagen);*/
+            if (!string.IsNullOrWhiteSpace(imagenPerfume))
+            {
+                // Si es URL absoluta (http/https), la usamos tal cual
+                if (imagenPerfume.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                    imagenPerfume.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    img_perfume.ImageLocation = imagenPerfume;
+                }
+                else
+                {
+                    // Si es un nombre/relativo, lo combinamos con Ruta_Base
+                    // (no importa si Ruta_Base termina con \ o no, Path.Combine se encarga)
+                    string rutaLocal = Path.Combine(Program.Ruta_Base ?? string.Empty, imagenPerfume);
 
-            string rutaCompletaImagen1 = Program.Ruta_Base + @"Diseño Promo.png";
+                    // Si querés agregar extensión por defecto:
+                    if (!Path.HasExtension(rutaLocal))
+                        rutaLocal += ".jpg";
+
+                    img_perfume.ImageLocation = rutaLocal;
+                }
+            }
+
+
+
+            string rutaCompletaImagen1 = Path.Combine(Program.Ruta_Base ?? string.Empty, "Diseño Promo.png");
             pictureBox9.Image = Image.FromFile(rutaCompletaImagen1);
 
-            string rutaCompletaImagen2 = Program.Ruta_Base + @"promo_no_acumulable_2.png";
+            string rutaCompletaImagen2 = Path.Combine(Program.Ruta_Base ?? string.Empty, "promo_no_acumulable_2.png");
             promos_no_acumulables.Image = Image.FromFile(rutaCompletaImagen2);
+
 
             //perfume = perfumeSeleccionado;
             CargarDataGridViewPromociones();
@@ -91,14 +112,18 @@ namespace Eterea_Parfums_Desktop
             if (!string.IsNullOrWhiteSpace(url))
                 return url;
 
-            // 2) Fallback por nombre de archivo (banner) en /imagenes/
-            var baseUrl = ((Program.Ruta_Web ?? string.Empty).TrimEnd('/')) + "/imagenes/";
+            // 2) Fallback: usar Ruta_Web como base
+            var baseUrl = (Program.Ruta_Web ?? string.Empty).TrimEnd('/', '\\') + "/";
+
             var file = (promo.banner ?? "").Trim();
             if (string.IsNullOrWhiteSpace(file)) return null;
-            if (!System.IO.Path.HasExtension(file)) file += ".jpg";
 
-            return baseUrl + System.IO.Path.GetFileName(file);
+            if (!Path.HasExtension(file))
+                file += ".jpg";
+
+            return baseUrl + Path.GetFileName(file);
         }
+
 
 
 

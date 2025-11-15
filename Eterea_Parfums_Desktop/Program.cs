@@ -112,7 +112,7 @@ namespace Eterea_Parfums_Desktop
                 {
                     var json = File.ReadAllText(ConfigPath);
 
-                    // ✅ Usamos Newtonsoft.Json y el tipo correcto
+                    // ✅ Usamos Newtonsoft.Json 
                     var cfg = JsonConvert.DeserializeObject<AppConfig.ConfigModel>(json);
 
                     if (cfg != null)
@@ -124,7 +124,7 @@ namespace Eterea_Parfums_Desktop
                         if (cfg.Db == null)
                             cfg.Db = new AppConfig.DbSettings();
 
-                        return cfg; // ✅ ahora coincide con AppConfig.ConfigModel
+                        return cfg; 
                     }
                 }
             }

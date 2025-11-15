@@ -779,13 +779,24 @@ namespace Eterea_Parfums_Desktop
                     lbl_desc_10.Text = "Perfume sin promoción";
                     lbl_desc_10.Visible = true;
 
+                    // 👉 Aumentar tamaño de letra a 9 pt (1 punto más que 8)
+                    lbl_desc_10.Font = new Font(
+                        lbl_desc_10.Font.FontFamily,
+                        10f,
+                        lbl_desc_10.Font.Style
+                    );
+
+                    // 👉 Mover el texto a la posición X=945, Y=105
+                    lbl_desc_10.Location = new Point(960, 105);
+
                     SetPrecioConDescVisible(false);
                     SetPrecioListaTachado(false);
 
-                   
                     return;
                 }
 
+
+                // CASO: SOLO 10%
                 if (promo10 && promo2x == null)
                 {
                     lbl_desc_10.Text = "Descuento 10%";
@@ -801,6 +812,50 @@ namespace Eterea_Parfums_Desktop
                     return;
                 }
 
+                // CASO: solo tiene promo 2x (segunda unidad con X% OFF)
+                if (!promo10 && promo2x != null)
+                {
+                    // Podemos ponerlo en true si queremos mostrar el mensaje
+                    lbl_desc_10.Text = "Promoción por llevar 2 unidades";
+                    lbl_desc_10.Visible = false;
+
+                    // Solo usamos el checkbox 2x
+                    checkBox_10.Visible = false;
+                    checkBox_10.Enabled = false;
+
+                    checkBox_2x.Visible = true;
+                    checkBox_2x.Enabled = true;
+
+                    // Texto del checkbox (aseguramos la leyenda)
+                    checkBox_2x.Text = "Llevá 2 por:";
+
+                    checkBox_2x.Location = new Point(878, 105);
+
+
+                    // Por defecto, NO marcarlo:
+                    // - si está desmarcado → simulás el valor normal (1 unidad sin promo)
+                    // - si el usuario lo marca → AplicarEleccionPromo calcula el total por 2 con descuento
+                    _updatingPromo = true;
+                    try
+                    {
+                        checkBox_2x.Checked = false;
+                    }
+                    finally
+                    {
+                        _updatingPromo = false;
+                    }
+
+                    // No seteamos txt_precio_con_desc todavía (solo al marcar la promo)
+                    SetPrecioConDescVisible(false);
+                    SetPrecioListaTachado(false);
+
+                    // Recalcular totales con precio normal por si ya eligieron medio de pago/cuotas
+                    RecalcularTodoConBaseActual();
+                    return;
+                }
+
+
+                // CASO: 10% + 2x
                 if (promo10 && promo2x != null)
                 {
                     lbl_desc_10.Visible = false;
