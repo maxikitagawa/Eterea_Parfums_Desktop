@@ -125,6 +125,7 @@
             this.label9 = new System.Windows.Forms.Label();
             this.txt_precio_con_desc = new System.Windows.Forms.TextBox();
             this.lbl_desc_10 = new System.Windows.Forms.Label();
+            this.img_qr_web = new System.Windows.Forms.PictureBox();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox3)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.img_perfume)).BeginInit();
@@ -144,6 +145,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewAromas)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox16)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.img_qr_web)).BeginInit();
             this.SuspendLayout();
             // 
             // combo_medios_pago
@@ -1283,12 +1285,23 @@
             this.lbl_desc_10.TabIndex = 375;
             this.lbl_desc_10.Text = "Decuento 10%";
             // 
+            // img_qr_web
+            // 
+            this.img_qr_web.Location = new System.Drawing.Point(873, 384);
+            this.img_qr_web.Name = "img_qr_web";
+            this.img_qr_web.Size = new System.Drawing.Size(326, 104);
+            this.img_qr_web.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
+            this.img_qr_web.TabIndex = 376;
+            this.img_qr_web.TabStop = false;
+            this.img_qr_web.Visible = false;
+            // 
             // FormVerDetallePerfume
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(249)))), ((int)(((byte)(225)))), ((int)(((byte)(230)))));
             this.ClientSize = new System.Drawing.Size(1208, 552);
+            this.Controls.Add(this.img_qr_web);
             this.Controls.Add(this.lbl_desc_10);
             this.Controls.Add(this.label9);
             this.Controls.Add(this.txt_precio_con_desc);
@@ -1394,6 +1407,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewAromas)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox16)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.img_qr_web)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -1485,5 +1499,6 @@
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.TextBox txt_precio_con_desc;
         private System.Windows.Forms.Label lbl_desc_10;
+        private System.Windows.Forms.PictureBox img_qr_web;
     }
 }
