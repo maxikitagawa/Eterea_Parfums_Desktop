@@ -664,7 +664,14 @@ namespace Eterea_Parfums_Desktop
         {
             txt_precio_con_desc.Visible = visible;
             label9.Visible = visible;
+
+            if (visible)
+            {                
+                txt_precio_con_desc.BringToFront();
+                label9.BringToFront();
+            }
         }
+        
 
         // Aplica/quita tachado al precio de lista
         private void SetPrecioListaTachado(bool tachar)
