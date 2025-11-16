@@ -57,6 +57,16 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
         {
             InitializeComponent();
 
+            // Estado inicial para la funcion de ingreso manual del codigo de barras
+            btn_ing_manual.Visible = true;
+            txt_ing_manual.Visible = false;
+            txt_ing_manual.MaxLength = 13;
+
+            // Eventos
+            btn_ing_manual.Click += btn_ing_manual_Click;
+            txt_ing_manual.KeyPress += txt_ing_manual_KeyPress;
+            txt_ing_manual.TextChanged += txt_ing_manual_TextChanged;
+
 
             txt_nombre_empleado.Text = Program.logueado.nombre + " " + Program.logueado.apellido;
 
@@ -130,6 +140,140 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
             this.VisibleChanged += Facturar_UC_VisibleChanged;
         }
+
+        private void txt_ing_manual_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            // Permitir teclas de control (Backspace, Delete, flechas, etc.)
+            if (char.IsControl(e.KeyChar))
+                return;
+
+            // Solo dígitos
+            if (!char.IsDigit(e.KeyChar))
+            {
+                e.Handled = true; // Bloquea el carácter
+            }
+        }
+
+        private void btn_ing_manual_Click(object sender, EventArgs e)
+        {
+            // Verificamos que haya caja abierta, igual que con el escáner
+            if (string.IsNullOrEmpty(numeroCaja) || numeroCaja == "Caja sin asignar")
+            {
+                MessageBox.Show(
+                    "No se puede ingresar productos sin una caja abierta.\nHaz clic en 'Abrir Caja'.",
+                    "Caja no asignada",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+                return;
+            }
+
+            btn_ing_manual.Visible = false;
+            txt_ing_manual.Visible = true;
+            txt_ing_manual.Clear();
+            txt_ing_manual.Focus();
+        }
+
+        private bool EsEan13Valido(string ean)
+        {
+            if (string.IsNullOrWhiteSpace(ean) || ean.Length != 13 || !ean.All(char.IsDigit))
+                return false;
+
+            int sumaImpares = 0; // posiciones 1,3,5,... (índices 0,2,4,...)
+            int sumaPares = 0;   // posiciones 2,4,6,... (índices 1,3,5,...)
+
+            for (int i = 0; i < 12; i++)
+            {
+                int dig = ean[i] - '0';
+                if (i % 2 == 0)
+                    sumaImpares += dig; // index par = posición impar
+                else
+                    sumaPares += dig;   // index impar = posición par
+            }
+
+            int total = sumaImpares + (sumaPares * 3);
+            int resto = total % 10;
+            int digitoCalculado = (10 - resto) % 10;
+
+            int digitoReal = ean[12] - '0';
+
+            return digitoCalculado == digitoReal;
+        }
+
+        private void txt_ing_manual_TextChanged(object sender, EventArgs e)
+        {
+            string codigo = txt_ing_manual.Text.Trim();
+
+            // Hasta que no haya 13 dígitos, no hacemos nada
+            if (codigo.Length < 13)
+                return;
+
+            if (codigo.Length > 13)
+            {
+                // Por seguridad, si se pasa de largo
+                codigo = codigo.Substring(0, 13);
+                txt_ing_manual.Text = codigo;
+                txt_ing_manual.SelectionStart = txt_ing_manual.Text.Length;
+            }
+
+            // En este punto tiene exactamente 13 caracteres
+            ProcesarCodigoBarrasManual(codigo);
+        }
+
+        private void ProcesarCodigoBarrasManual(string codigo)
+        {
+            try
+            {
+                // Validaciones básicas
+                if (string.IsNullOrEmpty(numeroCaja) || numeroCaja == "Caja sin asignar")
+                {
+                    MessageBox.Show(
+                        "No se puede ingresar productos sin una caja abierta.\nHaz clic en 'Abrir Caja'.",
+                        "Caja no asignada",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning
+                    );
+                    return;
+                }
+
+                if (codigo.Length != 13 || !codigo.All(char.IsDigit))
+                {
+                    MessageBox.Show(
+                        "El código de barras debe contener exactamente 13 dígitos numéricos.",
+                        "Código inválido",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning
+                    );
+                    return;
+                }
+
+                if (!EsEan13Valido(codigo))
+                {
+                    MessageBox.Show(
+                        "El código EAN-13 ingresado no es válido.",
+                        "Código inválido",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning
+                    );
+                    return;
+                }
+
+                //    Esto ya se encarga de:
+                //    - Buscar el Perfume
+                //    - Verificar stock
+                //    - Agregarlo a la factura con AddOrIncrementPerfume
+                ProcesarCodigoBarras(codigo);
+            }
+            finally
+            {
+                // Siempre volvemos al estado inicial de los controles
+                txt_ing_manual.Clear();
+                txt_ing_manual.Visible = false;
+                btn_ing_manual.Visible = true;
+                btn_ing_manual.Focus();
+            }
+        }
+
 
         private void Facturar_UC_VisibleChanged(object sender, EventArgs e)
         {
@@ -1624,6 +1768,26 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
         }
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            // Si el textbox manual está visible, no usamos Enter para el escáner
+            if (txt_ing_manual.Visible)
+            {
+                if (keyData == Keys.Escape)
+                {
+                    // Permitir cancelar el ingreso manual con ESC
+                    txt_ing_manual.Clear();
+                    txt_ing_manual.Visible = false;
+                    btn_ing_manual.Visible = true;
+                    btn_ing_manual.Focus();
+                    return true;
+                }
+
+                // No queremos que Enter dispare el escaneo automático del txt_scan_factura
+                if (keyData == Keys.Enter)
+                    return true;
+
+                return base.ProcessCmdKey(ref msg, keyData);
+            }
+
             if (keyData == Keys.Enter)
             {
                 if (!string.IsNullOrEmpty(txt_scan_factura.Text))
@@ -1633,9 +1797,9 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                     return true; // Consumimos la tecla Enter
                 }
             }
+
             return base.ProcessCmdKey(ref msg, keyData);
         }
-
 
 
         private void btn_enviar_Click(object sender, EventArgs e)
