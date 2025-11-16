@@ -64,25 +64,28 @@ namespace Eterea_Parfums_Desktop.Properties {
         ///   Busca una cadena traducida similar a &lt;!DOCTYPE html&gt;
         ///&lt;html lang=&quot;es&quot;&gt;
         ///&lt;head&gt;
+        ///    &lt;meta charset=&quot;utf-8&quot; /&gt;
         ///    &lt;title&gt;Factura Eterea Parfums&lt;/title&gt;
         ///    &lt;style&gt;
         ///        body {
         ///            font-family: Arial, sans-serif;
-        ///            margin: 0;
+        ///            font-size: 12px;
+        ///            margin: 20px;
         ///            padding: 0;
-        ///            height: 100%;
-        ///            display: flex;
-        ///            flex-direction: column;
         ///        }
         ///
-        ///        table.border {
-        ///            border-collapse: collapse;
+        ///        table {
         ///            width: 100%;
+        ///            border-collapse: collapse;
         ///        }
         ///
-        ///            table.border th, table.border td {
-        ///                padding: 5px;
-        ///                 [resto de la cadena truncado]&quot;;.
+        ///        .border th, .border td {
+        ///            border: 1px solid black;
+        ///            padding: 5px;
+        ///        }
+        ///
+        ///        .titulo {
+        /// [resto de la cadena truncado]&quot;;.
         /// </summary>
         internal static string FacturaA {
             get {
@@ -114,25 +117,27 @@ namespace Eterea_Parfums_Desktop.Properties {
         ///   Busca una cadena traducida similar a &lt;!DOCTYPE html&gt;
         ///&lt;html lang=&quot;es&quot;&gt;
         ///&lt;head&gt;
+        ///    &lt;meta charset=&quot;utf-8&quot; /&gt;
         ///    &lt;title&gt;Factura Eterea Parfums&lt;/title&gt;
         ///    &lt;style&gt;
         ///        body {
         ///            font-family: Arial, sans-serif;
-        ///            margin: 0;
+        ///            font-size: 12px;
+        ///            margin: 20px;
         ///            padding: 0;
-        ///            height: 100%;
-        ///            display: flex;
-        ///            flex-direction: column;
+        ///           
         ///        }
         ///
-        ///        table.border {
-        ///            border-collapse: collapse;
+        ///        table {
         ///            width: 100%;
+        ///            border-collapse: collapse;
+        ///            
         ///        }
         ///
-        ///            table.border th, table.border td {
-        ///                padding: 5px;
-        ///                 [resto de la cadena truncado]&quot;;.
+        ///        .border th, .border td {
+        ///            border: 1px solid black;
+        ///            padding: 5px;
+        ///      [resto de la cadena truncado]&quot;;.
         /// </summary>
         internal static string PlantillaFactura {
             get {
@@ -144,7 +149,7 @@ namespace Eterea_Parfums_Desktop.Properties {
         ///   Busca una cadena traducida similar a &lt;!DOCTYPE html&gt;
         ///&lt;html lang=&quot;es&quot;&gt;
         ///&lt;head&gt;
-        ///    &lt;title&gt;Factura Eterea Parfums&lt;/title&gt;
+        ///    &lt;title&gt;Informe de Ventas - Etérea Parfums&lt;/title&gt;
         ///    &lt;style&gt;
         ///        body {
         ///            font-family: Arial, sans-serif;
@@ -152,7 +157,6 @@ namespace Eterea_Parfums_Desktop.Properties {
         ///
         ///        .informe {
         ///            width: 80%;
-        ///            margin: auto;
         ///            margin: auto;
         ///            border: 1px solid #000;
         ///            padding: 20px;
@@ -164,11 +168,23 @@ namespace Eterea_Parfums_Desktop.Properties {
         ///
         ///            .encabezado h1 {
         ///                text-align: center;
-        ///       [resto de la cadena truncado]&quot;;.
+        ///            }
+        ///
+        ///     [resto de la cadena truncado]&quot;;.
         /// </summary>
         internal static string PlantillaInformeVentas {
             get {
                 return ResourceManager.GetString("PlantillaInformeVentas", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap QR_Web {
+            get {
+                object obj = ResourceManager.GetObject("QR_Web", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
             }
         }
         

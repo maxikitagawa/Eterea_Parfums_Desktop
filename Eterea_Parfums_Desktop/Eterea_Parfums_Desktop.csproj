@@ -688,9 +688,12 @@
     <Content Include="IconoEterea.ico" />
     <Content Include="LogoEterea.ico" />
     <Content Include="Resources\CerrarSesion.png" />
+    <None Include="Resources\QR_Web.png" />
     <None Include="Resources\warning-sign1.png" />
     <None Include="Resources\warning-sign.png" />
     <None Include="Resources\FacturaA.html" />
+    <None Include="Resources\Diseño Logo2.png" />
+    <None Include="Resources\Diseño Logo1.png" />
     <Content Include="Resources\imagen_por_defecto.jpg" />
     <Content Include="Resources\LogoEterea.png" />
     <None Include="Resources\sinImagen.jpg" />

@@ -65,6 +65,8 @@ namespace Eterea_Parfums_Desktop
 
             this.perfume = perfumeSeleccionado;
 
+            ConfigurarQRWeb();
+
             txt_nombre_perfume.Text = perfumeSeleccionado.nombre;
 
             // Estado de activo/inactivo
@@ -973,6 +975,22 @@ namespace Eterea_Parfums_Desktop
                 && combo_cuotas.SelectedIndex >= 0
                 && combo_cuotas.SelectedItem != null;
         }
+
+        private void ConfigurarQRWeb()
+        {
+            if (Program.logueado == null)
+            {
+                img_qr_web.Visible = true;
+                img_qr_web.Image = Properties.Resources.QR_Web; // 👈 cambiá QR_Web por el nombre que veas en Resources
+                img_qr_web.SizeMode = PictureBoxSizeMode.Zoom;
+            }
+            else
+            {
+                img_qr_web.Visible = false;
+                img_qr_web.Image = null;
+            }
+        }
+
 
 
     }
