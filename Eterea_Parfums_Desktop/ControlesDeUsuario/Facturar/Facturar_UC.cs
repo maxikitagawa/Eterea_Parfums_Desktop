@@ -1190,47 +1190,49 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
             if (esEfectivo)
             {
-                // Mostrar controles de ingreso de pago
+                // Siempre que entro a EFECTIVO, muestro los controles y los dejo limpios
                 txt_ing_pago.Visible = true;
                 txt_vuelto.Visible = true;
                 lbl_pesos_1.Visible = true;
                 lbl_pesos_2.Visible = true;
                 btn_ok.Visible = true;
-                
+
+                // Limpiar valores al volver a efectivo
+                txt_ing_pago.Text = "";
+                txt_vuelto.Text = "0,00";
 
                 // Ocultar cuotas (no tiene sentido en efectivo)
                 combo_cuotas.Visible = false;
                 lbl_cuotas.Text = "Ing. Pago";
                 lbl_cuotas.Location = new Point(1211, 390);
 
-                // En efectivo no usamos btn_pago de tarjeta, queda oculto
+                // En efectivo no usamos btn_pago de tarjeta
                 btn_pago.Visible = false;
-
-                // Imprimir oculto
                 btn_imprimir.Visible = false;
             }
             else
             {
-                // Ocultar controles de pago en efectivo
+                // Al salir de EFECTIVO, oculto y LIMPIO el importe y el vuelto
                 txt_ing_pago.Visible = false;
                 txt_vuelto.Visible = false;
                 lbl_pesos_1.Visible = false;
                 lbl_pesos_2.Visible = false;
                 btn_ok.Visible = false;
 
-                // Mostrar cuotas si corresponde
+                txt_ing_pago.Text = "";
+                txt_vuelto.Text = "0,00";
+
+                // Mostrar cuotas de nuevo
                 combo_cuotas.Visible = true;
                 lbl_cuotas.Text = "Cuotas";
                 lbl_cuotas.Location = lblCuotasPosOriginal;
 
                 // Lógica de botón de pago/imprimir para tarjetas u otros medios
-                if (forma != "Efectivo")
-                {
-                    btn_imprimir.Visible = false;
-                    btn_pago.Visible = true;
-                }
+                btn_imprimir.Visible = false;
+                btn_pago.Visible = true;
             }
         }
+
 
 
 
