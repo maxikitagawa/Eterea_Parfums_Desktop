@@ -1363,45 +1363,61 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
         private void btn_ok_Click(object sender, EventArgs e)
         {
-            // Validar que haya un importe ingresado
+            // 0) Verificar que haya al menos un artículo cargado
+            if (Factura.Rows.Count == 0)
+            {
+                MessageBox.Show("Debe agregar al menos un artículo para facturar.",
+                                "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
+                // Aseguramos que quede EFECTIVO seleccionado y visible
+                combo_forma_pago.SelectedItem = "Efectivo";       
+                ActualizarDescuentosYCuotas();
+                ActualizarUIFormaPago();
+
+                // Limpiamos por si quedó algo en el pago/vuelto
+                txt_ing_pago.Text = "";
+                txt_vuelto.Text = "0,00";
+
+                return;
+            }
+
+            // 1) Validar que haya un importe ingresado
             if (string.IsNullOrWhiteSpace(txt_ing_pago.Text))
             {
-                MessageBox.Show("Ingrese el monto recibido en efectivo.", "Pago en efectivo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Ingrese el monto recibido en efectivo.",
+                                "Pago en efectivo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // Parsear el total de la factura
+            // 2) Parsear el total de la factura
             if (!decimal.TryParse(txt_total.Text, NumberStyles.Any, Ar, out decimal total))
             {
-                MessageBox.Show("El total de la factura no es válido.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("El total de la factura no es válido.",
+                                "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            // Parsear el monto ingresado (solo números, así que es sencillo)
+            // 3) Parsear el monto ingresado
             if (!decimal.TryParse(txt_ing_pago.Text, NumberStyles.Any, Ar, out decimal pagado))
             {
-                MessageBox.Show("El monto ingresado no es válido.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("El monto ingresado no es válido.",
+                                "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            // Validar que el pago alcance el total
+            // 4) Validar que el pago alcance el total
             if (pagado < total)
             {
-                MessageBox.Show(
-                    "El monto ingresado es menor al total de la factura.",
-                    "Pago insuficiente",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning
-                );
+                MessageBox.Show("El monto ingresado es menor al total de la factura.",
+                                "Pago insuficiente",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Warning);
                 return;
             }
 
-            // Si todo es correcto, hacemos EXACTAMENTE lo mismo que al hacer clic en "Imprimir"
+            // 5) Si todo está correcto, hacemos lo mismo que "Imprimir"
             btn_imprimir_Click(sender, e);
 
-            // Después de imprimir, ReiniciarFormulario() ya se llamó dentro de btn_imprimir_Click,
-            // pero nos aseguramos de que la parte de pago en efectivo también quede como al inicio:
-            OcultarControlesEfectivoYRestaurarCuotas();
         }
 
 

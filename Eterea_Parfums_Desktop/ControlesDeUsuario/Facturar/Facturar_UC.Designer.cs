@@ -1268,7 +1268,7 @@
             this.txt_vuelto.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
             this.txt_vuelto.Location = new System.Drawing.Point(1289, 458);
             this.txt_vuelto.Name = "txt_vuelto";
-            this.txt_vuelto.Size = new System.Drawing.Size(158, 28);
+            this.txt_vuelto.Size = new System.Drawing.Size(155, 28);
             this.txt_vuelto.TabIndex = 444;
             this.txt_vuelto.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             // 
