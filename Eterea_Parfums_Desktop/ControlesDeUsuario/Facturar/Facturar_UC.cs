@@ -73,6 +73,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             lbl_pesos_1.Visible = false;
             lbl_pesos_2.Visible = false;
             txt_vuelto.Visible = false;
+            lbl_vuelto.Visible = false;
             btn_ok.Visible = false;
             btn_imprimir.Visible = false;
 
@@ -1094,13 +1095,27 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             // 2) Recalcular descuento general según combo_descuento
             desc();
             // 3) Recalcular recargo según forma de pago + cuotas seleccionadas
-            CalcularRecargo();
+            string forma = combo_forma_pago.SelectedItem?.ToString() ?? "";
+            if (forma == "Efectivo")
+            {
+                // En efectivo no hay recargo
+                txt_monto_recargo.Text = "0,00";
+                txt_rec.Text = "0";
+            }
+            else
+            {
+                // Tarjetas / otros medios → recargo según cuotas
+                CalcularRecargo();
+            }
             // 4) Tomar valores de los textbox y recalcular total + IVA
             float subtotal, recargo, descuento;
             if (!float.TryParse(txt_subtotal.Text, out subtotal)) subtotal = 0;
             if (!float.TryParse(txt_monto_recargo.Text, out recargo)) recargo = 0;
             if (!float.TryParse(txt_monto_descuento.Text, out descuento)) descuento = 0;
             sumaFinal(subtotal, recargo, descuento);
+
+            // 🔹 Si había un pago en efectivo cargado, lo limpiamos porque cambió el total
+            LimpiarPagoEfectivoSiHayDatos();
         }
 
 
@@ -1193,6 +1208,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 // Siempre que entro a EFECTIVO, muestro los controles y los dejo limpios
                 txt_ing_pago.Visible = true;
                 txt_vuelto.Visible = true;
+                lbl_vuelto.Visible = true;
                 lbl_pesos_1.Visible = true;
                 lbl_pesos_2.Visible = true;
                 btn_ok.Visible = true;
@@ -1215,6 +1231,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 // Al salir de EFECTIVO, oculto y LIMPIO el importe y el vuelto
                 txt_ing_pago.Visible = false;
                 txt_vuelto.Visible = false;
+                lbl_vuelto.Visible = false;
                 lbl_pesos_1.Visible = false;
                 lbl_pesos_2.Visible = false;
                 btn_ok.Visible = false;
@@ -1954,17 +1971,30 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             txt_email.Text = "";
             txt_dni.Text = ""; // Esto dispara txt_dni_TextChanged → lo deja en true
 
+            // Limpiar detalle
             Factura.Rows.Clear();
+
+            // ✅ Dejar forma de pago en Efectivo como al inicio
             combo_forma_pago.SelectedIndex = 0;
             combo_descuento.SelectedIndex = 0;
             combo_cuotas.SelectedIndex = 0;
 
+            // Recalcular reglas según forma de pago
+            ActualizarDescuentosYCuotas();
+            ActualizarTotales();
+
+            // ✅ Mostrar UI correspondiente a efectivo (txt_ing_pago, txt_vuelto, etc.)
+            ActualizarUIFormaPago();
+
+            // Limpiar campos de efectivo
+            txt_ing_pago.Text = "";
+            txt_vuelto.Text = "0,00";
+
+            // Volver a generar número de factura
             int puntoDeVenta = Program.sucursal;
             txt_numero_factura.Text = Num_factura_máximo();
-
-            OcultarControlesEfectivoYRestaurarCuotas();
-
         }
+
 
         private void ImprimirPdf(string rutaPdf)
         {
@@ -2249,6 +2279,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             // Ocultar controles de efectivo
             txt_ing_pago.Visible = false;
             txt_vuelto.Visible = false;
+            lbl_vuelto.Visible = false;
             lbl_pesos_1.Visible = false;
             lbl_pesos_2.Visible = false;
             btn_ok.Visible = false;
@@ -2264,6 +2295,14 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             btn_imprimir.Visible = true;
         }
 
+        private void LimpiarPagoEfectivoSiHayDatos()
+        {
+            if (!string.IsNullOrWhiteSpace(txt_ing_pago.Text))
+            {
+                txt_ing_pago.Text = "";
+                txt_vuelto.Text = "0,00";
+            }
+        }
 
 
     }
