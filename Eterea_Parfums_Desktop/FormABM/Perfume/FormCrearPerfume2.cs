@@ -287,6 +287,9 @@ namespace Eterea_Parfums_Desktop
 
             foreach (Sucursal sucursal in sucursales)
             {
+                if (sucursal.id == 0 || sucursal.id == 3)
+                    continue;  // salteo estas sucursales
+
                 StockControlador.insertStock(perfume.id, sucursal.id, 0);
             }
 
