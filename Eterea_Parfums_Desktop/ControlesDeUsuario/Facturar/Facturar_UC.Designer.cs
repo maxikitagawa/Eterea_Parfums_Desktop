@@ -76,7 +76,7 @@
             this.lbl_cajero = new System.Windows.Forms.Label();
             this.lbl_facturacion = new System.Windows.Forms.Label();
             this.pictureBox5 = new System.Windows.Forms.PictureBox();
-            this.button1 = new System.Windows.Forms.Button();
+            this.btn_cerrar_caja = new System.Windows.Forms.Button();
             this.btn_abrir_caja = new System.Windows.Forms.Button();
             this.pictureBox7 = new System.Windows.Forms.PictureBox();
             this.pictureBox8 = new System.Windows.Forms.PictureBox();
@@ -121,6 +121,12 @@
             this.btn_pago = new System.Windows.Forms.Button();
             this.btn_ing_manual = new System.Windows.Forms.Button();
             this.txt_ing_manual = new System.Windows.Forms.TextBox();
+            this.txt_ing_pago = new System.Windows.Forms.TextBox();
+            this.lbl_pesos_1 = new System.Windows.Forms.Label();
+            this.txt_vuelto = new System.Windows.Forms.TextBox();
+            this.lbl_pesos_2 = new System.Windows.Forms.Label();
+            this.btn_ok = new System.Windows.Forms.Button();
+            this.lbl_vuelto = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox6)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox4)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox3)).BeginInit();
@@ -696,20 +702,20 @@
             this.pictureBox5.TabIndex = 388;
             this.pictureBox5.TabStop = false;
             // 
-            // button1
+            // btn_cerrar_caja
             // 
-            this.button1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(228)))), ((int)(((byte)(137)))), ((int)(((byte)(164)))));
-            this.button1.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.button1.Font = new System.Drawing.Font("Microsoft Sans Serif", 16.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.button1.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
-            this.button1.Location = new System.Drawing.Point(1270, 20);
-            this.button1.Name = "button1";
-            this.button1.RightToLeft = System.Windows.Forms.RightToLeft.No;
-            this.button1.Size = new System.Drawing.Size(216, 63);
-            this.button1.TabIndex = 398;
-            this.button1.Text = "Cerrar Caja";
-            this.button1.UseVisualStyleBackColor = false;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
+            this.btn_cerrar_caja.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(228)))), ((int)(((byte)(137)))), ((int)(((byte)(164)))));
+            this.btn_cerrar_caja.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btn_cerrar_caja.Font = new System.Drawing.Font("Microsoft Sans Serif", 16.2F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btn_cerrar_caja.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
+            this.btn_cerrar_caja.Location = new System.Drawing.Point(1270, 20);
+            this.btn_cerrar_caja.Name = "btn_cerrar_caja";
+            this.btn_cerrar_caja.RightToLeft = System.Windows.Forms.RightToLeft.No;
+            this.btn_cerrar_caja.Size = new System.Drawing.Size(216, 63);
+            this.btn_cerrar_caja.TabIndex = 398;
+            this.btn_cerrar_caja.Text = "Cerrar Caja";
+            this.btn_cerrar_caja.UseVisualStyleBackColor = false;
+            this.btn_cerrar_caja.Click += new System.EventHandler(this.button1_Click);
             // 
             // btn_abrir_caja
             // 
@@ -1230,11 +1236,90 @@
             this.txt_ing_manual.Size = new System.Drawing.Size(356, 28);
             this.txt_ing_manual.TabIndex = 441;
             // 
+            // txt_ing_pago
+            // 
+            this.txt_ing_pago.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(249)))), ((int)(((byte)(225)))), ((int)(((byte)(230)))));
+            this.txt_ing_pago.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txt_ing_pago.Font = new System.Drawing.Font("Microsoft Sans Serif", 13.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txt_ing_pago.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
+            this.txt_ing_pago.Location = new System.Drawing.Point(1308, 386);
+            this.txt_ing_pago.Name = "txt_ing_pago";
+            this.txt_ing_pago.Size = new System.Drawing.Size(168, 28);
+            this.txt_ing_pago.TabIndex = 442;
+            this.txt_ing_pago.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            // 
+            // lbl_pesos_1
+            // 
+            this.lbl_pesos_1.AutoSize = true;
+            this.lbl_pesos_1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(249)))), ((int)(((byte)(225)))), ((int)(((byte)(230)))));
+            this.lbl_pesos_1.Font = new System.Drawing.Font("Microsoft Sans Serif", 13.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lbl_pesos_1.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
+            this.lbl_pesos_1.Location = new System.Drawing.Point(1315, 388);
+            this.lbl_pesos_1.Name = "lbl_pesos_1";
+            this.lbl_pesos_1.Size = new System.Drawing.Size(20, 24);
+            this.lbl_pesos_1.TabIndex = 443;
+            this.lbl_pesos_1.Text = "$";
+            // 
+            // txt_vuelto
+            // 
+            this.txt_vuelto.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(249)))), ((int)(((byte)(225)))), ((int)(((byte)(230)))));
+            this.txt_vuelto.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txt_vuelto.Font = new System.Drawing.Font("Microsoft Sans Serif", 13.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txt_vuelto.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
+            this.txt_vuelto.Location = new System.Drawing.Point(1289, 458);
+            this.txt_vuelto.Name = "txt_vuelto";
+            this.txt_vuelto.Size = new System.Drawing.Size(158, 28);
+            this.txt_vuelto.TabIndex = 444;
+            this.txt_vuelto.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            // 
+            // lbl_pesos_2
+            // 
+            this.lbl_pesos_2.AutoSize = true;
+            this.lbl_pesos_2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(249)))), ((int)(((byte)(225)))), ((int)(((byte)(230)))));
+            this.lbl_pesos_2.Font = new System.Drawing.Font("Microsoft Sans Serif", 13.8F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lbl_pesos_2.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
+            this.lbl_pesos_2.Location = new System.Drawing.Point(1292, 460);
+            this.lbl_pesos_2.Name = "lbl_pesos_2";
+            this.lbl_pesos_2.Size = new System.Drawing.Size(20, 24);
+            this.lbl_pesos_2.TabIndex = 445;
+            this.lbl_pesos_2.Text = "$";
+            // 
+            // btn_ok
+            // 
+            this.btn_ok.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(228)))), ((int)(((byte)(137)))), ((int)(((byte)(164)))));
+            this.btn_ok.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btn_ok.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.btn_ok.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
+            this.btn_ok.Location = new System.Drawing.Point(1446, 437);
+            this.btn_ok.Name = "btn_ok";
+            this.btn_ok.Size = new System.Drawing.Size(49, 50);
+            this.btn_ok.TabIndex = 446;
+            this.btn_ok.Text = "OK";
+            this.btn_ok.UseVisualStyleBackColor = false;
+            // 
+            // lbl_vuelto
+            // 
+            this.lbl_vuelto.AutoSize = true;
+            this.lbl_vuelto.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(249)))), ((int)(((byte)(225)))), ((int)(((byte)(230)))));
+            this.lbl_vuelto.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lbl_vuelto.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
+            this.lbl_vuelto.Location = new System.Drawing.Point(1290, 439);
+            this.lbl_vuelto.Name = "lbl_vuelto";
+            this.lbl_vuelto.Size = new System.Drawing.Size(154, 16);
+            this.lbl_vuelto.TabIndex = 447;
+            this.lbl_vuelto.Text = "Vuelto para el cliente";
+            // 
             // Facturar_UC
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(232)))), ((int)(((byte)(186)))), ((int)(((byte)(197)))));
+            this.Controls.Add(this.lbl_vuelto);
+            this.Controls.Add(this.btn_ok);
+            this.Controls.Add(this.lbl_pesos_2);
+            this.Controls.Add(this.txt_vuelto);
+            this.Controls.Add(this.lbl_pesos_1);
+            this.Controls.Add(this.txt_ing_pago);
             this.Controls.Add(this.btn_ing_manual);
             this.Controls.Add(this.txt_ing_manual);
             this.Controls.Add(this.btn_pago);
@@ -1244,7 +1329,7 @@
             this.Controls.Add(this.txt_email);
             this.Controls.Add(this.combo_forma_pago);
             this.Controls.Add(this.txt_estadoCaja);
-            this.Controls.Add(this.button1);
+            this.Controls.Add(this.btn_cerrar_caja);
             this.Controls.Add(this.btn_abrir_caja);
             this.Controls.Add(this.label8);
             this.Controls.Add(this.label5);
@@ -1383,7 +1468,7 @@
         private System.Windows.Forms.Label lbl_cajero;
         private System.Windows.Forms.Label lbl_facturacion;
         private System.Windows.Forms.PictureBox pictureBox5;
-        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button btn_cerrar_caja;
         private System.Windows.Forms.Button btn_abrir_caja;
         private System.Windows.Forms.PictureBox pictureBox7;
         private System.Windows.Forms.PictureBox pictureBox8;
@@ -1437,5 +1522,11 @@
         private System.Windows.Forms.DataGridViewButtonColumn eliminar;
         private System.Windows.Forms.Button btn_ing_manual;
         private System.Windows.Forms.TextBox txt_ing_manual;
+        private System.Windows.Forms.TextBox txt_ing_pago;
+        private System.Windows.Forms.Label lbl_pesos_1;
+        private System.Windows.Forms.TextBox txt_vuelto;
+        private System.Windows.Forms.Label lbl_pesos_2;
+        private System.Windows.Forms.Button btn_ok;
+        private System.Windows.Forms.Label lbl_vuelto;
     }
 }
