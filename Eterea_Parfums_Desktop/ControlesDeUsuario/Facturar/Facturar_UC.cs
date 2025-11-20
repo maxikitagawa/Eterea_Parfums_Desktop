@@ -39,6 +39,9 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
         private static string Mon(decimal v) => "$ " + v.ToString("N2", Ar);
         private static string Num(int v) => v.ToString(Ar);
 
+        private Point lblCuotasPosOriginal;
+
+
 
         private static string ObtenerCarpetaFacturas()
         {
@@ -57,15 +60,35 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
         {
             InitializeComponent();
 
+            // Guardamos la posición original del label de cuotas
+            lblCuotasPosOriginal = lbl_cuotas.Location;
+
             // Estado inicial para la funcion de ingreso manual del codigo de barras
             btn_ing_manual.Visible = true;
             txt_ing_manual.Visible = false;
             txt_ing_manual.MaxLength = 13;
 
+            //EStado inicial para la funcion de ingresar pago en efectivo
+            txt_ing_pago.Visible = false;
+            lbl_pesos_1.Visible = false;
+            lbl_pesos_2.Visible = false;
+            txt_vuelto.Visible = false;
+            btn_ok.Visible = false;
+            btn_imprimir.Visible = false;
+
             // Eventos
             btn_ing_manual.Click += btn_ing_manual_Click;
             txt_ing_manual.KeyPress += txt_ing_manual_KeyPress;
             txt_ing_manual.TextChanged += txt_ing_manual_TextChanged;
+
+
+            //Evento pago en efectivo
+            txt_ing_pago.KeyPress += txt_ing_pago_KeyPress;
+            txt_ing_pago.TextChanged += txt_ing_pago_TextChanged;
+            btn_ok.Click += btn_ok_Click;
+
+            //Evento agregar fila al dataGridView
+            Factura.RowsAdded += Factura_RowsAdded;
 
 
             txt_nombre_empleado.Text = Program.logueado.nombre + " " + Program.logueado.apellido;
@@ -116,6 +139,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
             combo_forma_pago.SelectedIndexChanged += combo_forma_pago_SelectedIndexChanged;
             ActualizarDescuentosYCuotas();
+            ActualizarUIFormaPago();
 
             lbl_dniE.Hide();
             txt_scan_factura.Hide();
@@ -153,6 +177,57 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 e.Handled = true; // Bloquea el carácter
             }
         }
+
+        private void txt_ing_pago_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            // Permitir teclas de control (Backspace, Delete, etc.)
+            if (char.IsControl(e.KeyChar))
+                return;
+
+            // Solo dígitos
+            if (!char.IsDigit(e.KeyChar))
+            {
+                e.Handled = true;
+            }
+        }
+
+        private void txt_ing_pago_TextChanged(object sender, EventArgs e)
+        {
+            // Si no hay total o no hay pago, ponemos 0,00
+            if (string.IsNullOrWhiteSpace(txt_total.Text) ||
+                string.IsNullOrWhiteSpace(txt_ing_pago.Text))
+            {
+                txt_vuelto.Text = "0,00";
+                return;
+            }
+
+            if (!decimal.TryParse(txt_total.Text, NumberStyles.Any, Ar, out decimal total))
+            {
+                txt_vuelto.Text = "0,00";
+                return;
+            }
+
+            // txt_ing_pago son solo dígitos, así que esto es seguro
+            if (!decimal.TryParse(txt_ing_pago.Text, NumberStyles.Any, Ar, out decimal pagado))
+            {
+                txt_vuelto.Text = "0,00";
+                return;
+            }
+
+            decimal vuelto = pagado - total;
+
+            // Si no querés mostrar negativo cuando falta dinero, podés descomentar:
+            // if (vuelto < 0) vuelto = 0;
+
+            txt_vuelto.Text = vuelto.ToString("N2", Ar);
+        }
+
+        private void Factura_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)
+        {
+            descuentoUnitario();
+            ActualizarTotales();
+        }
+
 
         private void btn_ing_manual_Click(object sender, EventArgs e)
         {
@@ -932,13 +1007,30 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             txt_subtotal.Text = sumaPrecios.ToString("N2");
         }
 
-        private void CalcularImporteRecargo(float recargo, float subtotal)
+        private void CalcularImporteRecargo(float subtotal, float recargo)
         {
             txt_monto_recargo.Text = (subtotal * recargo / 100).ToString("N2");
         }
 
         private void desc()
         {
+            string formaPago = combo_forma_pago.SelectedItem?.ToString() ?? "";
+
+            // Descuento SOLO si la forma de pago es EFECTIVO
+            if (formaPago != "Efectivo")
+            {
+                txt_desc.Text = "0";
+                txt_monto_descuento.Text = "0,00";
+                return;
+            }
+
+            if (combo_descuento.SelectedItem == null)
+            {
+                txt_desc.Text = "0";
+                txt_monto_descuento.Text = "0,00";
+                return;
+            }
+
             string descuentoStr = combo_descuento.SelectedItem.ToString();
 
             if (int.TryParse(descuentoStr, out int descuento))
@@ -951,14 +1043,12 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 }
                 else
                 {
-                    // Si no se puede convertir a float, simplemente establecer el monto de descuento en cero
                     txt_monto_descuento.Text = "0,00";
                 }
             }
             else
             {
                 MessageBox.Show("El valor de descuento no es válido.");
-                // Puedes manejar este caso de acuerdo a tus necesidades
             }
         }
 
@@ -999,8 +1089,13 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
         public void ActualizarTotales()
         {
+            // 1) Recalcular subtotal (suma de filas)
             totalFactura();
+            // 2) Recalcular descuento general según combo_descuento
             desc();
+            // 3) Recalcular recargo según forma de pago + cuotas seleccionadas
+            CalcularRecargo();
+            // 4) Tomar valores de los textbox y recalcular total + IVA
             float subtotal, recargo, descuento;
             if (!float.TryParse(txt_subtotal.Text, out subtotal)) subtotal = 0;
             if (!float.TryParse(txt_monto_recargo.Text, out recargo)) recargo = 0;
@@ -1088,12 +1183,68 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             }
         }
 
+        private void ActualizarUIFormaPago()
+        {
+            string forma = combo_forma_pago.SelectedItem?.ToString() ?? "";
+            bool esEfectivo = forma == "Efectivo";
+
+            if (esEfectivo)
+            {
+                // Mostrar controles de ingreso de pago
+                txt_ing_pago.Visible = true;
+                txt_vuelto.Visible = true;
+                lbl_pesos_1.Visible = true;
+                lbl_pesos_2.Visible = true;
+                btn_ok.Visible = true;
+                
+
+                // Ocultar cuotas (no tiene sentido en efectivo)
+                combo_cuotas.Visible = false;
+                lbl_cuotas.Text = "Ing. Pago";
+                lbl_cuotas.Location = new Point(1211, 390);
+
+                // En efectivo no usamos btn_pago de tarjeta, queda oculto
+                btn_pago.Visible = false;
+
+                // Imprimir oculto
+                btn_imprimir.Visible = false;
+            }
+            else
+            {
+                // Ocultar controles de pago en efectivo
+                txt_ing_pago.Visible = false;
+                txt_vuelto.Visible = false;
+                lbl_pesos_1.Visible = false;
+                lbl_pesos_2.Visible = false;
+                btn_ok.Visible = false;
+
+                // Mostrar cuotas si corresponde
+                combo_cuotas.Visible = true;
+                lbl_cuotas.Text = "Cuotas";
+                lbl_cuotas.Location = lblCuotasPosOriginal;
+
+                // Lógica de botón de pago/imprimir para tarjetas u otros medios
+                if (forma != "Efectivo")
+                {
+                    btn_imprimir.Visible = false;
+                    btn_pago.Visible = true;
+                }
+            }
+        }
+
+
+
         // Método para calcular el recargo según las cuotas seleccionadas
         private void CalcularRecargo()
         {
             if (combo_cuotas.SelectedItem == null)
+            {
+                txt_monto_recargo.Text = "0,00";
+                txt_rec.Text = "0";
                 return;
+            }
 
+            string formaPago = combo_forma_pago.SelectedItem?.ToString() ?? "";
             string cuotasStr = combo_cuotas.SelectedItem.ToString().Trim();
             int cuotas;
 
@@ -1105,24 +1256,35 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
             decimal recargoPct = 0m; // valor por defecto
 
-            switch (cuotas)
+            // Solo aplicamos recargo a tarjetas de crédito
+            bool esTarjetaCredito = formaPago == "Visa Crédito" || formaPago == "Mastercard" || formaPago == "Amex";
+
+            if (esTarjetaCredito)
             {
-                case 1:
-                case 3:
-                    recargoPct = 0m;
-                    break;
-                case 6:
-                    recargoPct = 10m;
-                    break;
-                case 9:
-                    recargoPct = 15m;
-                    break;
-                case 12:
-                    recargoPct = 20m;
-                    break;
-                default:
-                    recargoPct = 0m;
-                    break;
+                switch (cuotas)
+                {
+                    case 1:
+                    case 3:
+                        recargoPct = 0m;
+                        break;
+                    case 6:
+                        recargoPct = 10m;
+                        break;
+                    case 9:
+                        recargoPct = 15m;
+                        break;
+                    case 12:
+                        recargoPct = 20m;
+                        break;
+                    default:
+                        recargoPct = 0m;
+                        break;
+                }
+            }
+            else
+            {
+                // Efectivo, débito, Mercado Pago, etc. => sin recargo
+                recargoPct = 0m;
             }
 
             // Mostrar el porcentaje en el textbox
@@ -1136,7 +1298,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             }
             else
             {
-                MessageBox.Show("El subtotal no es un número válido.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                txt_monto_recargo.Text = "0,00";
             }
         }
 
@@ -1155,7 +1317,10 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
         {
             ActualizarDescuentosYCuotas();
             ActualizarTotales();
-            if (combo_forma_pago.SelectedItem.ToString() != "Efectivo")
+
+            string forma = combo_forma_pago.SelectedItem.ToString();
+
+            if (forma != "Efectivo")
             {
                 btn_imprimir.Visible = false;
                 btn_pago.Visible = true;
@@ -1165,6 +1330,9 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 btn_imprimir.Visible = true;
                 btn_pago.Visible = false;
             }
+
+            // 🔹 Ajustar visibilidad de los nuevos controles según la forma de pago
+            ActualizarUIFormaPago();
         }
 
         private void btn_pago_Click(object sender, EventArgs e)
@@ -1173,6 +1341,50 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             btn_imprimir.Visible = true;
             btn_pago.Visible = false;
         }
+
+        private void btn_ok_Click(object sender, EventArgs e)
+        {
+            // Validar que haya un importe ingresado
+            if (string.IsNullOrWhiteSpace(txt_ing_pago.Text))
+            {
+                MessageBox.Show("Ingrese el monto recibido en efectivo.", "Pago en efectivo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Parsear el total de la factura
+            if (!decimal.TryParse(txt_total.Text, NumberStyles.Any, Ar, out decimal total))
+            {
+                MessageBox.Show("El total de la factura no es válido.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // Parsear el monto ingresado (solo números, así que es sencillo)
+            if (!decimal.TryParse(txt_ing_pago.Text, NumberStyles.Any, Ar, out decimal pagado))
+            {
+                MessageBox.Show("El monto ingresado no es válido.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // Validar que el pago alcance el total
+            if (pagado < total)
+            {
+                MessageBox.Show(
+                    "El monto ingresado es menor al total de la factura.",
+                    "Pago insuficiente",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+                return;
+            }
+
+            // Si todo es correcto, hacemos EXACTAMENTE lo mismo que al hacer clic en "Imprimir"
+            btn_imprimir_Click(sender, e);
+
+            // Después de imprimir, ReiniciarFormulario() ya se llamó dentro de btn_imprimir_Click,
+            // pero nos aseguramos de que la parte de pago en efectivo también quede como al inicio:
+            OcultarControlesEfectivoYRestaurarCuotas();
+        }
+
 
         private void combo_cuotas_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -1748,6 +1960,8 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             int puntoDeVenta = Program.sucursal;
             txt_numero_factura.Text = Num_factura_máximo();
 
+            OcultarControlesEfectivoYRestaurarCuotas();
+
         }
 
         private void ImprimirPdf(string rutaPdf)
@@ -2022,6 +2236,30 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 descuentoUnitario();
                 ActualizarTotales();
             }
+        }
+
+        private void OcultarControlesEfectivoYRestaurarCuotas()
+        {
+            // Limpiar valores
+            txt_ing_pago.Text = "";
+            txt_vuelto.Text = "0,00";
+
+            // Ocultar controles de efectivo
+            txt_ing_pago.Visible = false;
+            txt_vuelto.Visible = false;
+            lbl_pesos_1.Visible = false;
+            lbl_pesos_2.Visible = false;
+            btn_ok.Visible = false;
+            btn_imprimir.Visible = false;
+
+            // Mostrar cuotas de nuevo y restaurar label
+            combo_cuotas.Visible = true;
+            lbl_cuotas.Text = "Cuotas";
+            lbl_cuotas.Location = lblCuotasPosOriginal;
+
+            // Garantizar estado de botones de pago
+            btn_pago.Visible = false;
+            btn_imprimir.Visible = true;
         }
 
 
