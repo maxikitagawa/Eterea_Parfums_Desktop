@@ -76,7 +76,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario.GenerarInformes
         {
             // Obtener sucursales y filtrar la que tiene id == 0
             var sucursales = SucursalControlador.getAll()
-                .Where(s => s.id != 0)
+                .Where(s => s.id != 0 && s.id != 3)
                 .ToList();
 
             comboBox_cambiar_sucursal.DataSource = null;
