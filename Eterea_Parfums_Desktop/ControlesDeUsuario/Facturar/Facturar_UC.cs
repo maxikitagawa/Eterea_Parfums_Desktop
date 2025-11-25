@@ -2089,6 +2089,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             {
 
             }
+            else
             {
                 // No hay caja asignada, mostrar FormNumeroDeCaja para elegirla
                 MessageBox.Show("\"Debes ingresar un número de caja. \n Haz click en 'Abrir Caja' ", "Número de Caja", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -2166,11 +2167,9 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
         {
             if (perfume == null || cantidadInicial <= 0) return;
 
-            // IMPORTANTE: si la columna del DGV se llama "Nombre" usá ese nombre acá,
-            // si se llama "Nombre_Perfume", cambialo en las líneas de Cells["Nombre"].
             const string colId = "Id_Perfume";
             const string colCantidad = "Cantidad";
-            const string colNombre = "Nombre_Perfume"; // <-- CAMBIÁ A "Nombre" si tu columna se llama así
+            const string colNombre = "Nombre_Perfume"; 
             const string colPrecioUnit = "Precio_Unitario";
             const string colDesc = "Descuento";
             const string colTot = "Tot";

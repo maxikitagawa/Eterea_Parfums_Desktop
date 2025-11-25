@@ -149,7 +149,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario.AdministrarStock
 
 
 
-        private async void txt_codigo_producto_TextChanged(object sender, EventArgs e)
+        private void txt_codigo_producto_TextChanged(object sender, EventArgs e)
         {
             if (limpiezaAutomatica) return;
 
@@ -188,7 +188,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario.AdministrarStock
 
             // === NUEVO: cargar imagen desde la web/API ===
             string url = ObtenerUrlImagenPrincipal(perfume);
-            await CargarImagenDesdeUrlAsync(url);
+            CargarImagenDesdeUrl(url);
         }
 
 
@@ -298,7 +298,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario.AdministrarStock
             return null;
         }
 
-        private async Task CargarImagenDesdeUrlAsync(string url)
+        private void CargarImagenDesdeUrl(string url)
         {
             try
             {
