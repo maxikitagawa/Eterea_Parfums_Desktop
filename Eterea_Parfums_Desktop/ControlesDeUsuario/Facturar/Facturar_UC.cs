@@ -81,6 +81,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             btn_ing_manual.Click += btn_ing_manual_Click;
             txt_ing_manual.KeyPress += txt_ing_manual_KeyPress;
             txt_ing_manual.TextChanged += txt_ing_manual_TextChanged;
+            txt_ing_manual.Leave += txt_ing_manual_Leave;
 
 
             //Evento pago en efectivo
@@ -178,6 +179,22 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 e.Handled = true; // Bloquea el carácter
             }
         }
+
+        private void txt_ing_manual_Leave(object sender, EventArgs e)
+        {
+            // Si ya no está visible (por ejemplo, porque se ocultó en ProcesarCodigoBarrasManual),
+            // no hacemos nada.
+            if (!txt_ing_manual.Visible)
+                return;
+
+            // Si el usuario hizo clic en otro lado y abandonó el ingreso manual,
+            // cancelamos el proceso y volvemos al botón.
+            txt_ing_manual.Clear();
+            txt_ing_manual.Visible = false;
+            btn_ing_manual.Visible = true;
+            btn_ing_manual.Focus();
+        }
+
 
         private void txt_ing_pago_KeyPress(object sender, KeyPressEventArgs e)
         {
