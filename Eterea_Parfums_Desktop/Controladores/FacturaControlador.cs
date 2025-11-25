@@ -79,47 +79,47 @@ namespace Eterea_Parfums_Desktop.Controladores
             string query = @"
         SELECT MAX(num_factura)
         FROM dbo.Factura
-        WHERE tipo_de_factura = @tipo_de_factura;
+        WHERE tipo_de_factura = @tipo_de_factura
+          AND LEFT(num_factura, 4) = @punto_de_venta;
     ";
 
             using (SqlConnection conexion = new SqlConnection(DB_Controller.GetConnectionString()))
+            using (SqlCommand cmd = new SqlCommand(query, conexion))
             {
-                using (SqlCommand cmd = new SqlCommand(query, conexion))
+                cmd.Parameters.AddWithValue("@tipo_de_factura", tipoDeFactura);
+                cmd.Parameters.AddWithValue("@punto_de_venta", puntoDeVenta); // ej: "0001" o "0004"
+
+                try
                 {
-                    cmd.Parameters.AddWithValue("@tipo_de_factura", tipoDeFactura);
+                    conexion.Open();
+                    var result = cmd.ExecuteScalar();
 
-                    try
+                    if (result != null && result != DBNull.Value)
                     {
-                        conexion.Open();
-                        var result = cmd.ExecuteScalar();
+                        string maxNumFactura = result.ToString();
 
-                        if (result != null && result != DBNull.Value)
+                        if (maxNumFactura.Length >= 12)
                         {
-                            string maxNumFactura = result.ToString();
-
-                            if (maxNumFactura.Length >= 12)
-                            {
-                                string parteNumerica = maxNumFactura.Substring(4, 8); // Últimos 8 dígitos
-                                nuevoNumero = int.Parse(parteNumerica) + 1;
-                            }
-                            else
-                            {
-                                throw new Exception("El formato de num_factura no es válido. Valor: " + maxNumFactura);
-                            }
+                            // Primeros 4 = punto de venta, últimos 8 = número correlativo
+                            string parteNumerica = maxNumFactura.Substring(4, 8);
+                            nuevoNumero = int.Parse(parteNumerica) + 1;
                         }
+                        else
+                        {
+                            throw new Exception("El formato de num_factura no es válido. Valor: " + maxNumFactura);
+                        }
+                    }
 
-                        proximoNumFactura = puntoDeVenta + nuevoNumero.ToString("D8");
-                    }
-                    catch (Exception ex)
-                    {
-                        throw new Exception("Error al obtener el próximo número de factura: " + ex.Message);
-                    }
+                    proximoNumFactura = puntoDeVenta + nuevoNumero.ToString("D8");
                 }
-
-                return proximoNumFactura;
+                catch (Exception ex)
+                {
+                    throw new Exception("Error al obtener el próximo número de factura: " + ex.Message);
+                }
             }
-        }
 
+            return proximoNumFactura;
+        }
 
 
         //CREAR UNA FACTURA AL IMPRIMIR LA VENTA

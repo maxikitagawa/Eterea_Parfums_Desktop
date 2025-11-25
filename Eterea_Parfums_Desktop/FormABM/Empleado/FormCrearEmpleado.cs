@@ -167,7 +167,7 @@ namespace Eterea_Parfums_Desktop
             combo_sucursal.DrawItem += comboBoxdiseño_DrawItem;
             combo_sucursal.DropDownStyle = ComboBoxStyle.DropDownList;
             combo_sucursal.Items.Clear();
-            foreach (var s in _sucursales.Where(s => s.id != 0))
+            foreach (var s in _sucursales.Where(s => s.id != 0 && s.id != 3))
                 combo_sucursal.Items.Add(s.nombre);
 
             // País/Prov/Loc/Calle con escritura + autocompletar dependiente

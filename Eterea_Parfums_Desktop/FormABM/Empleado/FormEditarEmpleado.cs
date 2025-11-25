@@ -161,7 +161,7 @@ namespace Eterea_Parfums_Desktop
             // ---- Cargar listas base ----
             _sucursales = SucursalControlador.getAll() ?? new List<Sucursal>();
             combo_sucursal.Items.Clear();
-            foreach (var s in _sucursales.Where(s => s.id != 0))
+            foreach (var s in _sucursales.Where(s => s.id != 0 && s.id != 3))
                 combo_sucursal.Items.Add(s.nombre);
 
             _paises = PaisControlador.getAll() ?? new List<Pais>();
