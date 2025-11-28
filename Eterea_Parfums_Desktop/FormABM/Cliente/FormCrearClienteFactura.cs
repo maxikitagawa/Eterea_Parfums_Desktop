@@ -1,5 +1,6 @@
 ﻿using Eterea_Parfums_Desktop.Controladores;
 using Eterea_Parfums_Desktop.ControlesDeUsuario;
+using Eterea_Parfums_Desktop.Helpers;
 using Eterea_Parfums_Desktop.Modelos;
 using PdfSharp.Quality;
 using System;
@@ -152,6 +153,23 @@ namespace Eterea_Parfums_Desktop
 
                 if (ClienteControlador.crearCliente(cliente))
                 {
+                    //Enviar correo de bienvenida con usuario y clave inicial
+                    try
+                    {
+                        CorreoHelper.EnviarCorreoBienvenidaNuevoUsuario(
+                            txt_email.Text.Trim(),
+                            txt_nombre.Text.Trim(),
+                            txt_apellido.Text.Trim(),
+                            usuario,          // DNI o CUIT
+                            clavePorDefecto   // DNI o CUIT como contraseña inicial
+                        );
+                    }
+                    catch
+                    {
+                        //EnviarCorreo ya atrapa excepciones y muestra mensaje, dejamos este catch vacío
+                        
+                    }
+
                     this.ClienteCreado = cliente;            // devolver el cliente
                     this.DialogResult = DialogResult.OK;     // informar OK al padre
                     this.Close();

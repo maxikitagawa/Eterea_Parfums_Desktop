@@ -25,6 +25,8 @@ namespace Eterea_Parfums_Desktop.Helpers
             EnviarCorreo(asunto, mensaje, emailDestino);
         }
 
+
+
         private static void EnviarCorreo(string asunto, string mensaje, string emailDestino)
         {
             try
@@ -50,6 +52,31 @@ namespace Eterea_Parfums_Desktop.Helpers
                 MessageBox.Show("Error al enviar correo: " + ex.Message);
             }
         }
+
+        public static void EnviarCorreoBienvenidaNuevoUsuario(
+    string emailDestino,
+    string nombreCliente,
+    string apellidoCliente,
+    string usuario,
+    string claveTemporal)
+        {
+            string asunto = "¡Bienvenido a Etérea Parfums! Tu usuario para la web y la app";
+
+            string mensaje =
+                $"Hola {nombreCliente} {apellidoCliente},\n\n" +
+                "¡Felicitaciones! Ya tenés tu nuevo usuario para ingresar a nuestra página web o utilizar nuestra app.\n\n" +
+                "Ingresá a www.etereaparfums.com.ar e ingresá por primera vez con los siguientes datos:\n\n" +
+                $"    Usuario: {usuario}\n" +
+                $"    Contraseña: {claveTemporal}\n\n" +
+                "En tu primer ingreso se te pedirá que cambies y actualices estos datos y que completes tu registro ingresando tu domicilio.\n" +
+                "Listo, ya podés usar tu carrito de compras y disfrutar del placer de comprar desde tu casa o donde estés.\n\n" +
+                "¡Gracias por elegirnos!\n\n" +
+                "Etérea Parfums.";
+
+            // Reutilizamos tu lógica ya existente
+            EnviarCorreo(asunto, mensaje, emailDestino);
+        }
+
         public static void EnviarCorreoFactura(string rutaArchivoPdf, string emailDestino)
         {
             string asunto = "Factura de tu compra";
