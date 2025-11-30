@@ -171,7 +171,7 @@
             this.lbl_emailE.AutoSize = true;
             this.lbl_emailE.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_emailE.ForeColor = System.Drawing.Color.Crimson;
-            this.lbl_emailE.Location = new System.Drawing.Point(152, 569);
+            this.lbl_emailE.Location = new System.Drawing.Point(146, 569);
             this.lbl_emailE.Name = "lbl_emailE";
             this.lbl_emailE.Size = new System.Drawing.Size(29, 13);
             this.lbl_emailE.TabIndex = 140;
@@ -182,7 +182,7 @@
             this.lbl_celularE.AutoSize = true;
             this.lbl_celularE.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_celularE.ForeColor = System.Drawing.Color.Crimson;
-            this.lbl_celularE.Location = new System.Drawing.Point(152, 502);
+            this.lbl_celularE.Location = new System.Drawing.Point(146, 502);
             this.lbl_celularE.Name = "lbl_celularE";
             this.lbl_celularE.Size = new System.Drawing.Size(29, 13);
             this.lbl_celularE.TabIndex = 139;
@@ -204,7 +204,7 @@
             this.lbl_dniE.AutoSize = true;
             this.lbl_dniE.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_dniE.ForeColor = System.Drawing.Color.Crimson;
-            this.lbl_dniE.Location = new System.Drawing.Point(151, 283);
+            this.lbl_dniE.Location = new System.Drawing.Point(146, 283);
             this.lbl_dniE.Name = "lbl_dniE";
             this.lbl_dniE.Size = new System.Drawing.Size(29, 13);
             this.lbl_dniE.TabIndex = 137;
@@ -215,7 +215,7 @@
             this.lbl_apellidoE.AutoSize = true;
             this.lbl_apellidoE.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_apellidoE.ForeColor = System.Drawing.Color.Crimson;
-            this.lbl_apellidoE.Location = new System.Drawing.Point(153, 404);
+            this.lbl_apellidoE.Location = new System.Drawing.Point(147, 404);
             this.lbl_apellidoE.Name = "lbl_apellidoE";
             this.lbl_apellidoE.Size = new System.Drawing.Size(29, 13);
             this.lbl_apellidoE.TabIndex = 136;
@@ -226,7 +226,7 @@
             this.lbl_nombreE.AutoSize = true;
             this.lbl_nombreE.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_nombreE.ForeColor = System.Drawing.Color.Crimson;
-            this.lbl_nombreE.Location = new System.Drawing.Point(153, 343);
+            this.lbl_nombreE.Location = new System.Drawing.Point(147, 343);
             this.lbl_nombreE.Name = "lbl_nombreE";
             this.lbl_nombreE.Size = new System.Drawing.Size(29, 13);
             this.lbl_nombreE.TabIndex = 135;
@@ -237,7 +237,7 @@
             this.lbl_claveE.AutoSize = true;
             this.lbl_claveE.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_claveE.ForeColor = System.Drawing.Color.Crimson;
-            this.lbl_claveE.Location = new System.Drawing.Point(151, 191);
+            this.lbl_claveE.Location = new System.Drawing.Point(146, 191);
             this.lbl_claveE.Name = "lbl_claveE";
             this.lbl_claveE.Size = new System.Drawing.Size(29, 13);
             this.lbl_claveE.TabIndex = 134;
@@ -248,7 +248,7 @@
             this.lbl_usuarioE.AutoSize = true;
             this.lbl_usuarioE.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_usuarioE.ForeColor = System.Drawing.Color.Crimson;
-            this.lbl_usuarioE.Location = new System.Drawing.Point(151, 133);
+            this.lbl_usuarioE.Location = new System.Drawing.Point(146, 133);
             this.lbl_usuarioE.Name = "lbl_usuarioE";
             this.lbl_usuarioE.Size = new System.Drawing.Size(29, 13);
             this.lbl_usuarioE.TabIndex = 133;
