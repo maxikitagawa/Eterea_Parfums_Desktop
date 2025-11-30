@@ -1701,8 +1701,8 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                     domicilioEntero = FormatearDomicilio(cliente);
                 }
 
-                Pagina
-                    _Texto = PaginaHTML_Texto.Replace("@CLIENTE", txt_nombre_cliente.Text);
+
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@CLIENTE", txt_nombre_cliente.Text);
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DOCUMENTO", dni);
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@NUMEROFACTURA", txt_numero_factura.Text);
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@FECHA", DateTime.Now.ToString("dd/MM/yyyy"));
