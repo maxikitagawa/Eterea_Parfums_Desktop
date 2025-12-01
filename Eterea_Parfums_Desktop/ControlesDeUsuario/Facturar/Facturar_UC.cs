@@ -1936,7 +1936,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             {
                 // Sí = enviar por mail, No = imprimir, Cancel = nada
                 var elegir = MessageBox.Show(
-                    $"¿Cómo querés entregar la factura?\n\nSí = Enviar por mail a {txt_email.Text}\nNo = Imprimir\nCancelar = No enviar. No imprimir.\nSolo generarla en el sistema.",
+                    $"¿Cómo querés entregar la factura?\n\nSí = Enviar por mail a {txt_email.Text}\nNo = Imprimir\nCancelar = No enviar. No imprimir.\n           Solo generarla en el sistema.",
                     "Entregar factura",
                     MessageBoxButtons.YesNoCancel,
                     MessageBoxIcon.Question
