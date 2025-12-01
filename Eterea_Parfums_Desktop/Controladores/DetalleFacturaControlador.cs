@@ -75,8 +75,10 @@ namespace Eterea_Parfums_Desktop.Controladores
                         cmd.Parameters.AddWithValue("@perfume_id", perfume_id);
                         cmd.Parameters.AddWithValue("@cantidad", cantidad);
                         cmd.Parameters.AddWithValue("@precio_unitario", precio_unitario);
-                        cmd.Parameters.AddWithValue("@promocion_id", promocion_id);
-                        cmd.Parameters.AddWithValue("@promocion2_id", promocion2_id);
+                        cmd.Parameters.AddWithValue("@promocion_id",
+                        (object)promocion_id ?? 1);
+                        cmd.Parameters.AddWithValue("@promocion2_id",
+                        (object)promocion2_id ?? DBNull.Value);
 
                         connection.Open();
                         cmd.ExecuteNonQuery();

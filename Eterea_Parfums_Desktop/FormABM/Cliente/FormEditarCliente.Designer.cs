@@ -158,7 +158,7 @@
             this.pictureBox1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.pictureBox1.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.pictureBox1.Location = new System.Drawing.Point(442, 84);
-            this.pictureBox1.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.pictureBox1.Margin = new System.Windows.Forms.Padding(2);
             this.pictureBox1.Name = "pictureBox1";
             this.pictureBox1.Size = new System.Drawing.Size(419, 111);
             this.pictureBox1.TabIndex = 507;
@@ -532,7 +532,7 @@
             this.lbl_emailE.AutoSize = true;
             this.lbl_emailE.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_emailE.ForeColor = System.Drawing.Color.Crimson;
-            this.lbl_emailE.Location = new System.Drawing.Point(163, 563);
+            this.lbl_emailE.Location = new System.Drawing.Point(150, 564);
             this.lbl_emailE.Name = "lbl_emailE";
             this.lbl_emailE.Size = new System.Drawing.Size(29, 13);
             this.lbl_emailE.TabIndex = 460;
@@ -543,7 +543,7 @@
             this.lbl_celularE.AutoSize = true;
             this.lbl_celularE.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_celularE.ForeColor = System.Drawing.Color.Crimson;
-            this.lbl_celularE.Location = new System.Drawing.Point(163, 496);
+            this.lbl_celularE.Location = new System.Drawing.Point(150, 498);
             this.lbl_celularE.Name = "lbl_celularE";
             this.lbl_celularE.Size = new System.Drawing.Size(29, 13);
             this.lbl_celularE.TabIndex = 459;
@@ -554,7 +554,7 @@
             this.lbl_dniE.AutoSize = true;
             this.lbl_dniE.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_dniE.ForeColor = System.Drawing.Color.Crimson;
-            this.lbl_dniE.Location = new System.Drawing.Point(166, 277);
+            this.lbl_dniE.Location = new System.Drawing.Point(150, 276);
             this.lbl_dniE.Name = "lbl_dniE";
             this.lbl_dniE.Size = new System.Drawing.Size(29, 13);
             this.lbl_dniE.TabIndex = 457;
@@ -565,7 +565,7 @@
             this.lbl_apellidoE.AutoSize = true;
             this.lbl_apellidoE.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_apellidoE.ForeColor = System.Drawing.Color.Crimson;
-            this.lbl_apellidoE.Location = new System.Drawing.Point(166, 402);
+            this.lbl_apellidoE.Location = new System.Drawing.Point(150, 400);
             this.lbl_apellidoE.Name = "lbl_apellidoE";
             this.lbl_apellidoE.Size = new System.Drawing.Size(29, 13);
             this.lbl_apellidoE.TabIndex = 456;
@@ -576,7 +576,7 @@
             this.lbl_nombreE.AutoSize = true;
             this.lbl_nombreE.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_nombreE.ForeColor = System.Drawing.Color.Crimson;
-            this.lbl_nombreE.Location = new System.Drawing.Point(166, 340);
+            this.lbl_nombreE.Location = new System.Drawing.Point(150, 339);
             this.lbl_nombreE.Name = "lbl_nombreE";
             this.lbl_nombreE.Size = new System.Drawing.Size(29, 13);
             this.lbl_nombreE.TabIndex = 455;
@@ -598,7 +598,7 @@
             this.lbl_usuarioE.AutoSize = true;
             this.lbl_usuarioE.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_usuarioE.ForeColor = System.Drawing.Color.Crimson;
-            this.lbl_usuarioE.Location = new System.Drawing.Point(166, 169);
+            this.lbl_usuarioE.Location = new System.Drawing.Point(150, 169);
             this.lbl_usuarioE.Name = "lbl_usuarioE";
             this.lbl_usuarioE.Size = new System.Drawing.Size(29, 13);
             this.lbl_usuarioE.TabIndex = 453;
@@ -622,9 +622,9 @@
             this.txt_email.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txt_email.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.txt_email.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
-            this.txt_email.Location = new System.Drawing.Point(165, 535);
+            this.txt_email.Location = new System.Drawing.Point(153, 535);
             this.txt_email.Name = "txt_email";
-            this.txt_email.Size = new System.Drawing.Size(246, 26);
+            this.txt_email.Size = new System.Drawing.Size(258, 26);
             this.txt_email.TabIndex = 447;
             // 
             // lbl_Celular
@@ -645,9 +645,9 @@
             this.txt_celular.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txt_celular.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.txt_celular.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
-            this.txt_celular.Location = new System.Drawing.Point(165, 469);
+            this.txt_celular.Location = new System.Drawing.Point(153, 469);
             this.txt_celular.Name = "txt_celular";
-            this.txt_celular.Size = new System.Drawing.Size(246, 26);
+            this.txt_celular.Size = new System.Drawing.Size(258, 26);
             this.txt_celular.TabIndex = 445;
             // 
             // lbl_dni
@@ -668,9 +668,9 @@
             this.txt_dni.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txt_dni.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.txt_dni.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
-            this.txt_dni.Location = new System.Drawing.Point(165, 246);
+            this.txt_dni.Location = new System.Drawing.Point(153, 246);
             this.txt_dni.Name = "txt_dni";
-            this.txt_dni.Size = new System.Drawing.Size(246, 26);
+            this.txt_dni.Size = new System.Drawing.Size(258, 26);
             this.txt_dni.TabIndex = 443;
             // 
             // lbl_apellido
@@ -691,9 +691,9 @@
             this.txt_apellido.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txt_apellido.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.txt_apellido.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
-            this.txt_apellido.Location = new System.Drawing.Point(165, 370);
+            this.txt_apellido.Location = new System.Drawing.Point(153, 370);
             this.txt_apellido.Name = "txt_apellido";
-            this.txt_apellido.Size = new System.Drawing.Size(246, 26);
+            this.txt_apellido.Size = new System.Drawing.Size(258, 26);
             this.txt_apellido.TabIndex = 441;
             // 
             // lbl_nombre
@@ -714,9 +714,9 @@
             this.txt_nombre.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txt_nombre.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.txt_nombre.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
-            this.txt_nombre.Location = new System.Drawing.Point(165, 309);
+            this.txt_nombre.Location = new System.Drawing.Point(153, 309);
             this.txt_nombre.Name = "txt_nombre";
-            this.txt_nombre.Size = new System.Drawing.Size(246, 26);
+            this.txt_nombre.Size = new System.Drawing.Size(258, 26);
             this.txt_nombre.TabIndex = 439;
             // 
             // lbl_clave
@@ -749,9 +749,9 @@
             this.txt_usuario.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txt_usuario.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.txt_usuario.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
-            this.txt_usuario.Location = new System.Drawing.Point(165, 141);
+            this.txt_usuario.Location = new System.Drawing.Point(153, 141);
             this.txt_usuario.Name = "txt_usuario";
-            this.txt_usuario.Size = new System.Drawing.Size(246, 26);
+            this.txt_usuario.Size = new System.Drawing.Size(258, 26);
             this.txt_usuario.TabIndex = 436;
             // 
             // txt_clave
@@ -784,7 +784,7 @@
             this.pictureBox3.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.pictureBox3.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.pictureBox3.Location = new System.Drawing.Point(18, 226);
-            this.pictureBox3.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.pictureBox3.Margin = new System.Windows.Forms.Padding(2);
             this.pictureBox3.Name = "pictureBox3";
             this.pictureBox3.Size = new System.Drawing.Size(419, 206);
             this.pictureBox3.TabIndex = 490;
@@ -795,7 +795,7 @@
             this.pictureBox5.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.pictureBox5.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.pictureBox5.Location = new System.Drawing.Point(442, 202);
-            this.pictureBox5.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.pictureBox5.Margin = new System.Windows.Forms.Padding(2);
             this.pictureBox5.Name = "pictureBox5";
             this.pictureBox5.Size = new System.Drawing.Size(419, 111);
             this.pictureBox5.TabIndex = 491;
@@ -806,7 +806,7 @@
             this.pictureBox6.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.pictureBox6.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.pictureBox6.Location = new System.Drawing.Point(18, 438);
-            this.pictureBox6.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.pictureBox6.Margin = new System.Windows.Forms.Padding(2);
             this.pictureBox6.Name = "pictureBox6";
             this.pictureBox6.Size = new System.Drawing.Size(419, 164);
             this.pictureBox6.TabIndex = 492;
@@ -817,7 +817,7 @@
             this.pictureBox7.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.pictureBox7.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.pictureBox7.Location = new System.Drawing.Point(442, 318);
-            this.pictureBox7.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.pictureBox7.Margin = new System.Windows.Forms.Padding(2);
             this.pictureBox7.Name = "pictureBox7";
             this.pictureBox7.Size = new System.Drawing.Size(419, 284);
             this.pictureBox7.TabIndex = 493;
@@ -828,7 +828,7 @@
             this.pictureBox2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.pictureBox2.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.pictureBox2.Location = new System.Drawing.Point(866, 84);
-            this.pictureBox2.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.pictureBox2.Margin = new System.Windows.Forms.Padding(2);
             this.pictureBox2.Name = "pictureBox2";
             this.pictureBox2.Size = new System.Drawing.Size(391, 92);
             this.pictureBox2.TabIndex = 494;
@@ -839,7 +839,7 @@
             this.pictureBox8.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.pictureBox8.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.pictureBox8.Location = new System.Drawing.Point(866, 182);
-            this.pictureBox8.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.pictureBox8.Margin = new System.Windows.Forms.Padding(2);
             this.pictureBox8.Name = "pictureBox8";
             this.pictureBox8.Size = new System.Drawing.Size(391, 219);
             this.pictureBox8.TabIndex = 495;
@@ -850,7 +850,7 @@
             this.pictureBox9.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.pictureBox9.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.pictureBox9.Location = new System.Drawing.Point(866, 406);
-            this.pictureBox9.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.pictureBox9.Margin = new System.Windows.Forms.Padding(2);
             this.pictureBox9.Name = "pictureBox9";
             this.pictureBox9.Size = new System.Drawing.Size(391, 196);
             this.pictureBox9.TabIndex = 497;
@@ -888,7 +888,7 @@
             this.pictureBox13.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.pictureBox13.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.pictureBox13.Location = new System.Drawing.Point(11, 13);
-            this.pictureBox13.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.pictureBox13.Margin = new System.Windows.Forms.Padding(2);
             this.pictureBox13.Name = "pictureBox13";
             this.pictureBox13.Size = new System.Drawing.Size(1185, 58);
             this.pictureBox13.TabIndex = 498;
@@ -911,7 +911,7 @@
             this.pictureBox4.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.pictureBox4.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.pictureBox4.Location = new System.Drawing.Point(866, 609);
-            this.pictureBox4.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.pictureBox4.Margin = new System.Windows.Forms.Padding(2);
             this.pictureBox4.Name = "pictureBox4";
             this.pictureBox4.Size = new System.Drawing.Size(391, 96);
             this.pictureBox4.TabIndex = 504;
@@ -922,7 +922,7 @@
             this.pictureBox14.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.pictureBox14.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.pictureBox14.Location = new System.Drawing.Point(18, 609);
-            this.pictureBox14.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.pictureBox14.Margin = new System.Windows.Forms.Padding(2);
             this.pictureBox14.Name = "pictureBox14";
             this.pictureBox14.Size = new System.Drawing.Size(843, 96);
             this.pictureBox14.TabIndex = 503;
@@ -933,7 +933,7 @@
             this.pictureBox11.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.pictureBox11.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.pictureBox11.Location = new System.Drawing.Point(18, 84);
-            this.pictureBox11.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.pictureBox11.Margin = new System.Windows.Forms.Padding(2);
             this.pictureBox11.Name = "pictureBox11";
             this.pictureBox11.Size = new System.Drawing.Size(419, 136);
             this.pictureBox11.TabIndex = 505;
@@ -944,7 +944,7 @@
             this.pictureBox12.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(249)))), ((int)(((byte)(225)))), ((int)(((byte)(230)))));
             this.pictureBox12.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.pictureBox12.Location = new System.Drawing.Point(11, 76);
-            this.pictureBox12.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.pictureBox12.Margin = new System.Windows.Forms.Padding(2);
             this.pictureBox12.Name = "pictureBox12";
             this.pictureBox12.Size = new System.Drawing.Size(1251, 635);
             this.pictureBox12.TabIndex = 506;
@@ -956,7 +956,7 @@
             this.pictureBox17.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
             this.pictureBox17.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.pictureBox17.Location = new System.Drawing.Point(6, 7);
-            this.pictureBox17.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.pictureBox17.Margin = new System.Windows.Forms.Padding(2);
             this.pictureBox17.Name = "pictureBox17";
             this.pictureBox17.Size = new System.Drawing.Size(1264, 711);
             this.pictureBox17.TabIndex = 501;
@@ -1044,7 +1044,7 @@
             this.Controls.Add(this.pictureBox12);
             this.Controls.Add(this.pictureBox17);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
-            this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.Margin = new System.Windows.Forms.Padding(2);
             this.Name = "FormEditarCliente";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "FormEditarClienteABM";

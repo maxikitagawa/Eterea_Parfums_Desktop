@@ -30,7 +30,7 @@ namespace Eterea_Parfums_Desktop
 
             // Obtener todas las sucursales menos la "WEB"
             List<Sucursal> sucursales = SucursalControlador.getAll()
-             .Where(s => s.id != 0)
+             .Where(s => s.id != 0 && s.id !=3)
              .ToList();
 
 

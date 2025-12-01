@@ -41,7 +41,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
         private Point lblCuotasPosOriginal;
 
-
+        private double totalDescuentoPromoFactura = 0.0;
 
         private static string ObtenerCarpetaFacturas()
         {
@@ -1006,24 +1006,30 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
         private void totalFactura()
         {
-            double sumaPrecios = 0; // Usar decimal para los precios
+            decimal sumaPrecios = 0m;
 
-            // Iterar a través de las filas del DataGridView
             foreach (DataGridViewRow fila in Factura.Rows)
             {
-                if (fila.Cells[4].Value != null)
+                if (fila.IsNewRow)
+                    continue;
+
+                // "Tot" es la columna total de la fila
+                var celdaTot = fila.Cells["Tot"].Value;
+                if (celdaTot == null)
+                    continue;
+
+                decimal precioFila;
+                if (decimal.TryParse(celdaTot.ToString(), NumberStyles.Any, Ar, out precioFila))
                 {
-                    double precioFila = 0;
-                    // Comprobar si el valor se puede convertir a decimal
-                    if (double.TryParse(fila.Cells[7].Value.ToString(), out precioFila))
-                    {
-                        sumaPrecios += precioFila; // Sumar el valor al total
-                    }
+                    sumaPrecios += precioFila;
                 }
             }
-            // Mostrar la suma en un TextBox
-            txt_subtotal.Text = sumaPrecios.ToString("N2");
+
+            // txt_subtotal = suma de la columna Tot del DGV Factura
+            txt_subtotal.Text = sumaPrecios.ToString("N2", Ar);
         }
+
+   
 
         private void CalcularImporteRecargo(float subtotal, float recargo)
         {
@@ -1088,20 +1094,35 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
         {
             string condicionCliente = txt_condicion_iva.Text.Trim();
 
-            // Verificar si el cliente es Responsable Monotributo
-            if (condicionCliente.Contains("Monotributista") || condicionCliente.Contains("Responsable Inscripto"))
+            // 🔹 Total con IVA incluido (lo que realmente se cobra)
+            float totalConIva = subtotal + recargo - descuento;
+
+            // Mostrar el total en el textbox usando la cultura AR
+            txt_total.Text = totalConIva.ToString("N2", Ar);
+
+            // Solo discriminamos IVA para Responsable Inscripto
+            if (condicionCliente.Contains("Responsable Inscripto"))
             {
-                float subtotalsiniva = subtotal / 1.21f;
-                txt_subtotal.Text = subtotalsiniva.ToString("N2");
-                txt_total.Text = (subtotal + recargo - descuento).ToString("N2");
-                txt_iva.Text = CalcularIVA(subtotal).ToString("N2");
+                decimal totalDec = (decimal)totalConIva;
+
+                // Base imponible = Total / 1.21
+                decimal baseImponibleDec = Math.Round(totalDec / 1.21m, 2, MidpointRounding.AwayFromZero);
+
+                // IVA = Total - Base imponible
+                decimal ivaDec = Math.Round(totalDec - baseImponibleDec, 2, MidpointRounding.AwayFromZero);
+
+                // ❗ YA NO TOCAMOS txt_subtotal: queda como suma de Tot
+                txt_iva.Text = ivaDec.ToString("N2", Ar);
             }
             else
             {
-                txt_total.Text = (subtotal + recargo - descuento).ToString("N2");
-                txt_iva.Text = "0.00";
+                // Consumidor Final / Exento / Monotributista: no se discrimina IVA
+                txt_iva.Text = 0m.ToString("N2", Ar);
             }
         }
+
+
+
 
 
 
@@ -1144,14 +1165,6 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             Factura.CellPainting += Factura_CellPainting;
 
             return Factura;
-        }
-
-        private float CalcularIVA(float subtotal)
-        {
-            // El subtotal ya incluye el IVA. Calculamos solo sobre él.
-            float iva = subtotal * 21f / 121f;
-
-            return iva;
         }
 
         private void ActualizarDescuentosYCuotas()
@@ -1457,7 +1470,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             }
             ActualizarTotales();
         }
- 
+
 
         private void CrearFactura()
         {
@@ -1465,40 +1478,75 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             {
                 Empleado empleadoAFacturar = new Empleado();
 
-                // Obtener los valores de los controles del formulario
-
-                int id = FacturaControlador.ObtenerProximoIdFactura(); 
+                int id = FacturaControlador.ObtenerProximoIdFactura();
                 DateTime fecha = DateTime.Now;
                 int sucursalId = Program.sucursal;
                 int vendedorId = Program.logueado.id;
+
                 int clienteId = clientefactura.id;
                 if (clienteId == 0)
                 {
-                    clienteId = 1;
+                    clienteId = 1; // Cliente "Consumidor Final" por defecto
                 }
+
                 string formaDePago = combo_forma_pago.SelectedItem.ToString();
-                double precioTotal = double.Parse(txt_total.Text);
-                double recargoTarjeta = double.Parse(txt_monto_recargo.Text);
-                double descuento = double.Parse(txt_monto_descuento.Text);
+
+                // Usamos decimal + CultureInfo Ar para evitar problemas de comas/puntos
+                decimal precioTotal = decimal.Parse(txt_total.Text, Ar);
+                decimal recargoTarjeta = decimal.Parse(txt_monto_recargo.Text, Ar);
+
+                // Bonificación por forma de pago (efectivo)
+                decimal bonificacion = decimal.Parse(txt_monto_descuento.Text, Ar);
+
+                // 🔹 Descuento por PROMOCIÓN (acumulado en Factura A/B)
+                // Asegurate de tener esto declarado arriba en la clase:
+                // private double totalDescuentoPromoFactura = 0.0;
+                decimal descuentoPromo = Math.Round(
+                                              (decimal)totalDescuentoPromoFactura,
+                                              2,
+                                              MidpointRounding.AwayFromZero);
+
+                // 🔹 Descuento TOTAL = promo + bonificación (redondeado a 2 decimales)
+                decimal descuentoTotal = Math.Round(
+                                              bonificacion + descuentoPromo,
+                                              2,
+                                              MidpointRounding.AwayFromZero);
+
                 int numeroDeCaja = int.Parse(txt_numero_caja.Text);
+
                 string tipoConsumidor = clientefactura.condicion_frente_al_iva;
                 if (string.IsNullOrEmpty(tipoConsumidor))
                 {
                     tipoConsumidor = "Consumidor Final";
                 }
+
                 string origen = "Local";
                 string facturaPdf = "";
                 string numFactura = txt_numero_factura.Text;
                 string tipoDeFactura = tipo_de_factura();
 
                 // Llamar al método crearFactura desde FacturaControlador
-                bool exito = FacturaControlador.crearFactura(id,fecha,sucursalId,vendedorId,clienteId,
-            formaDePago,precioTotal,recargoTarjeta,descuento,numeroDeCaja,tipoConsumidor,origen,facturaPdf,numFactura,tipoDeFactura);
+                bool exito = FacturaControlador.crearFactura(
+                    id,
+                    fecha,
+                    sucursalId,
+                    vendedorId,
+                    clienteId,
+                    formaDePago,
+                    (double)precioTotal,
+                    (double)recargoTarjeta,
+                    (double)descuentoTotal,  // ⬅️ AQUÍ VA PROMO + BONIFICACIÓN
+                    numeroDeCaja,
+                    tipoConsumidor,
+                    origen,
+                    facturaPdf,
+                    numFactura,
+                    tipoDeFactura
+                );
 
                 if (exito)
                 {
                     MessageBox.Show("Factura creada exitosamente.");
-
                 }
                 else
                 {
@@ -1510,6 +1558,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 MessageBox.Show("Error al crear la factura: " + ex.Message);
             }
         }
+
 
         private void CrearDetalleFactura()
         {
@@ -1633,6 +1682,46 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             return "SIN DATO";                                     // no hay datos
         }
 
+        private static void RellenarDatosSucursalEnEncabezado(ref string html)
+        {
+            // Sucursal configurada en el config.json y cargada en Program.sucursal
+            int sucursalId = Program.sucursal;
+
+            Sucursal suc = SucursalControlador.getById(sucursalId);
+
+            string dirSucursal = "SIN DOMICILIO";
+            string locPaisSuc = "SIN LOCALIDAD";
+
+            if (suc != null)
+            {
+                // ==== Calle + número ====
+                string calle = suc.calle_id?.nombre?.Trim();
+
+                // Si numeracion_calle es int "normal"
+                int numero = suc.numeracion_calle;
+
+                if (!string.IsNullOrWhiteSpace(calle))
+                {
+                    dirSucursal = numero > 0 ? $"{calle} {numero}" : calle;
+                }
+
+                // ==== Localidad y país ====
+                string localidad = suc.localidad_id?.nombre?.Trim();
+                string pais = suc.pais_id?.nombre?.Trim();
+
+                if (!string.IsNullOrWhiteSpace(localidad) || !string.IsNullOrWhiteSpace(pais))
+                {
+                    if (!string.IsNullOrWhiteSpace(localidad) && !string.IsNullOrWhiteSpace(pais))
+                        locPaisSuc = $"{localidad}, {pais}";
+                    else
+                        locPaisSuc = !string.IsNullOrWhiteSpace(localidad) ? localidad : pais;
+                }
+            }
+
+            // Reemplazar los placeholders en la plantilla HTML
+            html = html.Replace("@DIR_SUCURSAL", dirSucursal);
+            html = html.Replace("@LOC_PAIS_SUC", locPaisSuc);
+        }
 
 
         private void btn_imprimir_Click(object sender, EventArgs e)
@@ -1664,7 +1753,8 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             string carpetaFacturas = ObtenerCarpetaFacturas();
 
             string rutaFactura = Path.Combine(carpetaFacturas, $"Factura_Orden_{txt_numero_factura.Text}.pdf");
-            string filePath = rutaFactura; // si lo usás más abajo
+            string filePath = rutaFactura;
+
 
             // ---------------------------
             // FACTURA B (Consumidor Final / Exento / Monotributista)
@@ -1710,6 +1800,9 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DOMICILIO", domicilioEntero);
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@LOCALIDAD", localidad);
 
+                // 🔹 Completar Dirección y Localidad/Pais de la sucursal
+                RellenarDatosSucursalEnEncabezado(ref PaginaHTML_Texto);
+
                 // ===== Fila dinámica de "Forma de Pago" (+ "Cuotas" si es tarjeta) =====
                 var forma = combo_forma_pago.SelectedItem?.ToString() ?? "";
                 var cuotasSel = combo_cuotas.SelectedItem?.ToString() ?? "1";
@@ -1720,58 +1813,75 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 {
                     // 2 recuadros: Forma de Pago | Cuotas
                     rowFormaPago = @"
-                <tr>
-                  <td style='background:#F6DDE6; font-weight:bold;'>Forma de Pago:</td>
-                  <td style='width:40%;'>" + System.Net.WebUtility.HtmlEncode(forma) + @"</td>
-                  <td style='width:20%; background:#F6DDE6; font-weight:bold;'>Cuotas:</td>
-                  <td>" + System.Net.WebUtility.HtmlEncode(cuotasSel) + @"</td>
-                </tr>";
+        <tr>
+          <td style='background:#F6DDE6; font-weight:bold;'>Forma de Pago:</td>
+          <td style='width:40%;'>" + System.Net.WebUtility.HtmlEncode(forma) + @"</td>
+          <td style='width:20%; background:#F6DDE6; font-weight:bold;'>Cuotas:</td>
+          <td>" + System.Net.WebUtility.HtmlEncode(cuotasSel) + @"</td>
+        </tr>";
                 }
                 else
                 {
                     // Un solo recuadro ocupando todo el ancho a la derecha
                     rowFormaPago = @"
-                <tr>
-                  <td style='background:#F6DDE6; font-weight:bold;'>Forma de Pago:</td>
-                  <td colspan='3'>" + System.Net.WebUtility.HtmlEncode(forma) + @"</td>
-                </tr>";
+        <tr>
+          <td style='background:#F6DDE6; font-weight:bold;'>Forma de Pago:</td>
+          <td colspan='3'>" + System.Net.WebUtility.HtmlEncode(forma) + @"</td>
+        </tr>";
                 }
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@ROW_FORMA_PAGO", rowFormaPago);
                 // ======================================================================
 
                 // Filas del detalle
                 string filas = string.Empty;
-                decimal total = 0m;
+                decimal total = 0m;             // suma de Tot (precio final por fila)
+                decimal totalDescPromo = 0m;    // suma de descuento PROMO de cada fila
 
                 foreach (DataGridViewRow row in Factura.Rows)
                 {
                     var cant = Convert.ToInt32(row.Cells["Cantidad"].Value);
                     var desc = row.Cells["Nombre_Perfume"].Value?.ToString() ?? "";
                     var unit = Convert.ToDecimal(row.Cells["Precio_Unitario"].Value);
+
+                    // Descuento por promoción de ESA fila
                     var descMonto = Convert.ToDecimal(row.Cells["Descuento"].Value ?? 0m);
+
+                    // Total de la fila ya con promo aplicada
                     var tot = Convert.ToDecimal(row.Cells["Tot"].Value);
 
                     filas += $@"
-                <tr>
-                 <td class='cant'>{Num(cant)}</td>
-                 <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
-                 <td class='money'>{Mon(unit)}</td>
-                 <td class='money'>{Mon(descMonto)}</td>
-                 <td class='money'>{Mon(tot)}</td>
-                </tr>";
+        <tr>
+         <td class='cant'>{Num(cant)}</td>
+         <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
+         <td class='money'>{Mon(unit)}</td>
+         <td class='money'>{Mon(descMonto)}</td>
+         <td class='money'>{Mon(tot)}</td>
+        </tr>";
 
                     total += tot;
+                    totalDescPromo += descMonto;
                 }
 
-                double precioTotal = double.Parse(txt_total.Text);
-                double precioSubtotal = double.Parse(txt_subtotal.Text);
-                double recargoTarjeta = double.Parse(txt_monto_recargo.Text);
-                double descuento = double.Parse(txt_monto_descuento.Text);
+                // 🔹 Guardar la suma de DESCUENTO PROMO para la BD (se suma con bonificación en CrearFactura)
+                totalDescuentoPromoFactura = (double)totalDescPromo;
+
+                // 🔹 Recargo y bonificación (descuento por forma de pago) como decimal, sin pasar por double
+                decimal recargoTarjetaDec = 0m;
+                decimal bonificacionDec = 0m;   // bonificación por EFECTIVO, etc.
+
+                decimal.TryParse(txt_monto_recargo.Text, NumberStyles.Any, Ar, out recargoTarjetaDec);
+                decimal.TryParse(txt_monto_descuento.Text, NumberStyles.Any, Ar, out bonificacionDec);
+
+                // 🔹 Total de la factura:
+                //     Total = suma Tot (ya con promo)
+                //           - bonificación (forma de pago)
+                //           + recargo (tarjeta/cuotas)
+                decimal totalFactura = total + recargoTarjetaDec - bonificacionDec;
 
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@FILAS", filas);
-                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@RECARGO", Mon((decimal)recargoTarjeta));
-                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DESCUENTO", Mon((decimal)descuento));
-                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@TOTAL", Mon((decimal)precioTotal));
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@RECARGO", Mon(recargoTarjetaDec));
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DESCUENTO", Mon(bonificacionDec));
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@TOTAL", Mon(totalFactura));
             }
             // ---------------------------
             // FACTURA A (Responsable Inscripto)
@@ -1817,7 +1927,10 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DOMICILIO", domicilioEntero);
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@LOCALIDAD", localidad);
 
-                // ===== Fila dinámica de "Forma de Pago" (+ "Cuotas" si es tarjeta) =====
+                // 🔹 Dirección y Localidad/Pais de la sucursal
+                RellenarDatosSucursalEnEncabezado(ref PaginaHTML_Texto);
+
+                // ===== Fila dinámica "Forma de Pago" (+ Cuotas si es tarjeta) =====
                 var forma = combo_forma_pago.SelectedItem?.ToString() ?? "";
                 var cuotasSel = combo_cuotas.SelectedItem?.ToString() ?? "1";
                 bool esTarjeta = forma == "Visa Crédito" || forma == "Mastercard" || forma == "Amex";
@@ -1826,73 +1939,111 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 if (esTarjeta)
                 {
                     rowFormaPago = @"
-                <tr>
-                  <td style='background:#F6DDE6; font-weight:bold;'>Forma de Pago:</td>
-                  <td style='width:40%;'>" + System.Net.WebUtility.HtmlEncode(forma) + @"</td>
-                  <td style='width:20%; background:#F6DDE6; font-weight:bold;'>Cuotas:</td>
-                  <td>" + System.Net.WebUtility.HtmlEncode(cuotasSel) + @"</td>
-                </tr>";
+        <tr>
+          <td style='background:#F6DDE6; font-weight:bold;'>Forma de Pago:</td>
+          <td style='width:40%;'>" + System.Net.WebUtility.HtmlEncode(forma) + @"</td>
+          <td style='width:20%; background:#F6DDE6; font-weight:bold;'>Cuotas:</td>
+          <td>" + System.Net.WebUtility.HtmlEncode(cuotasSel) + @"</td>
+        </tr>";
                 }
                 else
                 {
                     rowFormaPago = @"
-                <tr>
-                  <td style='background:#F6DDE6; font-weight:bold;'>Forma de Pago:</td>
-                  <td colspan='3'>" + System.Net.WebUtility.HtmlEncode(forma) + @"</td>
-                </tr>";
+        <tr>
+          <td style='background:#F6DDE6; font-weight:bold;'>Forma de Pago:</td>
+          <td colspan='3'>" + System.Net.WebUtility.HtmlEncode(forma) + @"</td>
+        </tr>";
                 }
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@ROW_FORMA_PAGO", rowFormaPago);
                 // ======================================================================
 
-                // Filas del detalle (A: con y sin IVA)
+                // ==== Detalle: Precio Unitario (c/IVA), Subtotal, Descuento Promo, Total c/IVA ====
                 string filas = string.Empty;
-                decimal total = 0m;
+
+                decimal sumaTotalConIva = 0m;   // suma de columna "Total c/IVA"
+                decimal totalDescPromo = 0m;    // suma de descuentos por promoción (toda la factura)
 
                 foreach (DataGridViewRow row in Factura.Rows)
                 {
-                    var cant = Convert.ToInt32(row.Cells["Cantidad"].Value);
+                    if (row.IsNewRow) continue;
 
+                    var cant = Convert.ToInt32(row.Cells["Cantidad"].Value);
                     var desc = row.Cells["Nombre_Perfume"].Value?.ToString() ?? "";
 
+                    // Precio unitario CON IVA (como está en la grilla)
+                    decimal unitConIva = Convert.ToDecimal(row.Cells["Precio_Unitario"].Value);
 
-                    var unitConIva = Convert.ToDecimal(row.Cells["Precio_Unitario"].Value);
-                    var unitSinIva = unitConIva / 1.21m;
+                    // Subtotal (con IVA, sin promo)
+                    decimal subtotal = unitConIva * cant;
 
+                    // Descuento PROMO de ESA fila (valor nominal en pesos)
+                    decimal descPromo = Convert.ToDecimal(row.Cells["Descuento"].Value ?? 0m);
+                    totalDescPromo += descPromo;
 
-                    var totConIva = Convert.ToDecimal(row.Cells["Tot"].Value);
-                    var totSinIva = totConIva / 1.21m;
-
-                    var descMonto = Convert.ToDecimal(row.Cells["Descuento"].Value ?? 0m);
+                    // Total c/IVA para esa línea (subtotal - descuento promo)
+                    decimal totalConIvaLinea = subtotal - descPromo;
+                    sumaTotalConIva += totalConIvaLinea;
 
                     filas += $@"
-                <tr>
-                  <td class='cant'>{Num(cant)}</td>
-                  <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
-                  <td class='money'>{Mon(unitSinIva)}</td>
-                  <td class='money'>{Mon(descMonto)}</td>
-                  <td class='money'>{Mon(totSinIva)}</td>
-                  <td class='money'>{Mon(totConIva)}</td>
-                </tr>";
-
-                    total += totConIva;
+        <tr>
+          <td class='cant'>{Num(cant)}</td>
+          <td>{System.Net.WebUtility.HtmlEncode(desc)}</td>
+          <td class='money'>{Mon(unitConIva)}</td>
+          <td class='money'>{Mon(subtotal)}</td>
+          <td class='money'>{Mon(descPromo)}</td>
+          <td class='money'>{Mon(totalConIvaLinea)}</td>
+        </tr>";
                 }
 
-                double precioTotal = double.Parse(txt_total.Text);
-                double precioSubtotal = double.Parse(txt_subtotal.Text);
-                double recargoTarjeta = double.Parse(txt_monto_recargo.Text);
-                double iva = double.Parse(txt_iva.Text);
-                double descuento = double.Parse(txt_monto_descuento.Text);
+                // ⬅ guardamos el total de promo en el campo de la clase (para BD)
+                totalDescuentoPromoFactura = Math.Round((double)totalDescPromo, 2, MidpointRounding.AwayFromZero);
 
+                // Bonificación (descuento forma de pago) y recargo (tarjeta)
+                var culture = new System.Globalization.CultureInfo("es-AR");
+                decimal bonificacion = 0m;
+                decimal recargoTarjeta = 0m;
+
+                decimal.TryParse(txt_monto_descuento.Text, System.Globalization.NumberStyles.Any, culture, out bonificacion);
+                decimal.TryParse(txt_monto_recargo.Text, System.Globalization.NumberStyles.Any, culture, out recargoTarjeta);
+
+                // 👉 Precio Final c/IVA = suma Total c/IVA - bonificación + recargo
+                decimal precioFinalConIva = sumaTotalConIva - bonificacion + recargoTarjeta;
+                precioFinalConIva = Math.Round(precioFinalConIva, 2, MidpointRounding.AwayFromZero);
+
+                // Importe Neto Gravado = Precio Final c/IVA / 1,21
+                decimal baseImponible = 0m;
+                decimal iva = 0m;
+
+                if (precioFinalConIva != 0)
+                {
+                    baseImponible = Math.Round(precioFinalConIva / 1.21m, 2, MidpointRounding.AwayFromZero);
+                    iva = precioFinalConIva - baseImponible;
+                    iva = Math.Round(iva, 2, MidpointRounding.AwayFromZero);
+                }
+
+                // Reemplazos en plantilla
                 PaginaHTML_Texto = PaginaHTML_Texto.Replace("@FILAS", filas);
-                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@IMPORTE", Mon((decimal)precioSubtotal));
-                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@RECARGO", Mon((decimal)recargoTarjeta));
-                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DESCUENTO", Mon((decimal)descuento));
-                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@IVA", Mon((decimal)iva));
-                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@TOTAL", Mon((decimal)precioTotal));
+
+                // Bonificación y recargo
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@DESCUENTO", Mon(bonificacion));
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@RECARGO", Mon(recargoTarjeta));
+
+                // Precio Final c/IVA (nuevo row)
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@PRECIO_FINAL", Mon(precioFinalConIva));
+
+                // Importe Neto Gravado (base imponible)
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@IMPORTE", Mon(baseImponible));
+
+                // IVA 21%
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@IVA", Mon(iva));
+
+                // Total a pagar (puede ser igual al Precio Final c/IVA)
+                PaginaHTML_Texto = PaginaHTML_Texto.Replace("@TOTAL", Mon(precioFinalConIva));
             }
 
+
             // GUARDAR FACTURA AUTOMÁTICAMENTE EN CARPETA DE USUARIO
-           
+
             string rutaArchivo = Path.Combine(carpetaFacturas, $"Factura_Orden_{txt_numero_factura.Text}.pdf");
 
             using (FileStream stream = new FileStream(rutaArchivo, FileMode.Create))
@@ -1935,7 +2086,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             {
                 // Sí = enviar por mail, No = imprimir, Cancel = nada
                 var elegir = MessageBox.Show(
-                    $"¿Cómo querés entregar la factura?\n\nSí = Enviar por mail a {txt_email.Text}\nNo = Imprimir en impresora\nCancelar = No hacer nada",
+                    $"¿Cómo querés entregar la factura?\n\nSí = Enviar por mail a {txt_email.Text}\nNo = Imprimir\nCancelar = No enviar. No imprimir.\n           Solo generarla en el sistema.",
                     "Entregar factura",
                     MessageBoxButtons.YesNoCancel,
                     MessageBoxIcon.Question
@@ -1992,6 +2143,9 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
             txt_nombre_cliente.Text = "Consumidor Final";
             txt_condicion_iva.Text = "Consumidor Final";
+
+            //Resetear el valor del total de los descuentos 
+            totalDescuentoPromoFactura = 0;
 
             // Este flag igualmente se va a corregir con txt_dni_TextChanged
             btn_imprimir_habilitado = true;

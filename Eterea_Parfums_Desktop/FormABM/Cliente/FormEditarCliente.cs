@@ -25,7 +25,13 @@ namespace Eterea_Parfums_Desktop
         private Timer _debPais, _debProv, _debLoc;
         private const int DebounceMs = 180;
 
-        // Regla de contraseña (idéntica a Empleado/CrearCliente)
+        //Regla de nombre de USUARIO
+        // Usuario: 4 a 8 caracteres, solo letras y números, 
+        // con al menos 1 letra y al menos 1 dígito.
+        private static readonly Regex _rxUsuario =
+            new Regex(@"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{4,8}$");
+
+        // Regla de contraseña 
         private static readonly Regex _rxClave =
             new Regex(@"^(?=.*[A-Z])(?=.*[a-zA-Z])(?=.*\d)(?=.*[!¡""#\$%&/\(\)=\?¿]).{8,}$");
 
@@ -52,7 +58,8 @@ namespace Eterea_Parfums_Desktop
             OcultarErrores();
 
             // ====== INPUT MASKS / LÍMITES ======
-            txt_usuario.MaxLength = 45;
+            txt_usuario.MaxLength = 8;
+            txt_usuario.KeyPress += txt_usuario_KeyPress;
 
             // Clave: opcional (si se escribe, valida fuerte)
             txt_clave.MaxLength = 100;
@@ -658,15 +665,20 @@ namespace Eterea_Parfums_Desktop
             OcultarErrores();
 
             // Usuario
-            if (string.IsNullOrWhiteSpace(txt_usuario.Text) || txt_usuario.Text.Length < 3 || txt_usuario.Text.Length > 45)
+            string usuario = txt_usuario.Text.Trim();
+
+            if (!_rxUsuario.IsMatch(usuario))
             {
-                lbl_usuarioE.Text = "El usuario debe tener entre 3 y 45 caracteres.";
-                lbl_usuarioE.Show(); errorMsg += lbl_usuarioE.Text + Environment.NewLine;
+                lbl_usuarioE.Text = "El usuario debe tener entre 4 y 8 caracteres, solo letras y\n" +
+                                    "números, e incluir al menos una letra y un número.";
+                lbl_usuarioE.Show();
+                errorMsg += lbl_usuarioE.Text + Environment.NewLine;
             }
-            else if (ClienteControlador.ExisteUsuarioEnOtroCliente(txt_usuario.Text.Trim(), id_editar))
+            else if (ClienteControlador.ExisteUsuarioEnOtroCliente(usuario, id_editar))
             {
                 lbl_usuarioE.Text = "Ya existe un cliente con ese nombre de usuario.";
-                lbl_usuarioE.Show(); errorMsg += lbl_usuarioE.Text + Environment.NewLine;
+                lbl_usuarioE.Show();
+                errorMsg += lbl_usuarioE.Text + Environment.NewLine;
             }
 
             // Clave: solo validar si se quiere cambiar
@@ -876,6 +888,14 @@ namespace Eterea_Parfums_Desktop
             }
 
             return string.IsNullOrEmpty(errorMsg);
+        }
+
+        private void txt_usuario_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (char.IsControl(e.KeyChar)) return;
+
+            if (!char.IsLetterOrDigit(e.KeyChar))
+                e.Handled = true; // bloquea caracteres no alfanuméricos
         }
 
         private void EnfocarPrimerControlConError()
