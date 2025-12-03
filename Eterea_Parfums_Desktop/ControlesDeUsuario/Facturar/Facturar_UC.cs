@@ -1499,18 +1499,16 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 decimal bonificacion = decimal.Parse(txt_monto_descuento.Text, Ar);
 
                 // 🔹 Descuento por PROMOCIÓN (acumulado en Factura A/B)
-                // Asegurate de tener esto declarado arriba en la clase:
-                // private double totalDescuentoPromoFactura = 0.0;
                 decimal descuentoPromo = Math.Round(
-                                              (decimal)totalDescuentoPromoFactura,
-                                              2,
-                                              MidpointRounding.AwayFromZero);
+                                            (decimal)totalDescuentoPromoFactura,
+                                            2,
+                                            MidpointRounding.AwayFromZero);
 
                 // 🔹 Descuento TOTAL = promo + bonificación (redondeado a 2 decimales)
                 decimal descuentoTotal = Math.Round(
-                                              bonificacion + descuentoPromo,
-                                              2,
-                                              MidpointRounding.AwayFromZero);
+                                            bonificacion + descuentoPromo,
+                                            2,
+                                            MidpointRounding.AwayFromZero);
 
                 int numeroDeCaja = int.Parse(txt_numero_caja.Text);
 
@@ -1521,7 +1519,26 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 }
 
                 string origen = "Local";
-                string facturaPdf = "";
+
+                // 👇👇👇 AQUÍ DEFINIMOS LO QUE VA A LA COLUMNA factura_pdf (CUOTAS)
+                string cuotasStr = "1";
+
+                if (formaDePago == "Visa Crédito" || formaDePago == "Mastercard" || formaDePago == "Amex")
+                {
+                    cuotasStr = combo_cuotas.SelectedItem?.ToString() ?? "1";
+                }
+                else if (formaDePago == "Visa Débito" || formaDePago == "Mercado Pago")
+                {
+                    cuotasStr = "1";   // pago único
+                }
+                else // Efectivo u otro medio
+                {
+                    cuotasStr = "0";   // usamos 0 para indicar "sin cuotas"
+                }
+
+                // ⚠ Reutilizamos el campo factura_pdf para guardar CUOTAS
+                string facturaPdf = cuotasStr;
+
                 string numFactura = txt_numero_factura.Text;
                 string tipoDeFactura = tipo_de_factura();
 
@@ -1535,11 +1552,11 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                     formaDePago,
                     (double)precioTotal,
                     (double)recargoTarjeta,
-                    (double)descuentoTotal,  // ⬅️ AQUÍ VA PROMO + BONIFICACIÓN
+                    (double)descuentoTotal,  // AQUÍ VA PROMO + BONIFICACIÓN
                     numeroDeCaja,
                     tipoConsumidor,
                     origen,
-                    facturaPdf,
+                    facturaPdf,               // ⬅️ AHORA SON LAS CUOTAS
                     numFactura,
                     tipoDeFactura
                 );
