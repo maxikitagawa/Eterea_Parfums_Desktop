@@ -1513,6 +1513,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 int numeroDeCaja = int.Parse(txt_numero_caja.Text);
 
                 string tipoConsumidor = clientefactura.condicion_frente_al_iva;
+
                 if (string.IsNullOrEmpty(tipoConsumidor))
                 {
                     tipoConsumidor = "Consumidor Final";
@@ -1520,7 +1521,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
                 string origen = "Local";
 
-                // 👇👇👇 AQUÍ DEFINIMOS LO QUE VA A LA COLUMNA factura_pdf (CUOTAS)
+                //ACA DEFINIMOS LO QUE VA A LA COLUMNA factura_pdf (CUOTAS)
                 string cuotasStr = "1";
 
                 if (formaDePago == "Visa Crédito" || formaDePago == "Mastercard" || formaDePago == "Amex")
@@ -1536,7 +1537,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                     cuotasStr = "0";   // usamos 0 para indicar "sin cuotas"
                 }
 
-                // ⚠ Reutilizamos el campo factura_pdf para guardar CUOTAS
+                //Reutilizamos el campo factura_pdf para guardar CUOTAS
                 string facturaPdf = cuotasStr;
 
                 string numFactura = txt_numero_factura.Text;
