@@ -178,28 +178,31 @@ namespace Eterea_Parfums_Desktop.Controladores
         //GET ONE ByMaxId
         public static int GetByMaxId()
         {
-            int MaxId = 0;
-            string query = "select max(id) from dbo.perfume;";
-            SqlCommand cmd = new SqlCommand(query, DB_Controller.connection);
+            int maxId = 0;
+            string query = "SELECT ISNULL(MAX(id), 0) FROM dbo.perfume;";
+
             try
             {
-                DB_Controller.connection.Open();
-                SqlDataReader r = cmd.ExecuteReader();
-                while (r.Read())
+                using (var conn = new SqlConnection(DB_Controller.GetConnectionString()))
+                using (var cmd = new SqlCommand(query, conn))
                 {
-                    MaxId = r.GetInt32(0);
-                    Console.WriteLine("MaxId: " + MaxId);
-                }
+                    conn.Open();
 
-                r.Close();
-                DB_Controller.connection.Close();
-                return MaxId;
+                    // Como es un solo valor, usamos ExecuteScalar en vez de SqlDataReader
+                    object result = cmd.ExecuteScalar();
+
+                    if (result != null && result != DBNull.Value)
+                    {
+                        maxId = Convert.ToInt32(result);
+                    }
+                } // acá se cierra la conexión sí o sí
             }
             catch (Exception e)
             {
-                throw new Exception("Hay un error en la query: " + e.Message);
+                throw new Exception("Hay un error en la query GetByMaxId: " + e.Message, e);
             }
 
+            return maxId;
         }
 
         public static bool update(Perfume perfume)
