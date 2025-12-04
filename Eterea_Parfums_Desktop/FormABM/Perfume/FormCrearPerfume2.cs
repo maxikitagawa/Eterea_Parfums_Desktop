@@ -315,7 +315,7 @@ namespace Eterea_Parfums_Desktop
             MessageBox.Show("Se registro perfume con aromas y notas del perfume correctamente");
             this.Close();
             formProducto.Close();
-            perfumesUC.cargarPerfumes();
+            //perfumesUC.cargarPerfumes();
 
         }
 

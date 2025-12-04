@@ -13,7 +13,15 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
     public partial class Perfumes_UC : UserControl
     {
 
-        private List<Perfume> perfumes;
+        private List<Perfume> perfumes = new List<Perfume>();
+        private List<Perfume> perfumesFiltrados = new List<Perfume>();
+        private Dictionary<int, int> stockPorPerfume = new Dictionary<int, int>();
+
+
+        // Paginación
+        private int pageSize = 15;    // podemos cambiarlo a 20, 50, etc.
+        private int currentPage = 0;
+
         public Perfumes_UC()
         {
             InitializeComponent();
@@ -23,7 +31,20 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             txt_buscar_codigo.MaxLength = 13;
             txt_buscar_codigo.KeyPress += txt_buscar_codigo_KeyPress;
             txt_buscar_codigo.TextChanged += txt_buscar_codigo_TextChanged;
-            cargarPerfumes();
+
+            dataGridViewPerfumes.Cursor = Cursors.Default;
+            dataGridViewPerfumes.RowHeadersVisible = false;
+
+            // Evento de botones “Editar / Eliminar” pintados
+            dataGridViewPerfumes.CellPainting += dataGridView1_CellPainting;
+
+            // 1) Cargar desde BD una sola vez
+            CargarDatosDesdeBD();
+
+            // 2) Aplicar filtro vacío y mostrar primera página
+            AplicarFiltroYRefrescar();
+
+
             dataGridViewPerfumes.Cursor = Cursors.Default;
         }
 
@@ -39,8 +60,9 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             {
                 Trace.WriteLine("OK");
 
-                //ACTUALIZAR LA LISTA
-                cargarPerfumes();
+                //Recargar datos y refrescar grilla respetando el filtro actual
+                CargarDatosDesdeBD();
+                AplicarFiltroYRefrescar(txt_buscar_codigo.Text.Trim());
             }
         }
 
@@ -187,9 +209,8 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 if (dr == DialogResult.OK)
                 {
                     Trace.WriteLine("OK");
-
-                    //ACTUALIZAR LA LISTA
-                    cargarPerfumes();
+                    CargarDatosDesdeBD();
+                    AplicarFiltroYRefrescar(txt_buscar_codigo.Text.Trim());
                 }
             }
 
@@ -208,7 +229,8 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 if (dr == DialogResult.OK)
                 {
                     Trace.WriteLine("OK");
-                    cargarPerfumes();
+                    CargarDatosDesdeBD();
+                    AplicarFiltroYRefrescar(txt_buscar_codigo.Text.Trim());
                 }
             }
         }
@@ -242,7 +264,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
         private void txt_buscar_codigo_TextChanged(object sender, EventArgs e)
         {
             string filtroCodigo = txt_buscar_codigo.Text.Trim();
-            cargarPerfumes(filtroCodigo);
+            AplicarFiltroYRefrescar(filtroCodigo);
 
         }
 
@@ -254,6 +276,117 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             }
         }
 
+        private void CargarDatosDesdeBD()
+        {
+            // OJO: acá PerfumeControlador.getAll() ya viene con Include de marca, tipo, etc.
+            perfumes = PerfumeControlador.getAll();
 
+            var stocks = StockControlador.getAll();
+            stockPorPerfume = stocks
+                .GroupBy(s => s.perfume.id)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.cantidad));
+        }
+
+        private void AplicarFiltroYRefrescar(string filtroPerfume = "")
+        {
+            if (string.IsNullOrWhiteSpace(filtroPerfume))
+            {
+                perfumesFiltrados = perfumes.ToList();
+            }
+            else
+            {
+                perfumesFiltrados = perfumes
+                    .Where(p => !string.IsNullOrEmpty(p.codigo) &&
+                                p.codigo.Contains(filtroPerfume))
+                    .ToList();
+            }
+
+            currentPage = 0;
+            PintarPaginaActual();
+        }
+
+        private void PintarPaginaActual()
+        {
+            dataGridViewPerfumes.SuspendLayout();
+            dataGridViewPerfumes.Rows.Clear();
+
+            var pagina = perfumesFiltrados
+                .Skip(currentPage * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            foreach (Perfume perfume in pagina)
+            {
+                int rowIndex = dataGridViewPerfumes.Rows.Add();
+
+                dataGridViewPerfumes.Rows[rowIndex].Cells[0].Value = perfume.id;
+                dataGridViewPerfumes.Rows[rowIndex].Cells[1].Value = perfume.codigo;
+                dataGridViewPerfumes.Rows[rowIndex].Cells[2].Value = perfume.marca?.nombre;
+                dataGridViewPerfumes.Rows[rowIndex].Cells[3].Value = perfume.nombre;
+                dataGridViewPerfumes.Rows[rowIndex].Cells[4].Value = perfume.tipo_de_perfume?.tipo_de_perfume;
+                dataGridViewPerfumes.Rows[rowIndex].Cells[5].Value = perfume.genero?.genero;
+                dataGridViewPerfumes.Rows[rowIndex].Cells[6].Value = perfume.presentacion_ml;
+                dataGridViewPerfumes.Rows[rowIndex].Cells[7].Value = perfume.pais?.nombre;
+
+                dataGridViewPerfumes.Rows[rowIndex].Cells[8].Value = perfume.spray ? "Si" : "No";
+                dataGridViewPerfumes.Rows[rowIndex].Cells[9].Value = perfume.recargable ? "Si" : "No";
+
+                dataGridViewPerfumes.Rows[rowIndex].Cells[10].Value =
+                    perfume.precio_en_pesos.ToString("N2");
+
+                int stockTotal = stockPorPerfume.TryGetValue(perfume.id, out var st) ? st : 0;
+                dataGridViewPerfumes.Rows[rowIndex].Cells[11].Value = stockTotal;
+
+                int indexActivo = dataGridViewPerfumes.Columns["Activo"].Index;
+                bool? activo = perfume.activo;
+
+                string estadoActivo = activo.HasValue
+                    ? (activo.Value ? "Activo" : "Inactivo")
+                    : "No especificado";
+
+                dataGridViewPerfumes.Rows[rowIndex].Cells[indexActivo].Value = estadoActivo;
+
+                if (activo.HasValue)
+                {
+                    dataGridViewPerfumes.Rows[rowIndex].Cells[indexActivo].Style.ForeColor =
+                        activo.Value ? Color.Green : Color.Red;
+                }
+                else
+                {
+                    dataGridViewPerfumes.Rows[rowIndex].Cells[indexActivo].Style.ForeColor = Color.Gray;
+                }
+
+                dataGridViewPerfumes.Rows[rowIndex].Cells[13].Value = "Editar";
+                dataGridViewPerfumes.Rows[rowIndex].Cells[14].Value = "Eliminar";
+            }
+
+            dataGridViewPerfumes.ClearSelection();
+            dataGridViewPerfumes.ResumeLayout();
+
+            // label de página:
+            int totalPages = (int)Math.Ceiling((double)perfumesFiltrados.Count / pageSize);
+            lbl_pagina.Text = $"Página {currentPage + 1} de {Math.Max(1, totalPages)}";
+        }
+
+        private void btn_izq_Click(object sender, EventArgs e)
+        {
+            if (currentPage > 0)
+            {
+                currentPage--;
+                PintarPaginaActual();
+            }
+
+        }
+
+        private void btn_der_Click(object sender, EventArgs e)
+        {
+            int totalPages = (int)Math.Ceiling((double)perfumesFiltrados.Count / pageSize);
+
+            if (currentPage < totalPages - 1)
+            {
+                currentPage++;
+                PintarPaginaActual();
+            }
+        }
     }
 }
