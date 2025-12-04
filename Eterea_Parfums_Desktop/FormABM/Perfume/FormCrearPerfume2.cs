@@ -111,19 +111,17 @@ namespace Eterea_Parfums_Desktop
                 if (match != null)
                 {
                     lbl_nota.Text = match;
-                    lbl_buscar_nota.Text = match; // si usás este label como sugerencia
                 }
                 else
                 {
                     MessageBox.Show("No se encontró ninguna nota con ese nombre");
-                    lbl_buscar_nota.Text = "";
+                   
                     lbl_nota.Text = "Nota";
                     txt_nota.Clear();
                 }
             }
             else
             {
-                lbl_buscar_nota.Text = "";
                 lbl_nota.Text = "Nota";
             }
         }
