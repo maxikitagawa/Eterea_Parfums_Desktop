@@ -66,7 +66,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             }
         }
 
-        internal void cargarPerfumes(string filtroPerfume = "")
+        /*internal void cargarPerfumes(string filtroPerfume = "")
         {
             //Ocultas la primera columna de la tabla (es una columna de seleccion de fila)
             dataGridViewPerfumes.RowHeadersVisible = false;
@@ -154,7 +154,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 dataGridViewPerfumes.CellPainting += dataGridView1_CellPainting;
 
             }
-        }
+        }*/
 
         private void dataGridViewPerfumes_CellContentClick_1(object sender, DataGridViewCellEventArgs e)
         {

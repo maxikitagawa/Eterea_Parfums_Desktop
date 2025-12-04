@@ -489,7 +489,7 @@ namespace Eterea_Parfums_Desktop
             }
             else
             {
-                // Podés enfocar el primer control con error si querés (como en Empleado)
+                //enfocar el primer control con error 
                 EnfocarPrimerControlConError();
             }
         }

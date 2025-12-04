@@ -326,9 +326,12 @@ namespace Eterea_Parfums_Desktop
                 }
 
                 MessageBox.Show("Se han guardado los cambios del perfume correctamente.");
+                //se avisa al form padre que todo salió bien
+                formEditarProducto.DialogResult = DialogResult.OK;
+
+                // se cierra este UC y el form de edición
                 this.Close();
                 formEditarProducto.Close();
-                perfumesUC.cargarPerfumes();
             }
             catch (Exception ex)
             {

@@ -5,13 +5,19 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 {
     public partial class Clientes_UC : UserControl
     {
-        List<Cliente> clientes;
+        private List<Cliente> clientes = new List<Cliente>();
+        private List<Cliente> clientesFiltrados = new List<Cliente>();
+
+        // Paginación
+        private int pageSize = 15;   // cantidad de clientes por página
+        private int currentPage = 0;
 
         public Clientes_UC()
         {
@@ -21,10 +27,20 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             // Asocia el evento KeyPress para aceptar solo números
             txt_buscar_dni.KeyPress += txt_buscar_dni_KeyPress;
             txt_buscar_dni.TextChanged += txt_buscar_dni_TextChanged;
-            cargarClientes();
+
+            dataGridViewClientes.RowHeadersVisible = false;
+
+            // Enganchar una sola vez
+            dataGridViewClientes.CellPainting += dataGridView1_CellPainting;
+
+            // Cargar datos desde BD una sola vez
+            CargarClientesDesdeBD();
+
+            // Aplicar filtro vacío y mostrar primera página
+            AplicarFiltroYRefrescar();
         }
 
-        private void cargarClientes(string filtroDni = "")
+        /*private void cargarClientes(string filtroDni = "")
         {
             dataGridViewClientes.RowHeadersVisible = false;
             clientes = ClienteControlador.obtenerTodos();
@@ -62,7 +78,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 dataGridViewClientes.ClearSelection();
                 dataGridViewClientes.CellPainting += dataGridView1_CellPainting;
             }
-        }
+        }*/
 
         private void btn_crear_cliente_Click(object sender, EventArgs e)
         {
@@ -75,9 +91,8 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             if (dr == DialogResult.OK)
             {
                 Trace.WriteLine("OK");
-
-                //ACTUALIZAR LA LISTA
-                cargarClientes();
+                CargarClientesDesdeBD();
+                AplicarFiltroYRefrescar(txt_buscar_dni.Text.Trim());
             }
         }
 
@@ -103,10 +118,8 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 if (dr == DialogResult.OK)
                 {
                     Trace.WriteLine("OK");
-
-                    //ACTUALIZAR LA LISTA
-                    cargarClientes();
-
+                    CargarClientesDesdeBD();
+                    AplicarFiltroYRefrescar(txt_buscar_dni.Text.Trim());
                 }
             }
             else if (senderGrid.Columns[e.ColumnIndex].Name == "Eliminar")
@@ -126,10 +139,8 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 if (dr == DialogResult.OK)
                 {
                     Trace.WriteLine("OK");
-
-                    //ACTUALIZAR LA LISTA
-                    cargarClientes();
-
+                    CargarClientesDesdeBD();
+                    AplicarFiltroYRefrescar(txt_buscar_dni.Text.Trim());
                 }
             }
         }
@@ -164,8 +175,8 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
         {
             string filtroDni = txt_buscar_dni.Text.Trim();
 
-            // Actualiza el DataGridView con el filtro
-            cargarClientes(filtroDni);
+            //Ahora solo filtramos en memoria y refrescamos la página
+            AplicarFiltroYRefrescar(filtroDni);
         }
 
         private void txt_buscar_dni_KeyPress(object sender, KeyPressEventArgs e)
@@ -177,5 +188,86 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             }
         }
 
+        private void CargarClientesDesdeBD()
+        {
+            clientes = ClienteControlador.obtenerTodos();
+        }
+
+        private void AplicarFiltroYRefrescar(string filtroDni = "")
+        {
+            if (string.IsNullOrWhiteSpace(filtroDni))
+            {
+                clientesFiltrados = new List<Cliente>(clientes);
+            }
+            else
+            {
+                clientesFiltrados = clientes.FindAll(c =>
+                    c.dni.ToString().Contains(filtroDni));
+            }
+
+            currentPage = 0;
+            PintarPaginaActual();
+        }
+
+        private void PintarPaginaActual()
+        {
+            dataGridViewClientes.SuspendLayout();
+            dataGridViewClientes.Rows.Clear();
+
+            int totalPages = (int)Math.Ceiling((double)clientesFiltrados.Count / pageSize);
+            if (totalPages == 0) totalPages = 1; // evitar división por cero
+
+            var pagina = clientesFiltrados
+                .Skip(currentPage * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            foreach (Cliente cliente in pagina)
+            {
+                int rowIndex = dataGridViewClientes.Rows.Add();
+
+                dataGridViewClientes.Rows[rowIndex].Cells[0].Value = cliente.id.ToString();
+                dataGridViewClientes.Rows[rowIndex].Cells[1].Value = cliente.usuario;
+                dataGridViewClientes.Rows[rowIndex].Cells[2].Value = cliente.nombre;
+                dataGridViewClientes.Rows[rowIndex].Cells[3].Value = cliente.apellido;
+                dataGridViewClientes.Rows[rowIndex].Cells[4].Value = cliente.dni.ToString();
+                dataGridViewClientes.Rows[rowIndex].Cells[5].Value = cliente.celular;
+                dataGridViewClientes.Rows[rowIndex].Cells[6].Value = cliente.e_mail;
+
+                dataGridViewClientes.Rows[rowIndex].Cells[7].Value = cliente.activo ? "Activo" : "Inactivo";
+                dataGridViewClientes.Rows[rowIndex].Cells[7].Style.ForeColor =
+                    cliente.activo ? Color.Green : Color.Red;
+
+                dataGridViewClientes.Rows[rowIndex].Cells[8].Value = "Editar";
+                dataGridViewClientes.Rows[rowIndex].Cells[9].Value = "Eliminar";
+            }
+
+            dataGridViewClientes.ClearSelection();
+            dataGridViewClientes.ResumeLayout();
+
+            // Actualizar label de página
+            lbl_pagina.Text = $"Página {currentPage + 1} de {totalPages}";
+        }
+
+        private void btn_izq_Click(object sender, EventArgs e)
+        {
+            if (currentPage > 0)
+            {
+                currentPage--;
+                PintarPaginaActual();
+            }
+        }
+
+        private void btn_der_Click(object sender, EventArgs e)
+        {
+            int totalPages = (int)Math.Ceiling((double)clientesFiltrados.Count / pageSize);
+            if (totalPages == 0) totalPages = 1;
+
+            if (currentPage < totalPages - 1)
+            {
+                currentPage++;
+                PintarPaginaActual();
+            }
+        }
     }
 }
