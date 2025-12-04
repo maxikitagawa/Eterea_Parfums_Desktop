@@ -188,26 +188,7 @@ namespace Eterea_Parfums_Desktop
         }
 
 
-        /*private async void close_Click1(object sender, EventArgs e)
-        {
-            FormInicioAutoconsulta inicioAutoconsulta = null;
-            FormStart formStart = null;
-
-            // Esperar un poco para que se procese el cambio de formulario
-            await Task.Delay(100);
-
-            // Crear y mostrar el formulario de inicio de autoconsulta
-            FormInicioAutoconsulta formInicioAutoconsulta = new FormInicioAutoconsulta();
-            formInicioAutoconsulta.Show();
-            formInicioAutoconsulta.WindowState = FormWindowState.Normal;
-            formInicioAutoconsulta.TopMost = true;
-            formInicioAutoconsulta.BringToFront();
-            formInicioAutoconsulta.Activate();
-
-            // Cerrar el FormLogin con un pequeño retraso para asegurar que el otro formulario se muestra bien
-            Task.Delay(100).ContinueWith(_ => this.Close(), TaskScheduler.FromCurrentSynchronizationContext());
-        }*/
-
+      
 
     }
 }
