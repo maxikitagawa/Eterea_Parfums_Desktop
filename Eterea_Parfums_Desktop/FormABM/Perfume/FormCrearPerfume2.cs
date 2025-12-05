@@ -310,12 +310,19 @@ namespace Eterea_Parfums_Desktop
                 }
             }
 
-           
 
-            MessageBox.Show("Se registro perfume con aromas y notas del perfume correctamente");
-            this.DialogResult = DialogResult.OK;
+
+            MessageBox.Show("Se registró perfume con aromas y notas del perfume correctamente");
+
+            // 👉 Avisar al form padre (FormCrearPerfume1) que todo salió bien
+            if (formProducto != null)
+            {
+                formProducto.DialogResult = DialogResult.OK;
+                formProducto.Close();
+            }
+
+            // 👉 Cerrar este formulario (FormCrearPerfume2 / Perfume_UC de creación)
             this.Close();
-            //perfumesUC.cargarPerfumes();
 
         }
 

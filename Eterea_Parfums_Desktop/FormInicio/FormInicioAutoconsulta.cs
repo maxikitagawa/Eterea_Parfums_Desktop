@@ -28,12 +28,14 @@ namespace Eterea_Parfums_Desktop
 
         public List<Marca> marcas;
         public List<Genero> generos;
-
         private List<TipoDeAroma> aromas;
+
+        private Dictionary<int, int> stockPorPerfume = new Dictionary<int, int>();
+
 
         //LA PAGINA ACTUAL
         private static int current = 0;
-        private static int paginador = 10;
+        private static int paginador = 12;
 
         //TOTAL DE PRODUCTOS
         private static int total = 0;
@@ -126,7 +128,8 @@ namespace Eterea_Parfums_Desktop
             //Perfumes_Completo = PerfumeControlador.getAll();
             //Perfumes_Filtrado = PerfumeControlador.filtrarPorNombre(filtro.nombre);
             Perfumes_Completo = PerfumeControlador.getAll();
-            filtro.activo = true; // Esto asegura que al inicio solo se muestren los perfumes activos
+            CargarStockGlobal();         
+            filtro.activo = true;
             filtrar();
 
 
@@ -134,6 +137,18 @@ namespace Eterea_Parfums_Desktop
 
 
 
+        }
+
+        private void CargarStockGlobal()
+        {
+            var stocks = StockControlador.ObtenerTodosLosStocksPorSucursal();
+
+            stockPorPerfume = stocks
+                .GroupBy(k => k.Key.perfumeId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Sum(x => x.Value)
+                );
         }
 
         private void FormInicioAutoconsulta_VisibleChanged(object sender, EventArgs e)
@@ -232,7 +247,8 @@ namespace Eterea_Parfums_Desktop
             if (string.IsNullOrEmpty(codigo))
                 return;
 
-            Perfume perfumeEncontrado = PerfumeControlador.getByCodigo(codigo);
+            Perfume perfumeEncontrado = Perfumes_Completo
+                .FirstOrDefault(p => p.codigo == codigo);
 
             if (perfumeEncontrado != null)
             {
@@ -404,8 +420,14 @@ namespace Eterea_Parfums_Desktop
 
                 dataGridViewConsultas.Rows[rowIndex].Cells[0].Value = perfume.nombre;
                 dataGridViewConsultas.Rows[rowIndex].Cells[1].Value = perfume.presentacion_ml + "ml";
-                dataGridViewConsultas.Rows[rowIndex].Cells[2].Value = MarcaControlador.getById(perfume.marca.id).nombre;
-                dataGridViewConsultas.Rows[rowIndex].Cells[3].Value = GeneroControlador.getById(perfume.genero.id).genero;
+                string nombreMarca = marcas
+                    .FirstOrDefault(m => m.id == perfume.marca.id)?.nombre;
+
+                string nombreGenero = generos
+                    .FirstOrDefault(g => g.id == perfume.genero.id)?.genero;
+
+                dataGridViewConsultas.Rows[rowIndex].Cells[2].Value = nombreMarca;
+                dataGridViewConsultas.Rows[rowIndex].Cells[3].Value = nombreGenero;
                 dataGridViewConsultas.Rows[rowIndex].Cells[4].Value = precioMostrado;
 
                 if (precioMostrado == "Sin Stock")
@@ -465,7 +487,7 @@ namespace Eterea_Parfums_Desktop
             if (combo_filtro_marca.SelectedIndex > 0)
             {
                 string marcaSeleccionada = combo_filtro_marca.SelectedItem.ToString();
-                Marca marca = MarcaControlador.getByName(marcaSeleccionada);
+                Marca marca = marcas.FirstOrDefault(m => m.nombre == marcaSeleccionada);
                 if (marca != null)
                 {
                     filtro.marca = marca;
@@ -484,7 +506,7 @@ namespace Eterea_Parfums_Desktop
             if (combo_filtro_genero.SelectedIndex > 0)
             {
                 string generoSeleccionado = combo_filtro_genero.SelectedItem.ToString();
-                Genero genero = GeneroControlador.getByName(generoSeleccionado);
+                Genero genero = generos.FirstOrDefault(g => g.genero == generoSeleccionado);
                 if (genero != null)
                 {
                     filtro.genero = genero;
@@ -522,7 +544,7 @@ namespace Eterea_Parfums_Desktop
             if (combo_filtro_aroma.SelectedIndex > 0)
             {
                 string aromaSeleccionado = combo_filtro_aroma.SelectedItem.ToString();
-                TipoDeAroma aroma = TipoDeAromaControlador.getByNombre(aromaSeleccionado);
+                TipoDeAroma aroma = aromas.FirstOrDefault(a => a.nombre == aromaSeleccionado);
                 if (aroma != null)
                 {
                     aromaIdSeleccionado = aroma.id;
@@ -779,12 +801,6 @@ namespace Eterea_Parfums_Desktop
 
         private List<Perfume> AplicarFiltroStockYActivo(List<Perfume> listaBase)
         {
-            // Mapa de stock por perfume (id -> total)
-            var stockPorPerfume = StockControlador
-                .ObtenerTodosLosStocksPorSucursal()
-                .GroupBy(k => k.Key.perfumeId)
-                .ToDictionary(g => g.Key, g => g.Sum(x => x.Value));
-
             bool Mostrar(Perfume p)
             {
                 int stock = stockPorPerfume.TryGetValue(p.id, out var s) ? s : 0;
