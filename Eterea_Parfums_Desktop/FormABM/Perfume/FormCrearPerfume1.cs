@@ -743,7 +743,7 @@ namespace Eterea_Parfums_Desktop
         // ====== PREDICADO DE CARACTERES PERMITIDOS PARA NOMBRE/DESCRIPCIÓN ======
         private static readonly HashSet<char> _allowedSpecials = new HashSet<char>
 {
-    '"', '#', '&', '(', ')', '!', '¡', '?', '¿', '*', '=', ';', ' ','.'  // incluye espacio
+    '"', '#', '&', '(', ')', '!', '¡', '?', '¿', '*', '=', ';', ' ','.', '\''  // incluye espacio
 };
 
         private static bool IsAllowedNameChar(char c)

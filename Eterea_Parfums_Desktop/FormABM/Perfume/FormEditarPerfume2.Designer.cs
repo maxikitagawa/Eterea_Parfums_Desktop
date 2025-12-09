@@ -354,7 +354,7 @@
             this.lbl_tipo_de_nota.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_tipo_de_nota.Font = new System.Drawing.Font("Microsoft Sans Serif", 18F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lbl_tipo_de_nota.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
-            this.lbl_tipo_de_nota.Location = new System.Drawing.Point(497, 583);
+            this.lbl_tipo_de_nota.Location = new System.Drawing.Point(450, 583);
             this.lbl_tipo_de_nota.Name = "lbl_tipo_de_nota";
             this.lbl_tipo_de_nota.Size = new System.Drawing.Size(154, 29);
             this.lbl_tipo_de_nota.TabIndex = 447;
@@ -415,7 +415,7 @@
             this.lbl_nota.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(236)))), ((int)(((byte)(239)))));
             this.lbl_nota.Font = new System.Drawing.Font("Microsoft Sans Serif", 18F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lbl_nota.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(195)))), ((int)(((byte)(156)))), ((int)(((byte)(164)))));
-            this.lbl_nota.Location = new System.Drawing.Point(493, 507);
+            this.lbl_nota.Location = new System.Drawing.Point(447, 507);
             this.lbl_nota.Name = "lbl_nota";
             this.lbl_nota.Size = new System.Drawing.Size(64, 29);
             this.lbl_nota.TabIndex = 441;
