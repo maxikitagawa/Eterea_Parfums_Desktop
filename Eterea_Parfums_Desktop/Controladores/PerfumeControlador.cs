@@ -11,67 +11,141 @@ namespace Eterea_Parfums_Desktop.Controladores
     {
         public static List<Perfume> getAll()
         {
-            List<Perfume> lista_perfumes = new List<Perfume>();
+            var lista_perfumes = new List<Perfume>();
 
-            Marca marca = new Marca();
-            TipoDePerfume tipo_de_perfume = new TipoDePerfume();
-            Genero genero = new Genero();
-            Pais pais = new Pais();
+            string query = @"
+        SELECT 
+            p.*, 
+            m.nombre              AS marca_nombre,
+            tp.tipo_de_perfume    AS tipo_nombre,
+            g.genero              AS genero_nombre,
+            pa.nombre             AS pais_nombre
+        FROM dbo.perfume p
+        INNER JOIN dbo.marca           m  ON p.marca_id           = m.id
+        INNER JOIN dbo.tipo_de_perfume tp ON p.tipo_de_perfume_id = tp.id
+        INNER JOIN dbo.genero          g  ON p.genero_id          = g.id
+        INNER JOIN dbo.pais            pa ON p.pais_id            = pa.id
+        ORDER BY p.nombre ASC;
+    ";
 
-            string query = "SELECT * FROM dbo.perfume ORDER BY nombre ASC;";
-            SqlCommand cmd = new SqlCommand(query, DB_Controller.connection);
-            try
+            using (var conn = new SqlConnection(DB_Controller.GetConnectionString()))
+            using (var cmd = new SqlCommand(query, conn))
             {
-                DB_Controller.connection.Open();
-                SqlDataReader r = cmd.ExecuteReader();
-
-                while (r.Read())
+                try
                 {
-
-                    /* 
-                     Marca marca = new Marca(r.GetInt32(2), null);
-                     TipoDePerfume tipo_de_perfume = new TipoDePerfume(r.GetInt32(4), null);
-                     Genero genero = new Genero(r.GetInt32(5), null);
-                     Pais pais = new Pais(r.GetInt32(7), null);
-                    */
-                    marca.id = r.GetInt32(2);
-                    tipo_de_perfume.id = r.GetInt32(4);
-                    genero.id = r.GetInt32(5);
-                    pais.id = r.GetInt32(7);
-
-                    Marca marcaOb = new Marca(marca.id, "");
-                    TipoDePerfume tipo_de_perfumeOb = new TipoDePerfume(tipo_de_perfume.id, "");
-                    Genero generoOb = new Genero(genero.id, "");
-                    Pais paisOb = new Pais(pais.id, "");
-
-                    DateTime? fechaBaja = r.IsDBNull(16) ? (DateTime?)null : r.GetDateTime(16);
-
-                    /*if (r.GetInt32(13) == 1)
+                    conn.Open();
+                    using (var r = cmd.ExecuteReader())
                     {
-                        lista_perfumes.Add(new Perfume(r.GetInt32(0), r.GetString(1), marcaOb, r.GetString(3),
-                        tipo_de_perfumeOb, generoOb, r.GetInt32(6), paisOb,
-                        r.GetInt32(8), r.GetInt32(9), r.GetString(10), r.GetInt32(11), r.GetDouble(12),
-                        r.GetInt32(13), r.GetString(14), r.GetString(15)));               
-                    }*/
+                        // Tomamos los índices por nombre de columna (más seguro que números mágicos)
+                        int ordId = r.GetOrdinal("id");
+                        int ordCodigo = r.GetOrdinal("codigo");
+                        int ordMarcaId = r.GetOrdinal("marca_id");
+                        int ordNombre = r.GetOrdinal("nombre");
+                        int ordTipoId = r.GetOrdinal("tipo_de_perfume_id");
+                        int ordGeneroId = r.GetOrdinal("genero_id");
+                        int ordPresentacionMl = r.GetOrdinal("presentacion_ml");
+                        int ordPaisId = r.GetOrdinal("pais_id");
+                        int ordSpray = r.GetOrdinal("spray");
+                        int ordRecargable = r.GetOrdinal("recargable");
+                        int ordDescripcion = r.GetOrdinal("descripcion");
+                        int ordAnioLanzamiento = r.GetOrdinal("anio_de_lanzamiento");
+                        int ordPrecio = r.GetOrdinal("precio_en_pesos");
+                        int ordActivo = r.GetOrdinal("activo");
+                        int ordImagen1 = r.GetOrdinal("imagen1");
+                        int ordImagen2 = r.GetOrdinal("imagen2");
+                        int ordFechaBaja = r.GetOrdinal("fecha_baja");
+                        int ordImagen1Url = r.GetOrdinal("imagen1_URL");
+                        int ordImagen2Url = r.GetOrdinal("imagen2_URL");
 
-                    lista_perfumes.Add(new Perfume(r.GetInt32(0), r.GetString(1), marcaOb, r.GetString(3),
-                        tipo_de_perfumeOb, generoOb, r.GetInt32(6), paisOb,
-                       r.GetBoolean(8), r.GetBoolean(9), r.GetString(10), r.GetInt32(11), r.GetDouble(12),
-                        r.GetBoolean(13), r.GetString(14), r.GetString(15), fechaBaja, r.GetString(17), r.GetString(18)));
+                        int ordMarcaNombre = r.GetOrdinal("marca_nombre");
+                        int ordTipoNombre = r.GetOrdinal("tipo_nombre");
+                        int ordGeneroNombre = r.GetOrdinal("genero_nombre");
+                        int ordPaisNombre = r.GetOrdinal("pais_nombre");
 
+                        while (r.Read())
+                        {
+                            // Objetos relacionados con id + nombre desde el JOIN
+                            var marca = new Marca(
+                                r.GetInt32(ordMarcaId),
+                                r.GetString(ordMarcaNombre)
+                            );
 
+                            var tipo = new TipoDePerfume(
+                                r.GetInt32(ordTipoId),
+                                r.GetString(ordTipoNombre)
+                            );
+
+                            var genero = new Genero(
+                                r.GetInt32(ordGeneroId),
+                                r.GetString(ordGeneroNombre)
+                            );
+
+                            var pais = new Pais(
+                                r.GetInt32(ordPaisId),
+                                r.GetString(ordPaisNombre)
+                            );
+
+                            // Campos que pueden ser NULL
+                            DateTime? fechaBaja = r.IsDBNull(ordFechaBaja)
+                                ? (DateTime?)null
+                                : r.GetDateTime(ordFechaBaja);
+
+                            string descripcion = r.IsDBNull(ordDescripcion)
+                                ? null
+                                : r.GetString(ordDescripcion);
+
+                            string imagen1 = r.IsDBNull(ordImagen1)
+                                ? null
+                                : r.GetString(ordImagen1);
+
+                            string imagen2 = r.IsDBNull(ordImagen2)
+                                ? null
+                                : r.GetString(ordImagen2);
+
+                            string imagen1Url = r.IsDBNull(ordImagen1Url)
+                                ? null
+                                : r.GetString(ordImagen1Url);
+
+                            string imagen2Url = r.IsDBNull(ordImagen2Url)
+                                ? null
+                                : r.GetString(ordImagen2Url);
+
+                            // Armar el Perfume completo
+                            var perfume = new Perfume(
+                                r.GetInt32(ordId),              // id
+                                r.GetString(ordCodigo),         // codigo
+                                marca,                          // Marca con nombre
+                                r.GetString(ordNombre),         // nombre
+                                tipo,                           // Tipo con nombre
+                                genero,                         // Género con nombre
+                                r.GetInt32(ordPresentacionMl),  // presentacion_ml
+                                pais,                           // País con nombre
+                                r.GetBoolean(ordSpray),         // spray
+                                r.GetBoolean(ordRecargable),    // recargable
+                                descripcion,                    // descripcion
+                                r.GetInt32(ordAnioLanzamiento), // anio_de_lanzamiento
+                                r.GetDouble(ordPrecio),         // precio_en_pesos
+                                r.GetBoolean(ordActivo),        // activo
+                                imagen1,                        // imagen1
+                                imagen2,                        // imagen2
+                                fechaBaja,                      // fecha_baja
+                                imagen1Url,                     // imagen1_URL
+                                imagen2Url                      // imagen2_URL
+                            );
+
+                            lista_perfumes.Add(perfume);
+                        }
+                    }
                 }
-                r.Close();
-                DB_Controller.connection.Close();
+                catch (Exception e)
+                {
+                    throw new Exception("Hay un error en la query: " + e.Message);
+                }
+            }
 
-            }
-            catch (Exception e)
-            {
-                throw new Exception("Hay un error en la query: " + e.Message);
-            }
             return lista_perfumes;
-
         }
+
 
 
         public static bool create(Perfume perfume)

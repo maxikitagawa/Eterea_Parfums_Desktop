@@ -225,7 +225,7 @@
             this.checkedListBoxAroma.FormattingEnabled = true;
             this.checkedListBoxAroma.Location = new System.Drawing.Point(54, 210);
             this.checkedListBoxAroma.Name = "checkedListBoxAroma";
-            this.checkedListBoxAroma.Size = new System.Drawing.Size(318, 324);
+            this.checkedListBoxAroma.Size = new System.Drawing.Size(318, 432);
             this.checkedListBoxAroma.TabIndex = 157;
             // 
             // checkedListBoxNota
