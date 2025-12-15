@@ -45,7 +45,7 @@ public static class NotaFiltroHelper
         return q.FirstOrDefault();
     }
 
-    // Si querés todas las coincidencias ordenadas
+    // Para conseguir todas las coincidencias ordenadas
     public static List<string> CoincidenciasOrdenadas(string textoFiltro, IEnumerable<Nota> notas)
     {
         if (string.IsNullOrWhiteSpace(textoFiltro)) return new List<string>();

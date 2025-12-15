@@ -11,7 +11,6 @@ public class ComboPrefixGuard
     private readonly ToolTip _tip = new ToolTip { ShowAlways = true };
     private bool _suppressTextChanged = false;
 
-    // Si querés “contiene en cualquier parte” en vez de “empieza con”, cambiá la función Match aquí.
     private Func<string, string, bool> Match = (item, text) =>
         item.StartsWith(text, StringComparison.CurrentCultureIgnoreCase);
 

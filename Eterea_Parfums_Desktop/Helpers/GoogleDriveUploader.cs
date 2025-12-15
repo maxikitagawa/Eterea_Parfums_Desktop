@@ -19,7 +19,7 @@ namespace Eterea_Parfums_Desktop.Helpers
 
         private void InicializarServicio()
         {
-            string credPath = "credentials.json"; // Asegurate de tenerlo junto al .exe o especificar la ruta absoluta correcta
+            string credPath = "credentials.json"; // Tenerlo junto al .exe, sino especificar la ruta absoluta correcta
 
             GoogleCredential credential;
             using (var stream = new FileStream(credPath, FileMode.Open, FileAccess.Read))

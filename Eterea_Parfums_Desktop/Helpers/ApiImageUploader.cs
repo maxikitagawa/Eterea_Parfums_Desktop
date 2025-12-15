@@ -158,7 +158,7 @@ public static class ApiImageUploader
         }
     }
 
-    // (Overload opcional por si te resulta más cómodo el orden: localPath, newName, oldName)
+    // (Overload opcional por si resulta más cómodo el orden: localPath, newName, oldName)
     /*public static Task<UploadImageResult> ReplaceAsync(string localFilePath, string newNameOnServer, string oldNameOnServerOrNull, bool overload)
     {
         // 'overload' no se usa; es para diferenciar firma.

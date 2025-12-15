@@ -7,7 +7,6 @@ using System.Text.RegularExpressions;
 
 namespace Eterea_Parfums_Desktop.Helpers
 {
-    // Hacelo static para usarlo sin instanciar
     public static class AsignarNombreImagenHelper
     {
         private static readonly Random _rnd = new Random();
