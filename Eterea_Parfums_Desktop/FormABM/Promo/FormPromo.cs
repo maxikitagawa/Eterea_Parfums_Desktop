@@ -63,13 +63,11 @@ namespace Eterea_Parfums_Desktop
 
         public FormPromo()
         {
-
             InitializeComponent();
 
-            //txt_nomb_promo.KeyPress += txt_nomb_promo_KeyPress;
-            //txt_descripcion_promo.KeyPress += txt_descripcion_promo_KeyPress;
-
-            // Ocultar etiquetas de error
+            // =======================
+            // 1) UI / Errores / Tooltips
+            // =======================
             lbl_error_tipo_promo.Visible = false;
             lbl_error_nombP.Visible = false;
             lbl_error_desc_promo.Visible = false;
@@ -78,41 +76,15 @@ namespace Eterea_Parfums_Desktop
             lbl_error_promo_act.Visible = false;
             lbl_error_banner.Visible = false;
 
-            //Ocultar el boton para borrar el texto ingresado en la busqueda de promo por nombre
             lbl_borrar_texto.Visible = false;
-
-            // Inicializar y configurar el ToolTip
             toolTipBorrar = new ToolTip();
             toolTipBorrar.SetToolTip(lbl_borrar_texto, "Borrar texto ingresado");
 
-            //Cargar los combo_box, inicializar los DatePickers y cargar los perfumes al dataGridView de busqueda de perfumes
-            cargarComboBoxDescuentos();
-            cargarComboBoxMarcas();
-            cargarComboBoxGeneros();
-            inicializarDatePickers();
-            cargarPerfumes();
-
-            combo_activo_promo.Items.Clear();
-            combo_activo_promo.Items.Add("Si");
-            combo_activo_promo.Items.Add("No");
-            combo_activo_promo.SelectedIndex = -1;
-
             situacion = "Creacion";
 
-            // === Auto-clear de errores ===
-            // Textos
-            HookTextHideError(txt_nomb_promo, lbl_error_nombP);
-            HookTextHideError(txt_descripcion_promo, lbl_error_desc_promo);
-
-            // Combos
-            HookComboHideError(combo_tipo_promo, lbl_error_tipo_promo);
-            HookComboHideError(combo_activo_promo, lbl_error_promo_act);
-
-            // Fechas
-            HookDateHideError(dateTime_inicio_promo, lbl_error_fecha_iniP);
-            HookDateHideError(dateTime_fin_promo, lbl_error_fecha_finP);
-
-            //Diseño del combo box
+            // =======================
+            // 2) Diseño de combos (antes de cargar data)
+            // =======================
             combo_tipo_promo.DrawMode = DrawMode.OwnerDrawFixed;
             combo_tipo_promo.DrawItem += comboBoxdiseño_DrawItem;
             combo_tipo_promo.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -129,7 +101,49 @@ namespace Eterea_Parfums_Desktop
             combo_buscar_generoP.DrawItem += comboBoxdiseño_DrawItem;
             combo_buscar_generoP.DropDownStyle = ComboBoxStyle.DropDownList;
 
-            //Inicia ataGrid_resultado_busqueda_perfumes sin marcar
+            // =======================
+            // 3) Auto-clear de errores (liviano)
+            // =======================
+            HookTextHideError(txt_nomb_promo, lbl_error_nombP);
+            HookTextHideError(txt_descripcion_promo, lbl_error_desc_promo);
+
+            HookComboHideError(combo_tipo_promo, lbl_error_tipo_promo);
+            HookComboHideError(combo_activo_promo, lbl_error_promo_act);
+
+            HookDateHideError(dateTime_inicio_promo, lbl_error_fecha_iniP);
+            HookDateHideError(dateTime_fin_promo, lbl_error_fecha_finP);
+
+            // =======================
+            // 4) Cargar combos de datos (pesado)
+            // =======================
+            cargarComboBoxDescuentos();
+            cargarComboBoxMarcas();
+            cargarComboBoxGeneros();
+
+            // =======================
+            // 5) Activo combo items
+            // =======================
+            combo_activo_promo.Items.Clear();
+            combo_activo_promo.Items.Add("Si");
+            combo_activo_promo.Items.Add("No");
+            combo_activo_promo.SelectedIndex = -1;
+
+            // =======================
+            // 6) DatePickers + sync Activo<->Fechas
+            // (solo UNA vez)
+            // =======================
+            inicializarDatePickers();        // tu versión corregida (Short + MinDate Minimum)
+            HookAutoSyncActivoYFechas();     // engancha eventos sin duplicar
+            AplicarDefaultsCreacion();       // setea valores iniciales y recalcula activo
+
+            // =======================
+            // 7) Cargar perfumes (pesado)
+            // =======================
+            cargarPerfumes();
+
+            // =======================
+            // 8) Grillas: arrancar sin selección
+            // =======================
             dataGrid_resultado_busqueda_perfumes.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dataGrid_resultado_busqueda_perfumes.MultiSelect = false;
 
@@ -138,8 +152,29 @@ namespace Eterea_Parfums_Desktop
                 dataGrid_resultado_busqueda_perfumes.ClearSelection();
                 dataGrid_resultado_busqueda_perfumes.CurrentCell = null;
             };
+        }
 
+        private void AplicarDefaultsCreacion()
+        {
+            _syncing = true;
+            try
+            {
+                // Defaults para crear (ejemplo):
+                combo_activo_promo.SelectedItem = "Si";
 
+                dateTime_inicio_promo.MinDate = DateTimePicker.MinimumDateTime;
+                dateTime_fin_promo.MinDate = DateTimePicker.MinimumDateTime;
+
+                dateTime_inicio_promo.Format = DateTimePickerFormat.Short;
+                dateTime_fin_promo.Format = DateTimePickerFormat.Short;
+
+                dateTime_inicio_promo.Value = DateTime.Today;
+                dateTime_fin_promo.Value = DateTime.Today.AddDays(1);
+
+                // Ajusta activo según fechas (queda "Si" porque hoy está en rango)
+                RecalcularActivoDesdeFechas();
+            }
+            finally { _syncing = false; }
         }
 
 
@@ -698,6 +733,7 @@ namespace Eterea_Parfums_Desktop
             combo_activo_promo.SelectedItem = promo.activo ? "Si" : "No";
 
             HookAutoSyncActivoYFechas();
+            RecalcularActivoDesdeFechas();
 
             // Banner/URL
             promoBannerStemActual = promo.banner;
