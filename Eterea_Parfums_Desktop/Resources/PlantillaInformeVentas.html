@@ -26,13 +26,21 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
+            /* ? achicamos medio punto el tamaño del cuadro */
+            font-size: 10.5pt;
         }
 
         th, td {
             border: 1px solid #000;
             padding: 8px;
             text-align: left;
+            vertical-align: top;
         }
+
+            /* ? Hacemos más ancha la primer columna y evitamos que corte títulos */
+            td.col-titulo, th.col-titulo {
+                white-space: nowrap; /* que quede en 1 renglón */
+            }
 
         .footer p {
             text-align: center;
@@ -53,27 +61,34 @@
 
         <div class="detalle">
             <table>
+                <!-- ? Forzamos el ancho de columnas -->
+                <colgroup>
+                    <col style="width: 50%;" />
+                    <col style="width: 50%;" />
+                </colgroup>
+
                 <thead>
                     <tr>
-                        <th>Tipo de Información</th>
+                        <th class="col-titulo">Tipo de Información</th>
                         <th>Detalle</th>
                     </tr>
                 </thead>
+
                 <tbody>
                     <tr>
-                        <td>Cantidad de ventas</td>
+                        <td class="col-titulo">Cantidad de ventas</td>
                         <td>@CANTIDAD</td>
                     </tr>
                     <tr>
-                        <td>Monto total de ventas</td>
+                        <td class="col-titulo">Monto total de ventas</td>
                         <td>@MONTO_TOTAL_VENTAS</td>
                     </tr>
                     <tr>
-                        <td>Productos más vendidos</td>
+                        <td class="col-titulo">Productos más vendidos</td>
                         <td>@PERFUME_MAS_VENDIDO</td>
                     </tr>
                     <tr>
-                        <td>Productos menos vendidos</td>
+                        <td class="col-titulo">Productos menos vendidos</td>
                         <td>@PERFUME_MENOS_VENDIDO</td>
                     </tr>
                 </tbody>
