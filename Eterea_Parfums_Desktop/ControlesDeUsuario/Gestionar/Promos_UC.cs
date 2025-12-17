@@ -14,20 +14,101 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
     {
         int idPromo;
 
+        // listas en memoria
+        private List<Promocion> Promos_Completo = new List<Promocion>();
+        private List<Promocion> Promos_Filtrado = new List<Promocion>();
+
+        // paginación
+        private int _page = 1;
+        private const int _pageSize = 12;
+
         List<Promocion> promociones;
         public Promos_UC()
         {
             InitializeComponent();
-            cargarPromociones();
+         
             dataGridViewPromos.Cursor = Cursors.Default;
+            // enganchar painting una sola vez
+            dataGridViewPromos.CellPainting += dataGridView1_CellPainting;
+
+            // cargar una sola vez
+            RecargarDesdeBD();
+
+            //Ocultas la primera columna de la tabla (es una columna de seleccion de fila)
+            dataGridViewPromos.RowHeadersVisible = false;
         }
 
+        private void RecargarDesdeBD()
+        {
+            Promos_Completo = PromoControlador.obtenerTodos();
 
+            // Ignorar promo id=1 desde el arranque (así no la filtrás siempre)
+            Promos_Completo.RemoveAll(p => p.id == 1);
+
+            _page = 1;
+            AplicarFiltrosYPaginarYRender();
+        }
+
+        private void AplicarFiltrosYPaginarYRender()
+        {
+            string filtroNombre = txt_buscar_nombre.Text.Trim();
+
+            // ✅ FILTRO EN MEMORIA
+            if (string.IsNullOrWhiteSpace(filtroNombre))
+            {
+                Promos_Filtrado = new List<Promocion>(Promos_Completo);
+            }
+            else
+            {
+                Promos_Filtrado = Promos_Completo.FindAll(p =>
+                    (p.nombre ?? "").IndexOf(filtroNombre, StringComparison.OrdinalIgnoreCase) >= 0
+                );
+            }
+
+            // ✅ PAGINACIÓN
+            int total = Promos_Filtrado.Count;
+            int totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)_pageSize));
+
+            if (_page > totalPages) _page = totalPages;
+            if (_page < 1) _page = 1;
+
+            var pagina = Promos_Filtrado
+                .GetRange((_page - 1) * _pageSize, Math.Min(_pageSize, total - ((_page - 1) * _pageSize)));
+
+            // ✅ RENDER GRID
+            dataGridViewPromos.Rows.Clear();
+
+            foreach (var promocion in pagina)
+            {
+                int rowIndex = dataGridViewPromos.Rows.Add();
+
+                dataGridViewPromos.Rows[rowIndex].Cells[0].Value = promocion.id.ToString();
+                dataGridViewPromos.Rows[rowIndex].Cells[1].Value = promocion.nombre;
+
+                dataGridViewPromos.Rows[rowIndex].Cells[3].Value = promocion.fecha_inicio.ToString("dd-MM-yyyy");
+                dataGridViewPromos.Rows[rowIndex].Cells[4].Value = promocion.fecha_fin.ToString("dd-MM-yyyy");
+
+                dataGridViewPromos.Rows[rowIndex].Cells[2].Value = GetTextoPromocion(promocion.descuento);
+
+                string estadoActivo = promocion.activo ? "Activo" : "Inactivo";
+                dataGridViewPromos.Rows[rowIndex].Cells[5].Value = estadoActivo;
+                dataGridViewPromos.Rows[rowIndex].Cells[5].Style.ForeColor = promocion.activo ? Color.Green : Color.Red;
+
+                dataGridViewPromos.Rows[rowIndex].Cells[6].Value = "Editar";
+                dataGridViewPromos.Rows[rowIndex].Cells[7].Value = "Eliminar";
+            }
+
+            dataGridViewPromos.ClearSelection();
+
+            // ✅ UI paginado
+            lbl_pagina.Text = $"Página {_page}/{totalPages}";
+            btn_izq.Enabled = _page > 1;
+            btn_der.Enabled = _page < totalPages;
+        }
 
         private void cargarPromociones(string filtroNombre = "")
         {
-            //Ocultas la primera columna de la tabla (es una columna de seleccion de fila)
-            dataGridViewPromos.RowHeadersVisible = false;
+           
 
             promociones = PromoControlador.obtenerTodos();
 
@@ -65,8 +146,6 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                     dataGridViewPromos.Rows[rowIndex].Cells[7].Value = "Eliminar";
                 }
                 dataGridViewPromos.ClearSelection();
-
-                dataGridViewPromos.CellPainting += dataGridView1_CellPainting;
             }
         }
 
@@ -90,13 +169,23 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             }
         }
 
+        private void btn_izq_Click(object sender, EventArgs e)
+        {
+            _page--;
+            AplicarFiltrosYPaginarYRender();
+        }
+
+        private void btn_der_Click(object sender, EventArgs e)
+        {
+            _page++;
+            AplicarFiltrosYPaginarYRender();
+        }
+
 
         private void txt_buscar_nombre_TextChanged(object sender, EventArgs e)
         {
-            string filtroNombre = txt_buscar_nombre.Text.Trim();
-
-            // Actualiza el DataGridView con el filtro
-            cargarPromociones(filtroNombre);
+            _page = 1; // ✅ al filtrar, vuelve a página 1
+            AplicarFiltrosYPaginarYRender();
         }
 
         private void btn_crear_promo_Click(object sender, EventArgs e)
@@ -110,7 +199,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                 Trace.WriteLine("OK");
 
                 //Actualizar la lista
-                cargarPromociones();
+                RecargarDesdeBD();
 
             }
         }
@@ -139,7 +228,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                         Trace.WriteLine("OK");
 
                         //ACTUALIZAR LA LISTA
-                        cargarPromociones();
+                        RecargarDesdeBD();
 
                     }
 
@@ -163,7 +252,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
                     // Mostrar el formulario
                     // ✅ Mostrar con fondo oscuro
                     DialogResult dr = ModalHelper.MostrarModalConFondoOscuro(formEliminarPromo);
-                    cargarPromociones();
+                    RecargarDesdeBD();
                 }
                 else
                 {
