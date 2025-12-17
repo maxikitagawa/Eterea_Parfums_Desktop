@@ -117,63 +117,123 @@ namespace Eterea_Parfums_Desktop.Controladores
         public static List<Cliente> obtenerTodos()
         {
             List<Cliente> list = new List<Cliente>();
-            string query = "SELECT * FROM dbo.cliente;";
 
-            // 🔹 Usamos "using" para que la conexión se cierre automáticamente
+            string query = @"
+        SELECT
+            c.id, c.usuario, c.clave, c.nombre, c.apellido, c.dni,
+            c.condicion_frente_al_iva, c.fecha_nacimiento, c.celular, c.e_mail,
+            c.pais_id, c.provincia_id, c.localidad_id, c.codigo_postal, c.calle_id,
+            c.numeracion_calle, c.piso, c.departamento, c.comentarios_domicilio,
+            c.activo, c.rol,
+
+            -- datos de las tablas relacionadas
+            p.nombre  AS pais_nombre,
+            pr.nombre AS provincia_nombre,
+            l.nombre  AS localidad_nombre,
+            ca.nombre AS calle_nombre
+
+        FROM dbo.cliente c
+        LEFT JOIN dbo.pais p        ON p.id  = c.pais_id
+        LEFT JOIN dbo.provincia pr  ON pr.id = c.provincia_id
+        LEFT JOIN dbo.localidad l   ON l.id  = c.localidad_id
+        LEFT JOIN dbo.calle ca      ON ca.id = c.calle_id
+        ORDER BY c.apellido, c.nombre;";
+
             using (SqlConnection conexion = new SqlConnection(DB_Controller.GetConnectionString()))
+            using (SqlCommand cmd = new SqlCommand(query, conexion))
             {
-                using (SqlCommand cmd = new SqlCommand(query, conexion))
+                try
                 {
-                    try
+                    conexion.Open();
+
+                    using (SqlDataReader r = cmd.ExecuteReader())
                     {
-                        conexion.Open();
-                        using (SqlDataReader r = cmd.ExecuteReader())
+                        // índices “base” de cliente
+                        int ordId = r.GetOrdinal("id");
+                        int ordUsuario = r.GetOrdinal("usuario");
+                        int ordNombre = r.GetOrdinal("nombre");
+                        int ordApellido = r.GetOrdinal("apellido");
+                        int ordDni = r.GetOrdinal("dni");
+                        int ordCondIva = r.GetOrdinal("condicion_frente_al_iva");
+                        int ordFechaNac = r.GetOrdinal("fecha_nacimiento");
+                        int ordCel = r.GetOrdinal("celular");
+                        int ordEmail = r.GetOrdinal("e_mail");
+                        int ordPaisId = r.GetOrdinal("pais_id");
+                        int ordProvId = r.GetOrdinal("provincia_id");
+                        int ordLocId = r.GetOrdinal("localidad_id");
+                        int ordCodPostal = r.GetOrdinal("codigo_postal");
+                        int ordCalleId = r.GetOrdinal("calle_id");
+                        int ordNumCalle = r.GetOrdinal("numeracion_calle");
+                        int ordPiso = r.GetOrdinal("piso");
+                        int ordDepto = r.GetOrdinal("departamento");
+                        int ordComent = r.GetOrdinal("comentarios_domicilio");
+                        int ordActivo = r.GetOrdinal("activo");
+                        int ordRol = r.GetOrdinal("rol");
+
+                        // índices “nombres” join
+                        int ordPaisNombre = r.GetOrdinal("pais_nombre");
+                        int ordProvNombre = r.GetOrdinal("provincia_nombre");
+                        int ordLocNombre = r.GetOrdinal("localidad_nombre");
+                        int ordCalleNombre = r.GetOrdinal("calle_nombre");
+
+                        while (r.Read())
                         {
-                            while (r.Read())
-                            {
-                                Pais pais = PaisControlador.getById(r.IsDBNull(10) ? 0 : r.GetInt32(10));
-                                Provincia provincia = ProvinciaControlador.getById(r.IsDBNull(11) ? 0 : r.GetInt32(11));
-                                Localidad localidad = LocalidadControlador.getById(r.IsDBNull(12) ? 0 : r.GetInt32(12));
-                                Calle calle = CalleControlador.getById(r.IsDBNull(14) ? 0 : r.GetInt32(14));
+                            // ✅ construir objetos relacionados sin getById
+                            var pais = new Pais(
+                                r.IsDBNull(ordPaisId) ? 0 : r.GetInt32(ordPaisId),
+                                r.IsDBNull(ordPaisNombre) ? "" : r.GetString(ordPaisNombre)
+                            );
 
-                                list.Add(new Cliente(
-                                    r.GetInt32(0),
-                                    r.GetString(1),
-                                    "",
-                                    r.GetString(3),
-                                    r.GetString(4),
-                                    r.GetInt64(5),
-                                    r.GetString(6),
-                                    r.IsDBNull(7) ? default(DateTime) : r.GetDateTime(7),
-                                    r.GetString(8),
-                                    r.GetString(9),
-                                    pais,
-                                    provincia,
-                                    localidad,
-                                    r.IsDBNull(13) ? 0 : r.GetInt32(13),
-                                    calle,
-                                    r.IsDBNull(15) ? 0 : r.GetInt32(15),
-                                    r.IsDBNull(16) ? "" : r.GetString(16),
-                                    r.IsDBNull(17) ? "" : r.GetString(17),
-                                    r.IsDBNull(18) ? "" : r.GetString(18),
-                                    r.GetBoolean(19),
-                                    r.GetString(20)
-                                ));
+                            var provincia = new Provincia(
+                                r.IsDBNull(ordProvId) ? 0 : r.GetInt32(ordProvId),
+                                r.IsDBNull(ordProvNombre) ? "" : r.GetString(ordProvNombre)
+                            );
 
-                                Trace.WriteLine("Cliente encontrado, nombre: " + r.GetString(1));
-                            }
+                            var localidad = new Localidad(
+                                r.IsDBNull(ordLocId) ? 0 : r.GetInt32(ordLocId),
+                                r.IsDBNull(ordLocNombre) ? "" : r.GetString(ordLocNombre)
+                            );
+
+                            var calle = new Calle(
+                                r.IsDBNull(ordCalleId) ? 0 : r.GetInt32(ordCalleId),
+                                r.IsDBNull(ordCalleNombre) ? "" : r.GetString(ordCalleNombre)
+                            );
+
+                            list.Add(new Cliente(
+                                r.GetInt32(ordId),
+                                r.GetString(ordUsuario),
+                                "", // clave no la cargás por seguridad (como ya hacías) :contentReference[oaicite:1]{index=1}
+                                r.GetString(ordNombre),
+                                r.GetString(ordApellido),
+                                r.GetInt64(ordDni),
+                                r.GetString(ordCondIva),
+                                r.IsDBNull(ordFechaNac) ? default(DateTime) : r.GetDateTime(ordFechaNac),
+                                r.GetString(ordCel),
+                                r.GetString(ordEmail),
+                                pais,
+                                provincia,
+                                localidad,
+                                r.IsDBNull(ordCodPostal) ? 0 : r.GetInt32(ordCodPostal),
+                                calle,
+                                r.IsDBNull(ordNumCalle) ? 0 : r.GetInt32(ordNumCalle),
+                                r.IsDBNull(ordPiso) ? "" : r.GetString(ordPiso),
+                                r.IsDBNull(ordDepto) ? "" : r.GetString(ordDepto),
+                                r.IsDBNull(ordComent) ? "" : r.GetString(ordComent),
+                                r.GetBoolean(ordActivo),
+                                r.GetString(ordRol)
+                            ));
                         }
                     }
-                    catch (Exception e)
-                    {
-                        throw new Exception("Hay un error en la query: " + e.Message);
-                    }
+                }
+                catch (Exception e)
+                {
+                    throw new Exception("Hay un error en la query: " + e.Message);
                 }
             }
 
             return list;
         }
-      
+
         // GET ONE BY ID
         public static Cliente obtenerPorId(int id)
         {
