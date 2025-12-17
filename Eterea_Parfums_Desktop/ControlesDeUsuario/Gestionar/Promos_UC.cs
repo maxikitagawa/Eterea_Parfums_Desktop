@@ -28,14 +28,15 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             InitializeComponent();
          
             dataGridViewPromos.Cursor = Cursors.Default;
+            //Ocultas la primera columna de la tabla (es una columna de seleccion de fila)
+            dataGridViewPromos.RowHeadersVisible = false;
+
             // enganchar painting una sola vez
             dataGridViewPromos.CellPainting += dataGridView1_CellPainting;
 
             // cargar una sola vez
             RecargarDesdeBD();
 
-            //Ocultas la primera columna de la tabla (es una columna de seleccion de fila)
-            dataGridViewPromos.RowHeadersVisible = false;
         }
 
         private void RecargarDesdeBD()
@@ -106,48 +107,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
             btn_der.Enabled = _page < totalPages;
         }
 
-        private void cargarPromociones(string filtroNombre = "")
-        {
-           
-
-            promociones = PromoControlador.obtenerTodos();
-
-            dataGridViewPromos.Rows.Clear();
-            foreach (Promocion promocion in promociones)
-            {
-                if (promocion.id == 1)
-                    continue; // 👉 Ignorar la promo con id = 1
-
-                if (string.IsNullOrEmpty(filtroNombre) || promocion.nombre.ToString().IndexOf(filtroNombre, StringComparison.OrdinalIgnoreCase) >= 0)
-
-                {
-                    int rowIndex = dataGridViewPromos.Rows.Add();
-
-                    dataGridViewPromos.Rows[rowIndex].Cells[0].Value = promocion.id.ToString();
-                    dataGridViewPromos.Rows[rowIndex].Cells[1].Value = promocion.nombre.ToString();
-                    dataGridViewPromos.Rows[rowIndex].Cells[3].Value = promocion.fecha_inicio.ToString("dd-MM-yyyy");
-                    dataGridViewPromos.Rows[rowIndex].Cells[4].Value = promocion.fecha_fin.ToString("dd-MM-yyyy");
-                    //dataGV_Promos.Rows[rowIndex].Cells[2].Value = promocion.descuento.ToString();
-                    int descuento = promocion.descuento; // Obtén el valor del descuento como entero
-
-                    //string textoPromocion;
-                    // Asignar texto basado en el descuento
-                    string textoPromocion = GetTextoPromocion(promocion.descuento);
-                    dataGridViewPromos.Rows[rowIndex].Cells[2].Value = textoPromocion;
-
-                    string estadoActivo = promocion.activo ? "Activo" : "Inactivo";
-                    dataGridViewPromos.Rows[rowIndex].Cells[5].Value = estadoActivo;
-
-                    // Colorear el texto según el estado
-                    dataGridViewPromos.Rows[rowIndex].Cells[5].Style.ForeColor = promocion.activo ? Color.Green : Color.Red;
-
-
-                    dataGridViewPromos.Rows[rowIndex].Cells[6].Value = "Editar";
-                    dataGridViewPromos.Rows[rowIndex].Cells[7].Value = "Eliminar";
-                }
-                dataGridViewPromos.ClearSelection();
-            }
-        }
+       
 
         private string GetTextoPromocion(int descuento)
         {
@@ -184,7 +144,7 @@ namespace Eterea_Parfums_Desktop.ControlesDeUsuario
 
         private void txt_buscar_nombre_TextChanged(object sender, EventArgs e)
         {
-            _page = 1; // ✅ al filtrar, vuelve a página 1
+            _page = 1; // al filtrar, vuelve a página 1
             AplicarFiltrosYPaginarYRender();
         }
 
