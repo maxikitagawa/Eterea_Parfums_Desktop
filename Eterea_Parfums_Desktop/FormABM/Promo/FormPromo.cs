@@ -24,7 +24,9 @@ namespace Eterea_Parfums_Desktop
         int idPromo;
 
         Image banner;
-        //int num = 0;
+
+        private bool _syncing = false;
+
 
         private string promoBannerStemActual = null; // p.ej. "banner-black-friday"
         private string promoImagenUrlActual = null;  // URL completa devuelta por la API
@@ -262,27 +264,116 @@ namespace Eterea_Parfums_Desktop
 
         private void inicializarDatePickers()
         {
-            
+            // permitir setear cualquier fecha sin bugs (y ya validás en ValueChanged)
+            dateTime_inicio_promo.MinDate = DateTimePicker.MinimumDateTime;
+            dateTime_fin_promo.MinDate = DateTimePicker.MinimumDateTime;
 
+            // mostrarlas siempre
+            dateTime_inicio_promo.Format = DateTimePickerFormat.Short;
+            dateTime_fin_promo.Format = DateTimePickerFormat.Short;
 
-            // Configura las fechas mínimas para los DateTimePicker
-            dateTime_inicio_promo.MinDate = DateTime.Now; // No permite elegir fechas pasadas
-            dateTime_inicio_promo.Value = DateTime.Now;   // Fecha predeterminada de inicio
+            // valores default para creación
+            dateTime_inicio_promo.Value = DateTime.Today;
+            dateTime_fin_promo.Value = DateTime.Today.AddDays(1);
 
-            dateTime_fin_promo.MinDate = DateTime.Now.AddDays(1); // Fin debe ser al menos un día después de hoy
-            dateTime_fin_promo.Value = DateTime.Now.AddDays(1);   // Fecha predeterminada de fin
-
-            // Configura los valores personalizados de formato
-            dateTime_inicio_promo.CustomFormat = " ";
-            dateTime_inicio_promo.Format = DateTimePickerFormat.Custom;
-            dateTime_inicio_promo.ValueChanged += dateTime_inicio_promo_ValueChanged;
-
-            dateTime_fin_promo.CustomFormat = " ";
-            dateTime_fin_promo.Format = DateTimePickerFormat.Custom;
-            dateTime_fin_promo.ValueChanged += dateTime_fin_promo_ValueChanged;
+            // ✅ enganchar la sincronización automática (activo<->fechas)
+            HookAutoSyncActivoYFechas();
         }
 
 
+
+        private void HookAutoSyncActivoYFechas()
+        {
+            // evita doble suscripción si se llama más de una vez
+            combo_activo_promo.SelectedIndexChanged -= combo_activo_promo_SelectedIndexChanged_Auto;
+            combo_activo_promo.SelectedIndexChanged += combo_activo_promo_SelectedIndexChanged_Auto;
+
+            dateTime_inicio_promo.ValueChanged -= dateTime_inicio_promo_ValueChanged_Auto;
+            dateTime_inicio_promo.ValueChanged += dateTime_inicio_promo_ValueChanged_Auto;
+
+            dateTime_fin_promo.ValueChanged -= dateTime_fin_promo_ValueChanged_Auto;
+            dateTime_fin_promo.ValueChanged += dateTime_fin_promo_ValueChanged_Auto;
+        }
+
+        private void combo_activo_promo_SelectedIndexChanged_Auto(object sender, EventArgs e)
+        {
+            if (_syncing) return;
+
+            var sel = combo_activo_promo.SelectedItem?.ToString();
+            if (sel == "No")
+            {
+                _syncing = true;
+                try
+                {
+                    var hoy = DateTime.Today;
+
+                    // dejá mostrar fecha siempre (evita el "se queda en blanco")
+                    dateTime_inicio_promo.Format = DateTimePickerFormat.Short;
+                    dateTime_fin_promo.Format = DateTimePickerFormat.Short;
+
+                    // fijar fechas de inactivo
+                    dateTime_inicio_promo.MinDate = DateTimePicker.MinimumDateTime;
+                    dateTime_fin_promo.MinDate = DateTimePicker.MinimumDateTime;
+
+                    dateTime_inicio_promo.Value = hoy.AddDays(-2);
+                    dateTime_fin_promo.Value = hoy.AddDays(-1);
+                }
+                finally { _syncing = false; }
+            }
+            else if (sel == "Si")
+            {
+                // si lo activan, recalculamos por fechas actuales
+                RecalcularActivoDesdeFechas();
+            }
+        }
+
+        private void dateTime_inicio_promo_ValueChanged_Auto(object sender, EventArgs e)
+        {
+            if (_syncing) return;
+
+            // mantener tu validación de fin >= inicio+1 (si querés)
+            dateTime_inicio_promo.Format = DateTimePickerFormat.Short;
+
+            DateTime nuevaMin = dateTime_inicio_promo.Value.Date.AddDays(1);
+            if (dateTime_fin_promo.MinDate != nuevaMin)
+                dateTime_fin_promo.MinDate = nuevaMin;
+
+            if (dateTime_fin_promo.Value.Date < nuevaMin)
+                dateTime_fin_promo.Value = nuevaMin;
+
+            RecalcularActivoDesdeFechas();
+        }
+
+        private void dateTime_fin_promo_ValueChanged_Auto(object sender, EventArgs e)
+        {
+            if (_syncing) return;
+
+            dateTime_fin_promo.Format = DateTimePickerFormat.Short;
+            RecalcularActivoDesdeFechas();
+        }
+
+        private void RecalcularActivoDesdeFechas()
+        {
+            _syncing = true;
+            try
+            {
+                var hoy = DateTime.Today;
+                var ini = dateTime_inicio_promo.Value.Date;
+                var fin = dateTime_fin_promo.Value.Date;
+
+                // rango inválido => No
+                if (fin < ini)
+                {
+                    combo_activo_promo.SelectedItem = "No";
+                    return;
+                }
+
+                bool hoyDentro = (ini <= hoy && hoy <= fin);
+
+                combo_activo_promo.SelectedItem = hoyDentro ? "Si" : "No";
+            }
+            finally { _syncing = false; }
+        }
 
 
 
@@ -605,6 +696,8 @@ namespace Eterea_Parfums_Desktop
             dateTime_fin_promo.Value = promo.fecha_fin;
 
             combo_activo_promo.SelectedItem = promo.activo ? "Si" : "No";
+
+            HookAutoSyncActivoYFechas();
 
             // Banner/URL
             promoBannerStemActual = promo.banner;

@@ -230,20 +230,19 @@ namespace Eterea_Parfums_Desktop.Controladores
 
 
         //EDIT ó PUT  -  EDITAR UNA PROMO
-        public static bool editarPromo(Promocion promo)
+      /*  public static bool editarPromo(Promocion promo)
         {
             string query = @"
-        UPDATE dbo.promocion
-        SET  id = @id_editar,
-             nombre = @nombre,
-             fecha_inicio = @fechaInicio,
-             fecha_fin = @fechaFin,
-             descuento = @descuento,
-             activo = @activo,
-             descripcion = @descripcion,
-             banner = @banner,
-             imagen_URL = @imagen_URL
-        WHERE id = @id_editar;";
+                UPDATE dbo.promocion
+                SET  nombre = @nombre,
+                     fecha_inicio = @fechaInicio,
+                     fecha_fin = @fechaFin,
+                     descuento = @descuento,
+                     activo = @activo,
+                     descripcion = @descripcion,
+                     banner = @banner,
+                     imagen_URL = @imagen_URL
+                WHERE id = @id_editar;";
 
             using (var cmd = new SqlCommand(query, DB_Controller.connection))
             {
@@ -258,6 +257,7 @@ namespace Eterea_Parfums_Desktop.Controladores
                 cmd.Parameters.AddWithValue("@imagen_URL", (object)promo.imagen_URL ?? DBNull.Value);
 
                 SqlTransaction transaction = null;
+
                 try
                 {
                     DB_Controller.connection.Open();
@@ -266,10 +266,10 @@ namespace Eterea_Parfums_Desktop.Controladores
 
                     cmd.ExecuteNonQuery();
 
+                    // relaciones promo-perfume
                     PerfumeEnPromoControlador.eliminarRegistrosPromoPerfumes(promo.id, transaction);
 
                     transaction.Commit();
-                    return true;
                 }
                 catch (Exception e)
                 {
@@ -282,9 +282,13 @@ namespace Eterea_Parfums_Desktop.Controladores
                         DB_Controller.connection.Close();
                 }
             }
+
+            // IMPORTANTE: correr el servicio SIEMPRE después del edit (ya con la conexión cerrada)
+            PromocionService.ActualizarEstadoPromociones();
+
+            return true;
         }
-
-
+      */
 
 
 
@@ -364,11 +368,11 @@ namespace Eterea_Parfums_Desktop.Controladores
         public static bool editarPromoYRelaciones(Promocion promo, List<int> perfumeIds)
         {
             const string updateSql = @"
-        UPDATE dbo.promocion
-        SET nombre=@nombre, fecha_inicio=@fechaInicio, fecha_fin=@fechaFin,
-            descuento=@descuento, activo=@activo, descripcion=@descripcion,
-            banner=@banner, imagen_URL=@imagen_URL
-        WHERE id=@id";
+                UPDATE dbo.promocion
+                SET nombre=@nombre, fecha_inicio=@fechaInicio, fecha_fin=@fechaFin,
+                    descuento=@descuento, activo=@activo, descripcion=@descripcion,
+                    banner=@banner, imagen_URL=@imagen_URL
+                WHERE id=@id";
 
             const string deleteSql = @"DELETE FROM dbo.perfumes_en_promo WHERE promocion_id = @promoId";
 
@@ -423,7 +427,7 @@ namespace Eterea_Parfums_Desktop.Controladores
                         }
 
                         tx.Commit();
-                        return true;
+                       
                     }
                     catch (Exception ex)
                     {
@@ -432,6 +436,11 @@ namespace Eterea_Parfums_Desktop.Controladores
                     }
                 }
             }
+            // ✅ AHORA sí: recalcular activo según fechas
+            PromocionService.ActualizarEstadoPromociones();
+
+
+            return true;
         }
 
 
