@@ -291,86 +291,43 @@ namespace Eterea_Parfums_Desktop.Controladores
 
         //METODO PARA ELIMINAR UNA PROMOCION
 
+        // ELIMINADO LÓGICO (nuevo)
         public static bool eliminarPromo(int id_promo)
         {
-            // Obtener el nombre del banner antes de eliminar la promoción
-            string bannerPromo = obtenerNombreImagen(id_promo); // Nuevo método para obtener el nombre del banner
+            string query = @"
+        UPDATE dbo.promocion
+        SET fecha_inicio = @fechaInicio,
+            fecha_fin    = @fechaFin,
+            activo       = @activo
+        WHERE id = @id;";
 
-            string query = "DELETE FROM dbo.promocion WHERE id = @id";
-            SqlCommand cmd = new SqlCommand(query, DB_Controller.connection);
-            cmd.Parameters.AddWithValue("@id", id_promo);
-
-            SqlTransaction transaction = null; // Declarar la transacción
-
-            try
+            using (var cmd = new SqlCommand(query, DB_Controller.connection))
             {
-                // Abrir la conexión
-                DB_Controller.connection.Open();
+                // Fechas: hoy-2 y ayer
+                DateTime hoy = DateTime.Today;
+                DateTime fechaInicio = hoy.AddDays(-2);
+                DateTime fechaFin = hoy.AddDays(-1);
 
-                // Iniciar la transacción
-                transaction = DB_Controller.connection.BeginTransaction();
-                cmd.Transaction = transaction;
+                cmd.Parameters.AddWithValue("@id", id_promo);
+                cmd.Parameters.AddWithValue("@fechaInicio", fechaInicio);
+                cmd.Parameters.AddWithValue("@fechaFin", fechaFin);
+                cmd.Parameters.AddWithValue("@activo", false);
 
-                // **Eliminar la imagen antes de eliminar la promoción de la BD**
-                if (!string.IsNullOrEmpty(bannerPromo))
+                try
                 {
-                    string rutaImagen = Path.Combine(Program.Ruta_Base, bannerPromo + ".jpg");
-                    if (File.Exists(rutaImagen))
-                    {
-                        try
-                        {
-                            // **Liberar la imagen del PictureBox antes de eliminar el archivo**
-                            Form formPrincipal = Application.OpenForms["NombreDelFormulario"];
-                            if (formPrincipal != null)
-                            {
-                                PictureBox pictBox = formPrincipal.Controls.Find("pictBox_banner", true).FirstOrDefault() as PictureBox;
-                                if (pictBox != null && pictBox.Image != null)
-                                {
-                                    pictBox.Image.Dispose();
-                                    pictBox.Image = null;
-                                }
-                            }
-
-                            // **Forzar recolección de basura para liberar el archivo**
-                            GC.Collect();
-                            GC.WaitForPendingFinalizers();
-
-                            // **Ahora se elimina el archivo**
-                            File.Delete(rutaImagen);
-                            Console.WriteLine($"Imagen eliminada: {rutaImagen}");
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"No se pudo eliminar la imagen: {ex.Message}");
-                        }
-                    }
+                    DB_Controller.connection.Open();
+                    cmd.ExecuteNonQuery();
+                    return true;
                 }
-
-                // **Eliminar relaciones de perfumes en la promoción**
-                PerfumeEnPromoControlador.eliminarRegistrosPromoPerfumes(id_promo, transaction);
-
-                // **Ejecutar la eliminación de la promoción**
-                cmd.ExecuteNonQuery();
-
-                // **Confirmar la transacción después de eliminar la imagen y la promoción**
-                transaction.Commit();
-
-                return true;
-            }
-            catch (Exception e)
-            {
-                // **Si hay un error, solo hacer rollback si la transacción no se ha confirmado**
-                if (transaction != null && transaction.Connection != null)
+                catch (Exception e)
                 {
-                    transaction.Rollback();
+                    throw new Exception("Ocurrió un error al eliminar lógicamente la promoción: " + e.Message);
                 }
-                throw new Exception("Ocurrió un error al eliminar la promoción: " + e.Message);
-            }
-            finally
-            {
-                // **Cerrar la conexión siempre**
-                if (DB_Controller.connection.State == System.Data.ConnectionState.Open)
-                    DB_Controller.connection.Close();
+                finally
+                {
+                    if (DB_Controller.connection.State == ConnectionState.Open)
+                        DB_Controller.connection.Close();
+                }
             }
         }
 

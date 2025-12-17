@@ -23,12 +23,10 @@ namespace Eterea_Parfums_Desktop
 
         private void btn_eliminar_promo_Click(object sender, EventArgs e)
         {
-            //PromoControlador.eliminarPromo(promoId);
-
-            // Confirmar si desea eliminar la promoción
             var confirmResult = MessageBox.Show(
-                "¿Está seguro de que desea eliminar permanentemente esta promoción?",
-                "Confirmar eliminación",
+                "¿Está seguro de que desea desactivar esta promoción?\n\n" +
+                "Se marcará como inactiva y sus fechas se ajustarán automáticamente.",
+                "Confirmar desactivación",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning
             );
@@ -37,43 +35,26 @@ namespace Eterea_Parfums_Desktop
             {
                 try
                 {
-                    // Primero obtenemos el nombre del archivo de la promo antes de eliminarla
-                    string nombreArchivoImagen = PromoControlador.obtenerNombreImagen(promoId);
-
-
-                    // Llamar al método para eliminar la promoción
+                    // ✅ Eliminación lógica (UPDATE: fechas + activo=false)
                     bool resultado = PromoControlador.eliminarPromo(promoId);
 
                     if (resultado)
                     {
-                        // Eliminar la imagen si existe
-                        if (!string.IsNullOrEmpty(nombreArchivoImagen))
-                        {
-                            string rutaImagen = Path.Combine(Program.Ruta_Base, nombreArchivoImagen + ".jpg");
-
-
-                            if (File.Exists(rutaImagen))
-                            {
-                                File.Delete(rutaImagen);
-                            }
-                        }
-
                         MessageBox.Show(
-                            "La promoción se eliminó con éxito.",
+                            "La promoción fue desactivada con éxito.",
                             "Éxito",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Information
                         );
 
-                        // Cerrar el formulario de eliminación
+                        this.DialogResult = DialogResult.OK; //para que Promos_UC recargue
                         this.Close();
-
                     }
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show(
-                        "Ocurrió un error al eliminar la promoción: " + ex.Message,
+                        "Ocurrió un error al desactivar la promoción: " + ex.Message,
                         "Error",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error
