@@ -193,14 +193,21 @@ namespace Eterea_Parfums_Desktop
 
         }
 
-      
 
-       
+
+
 
         private void btnIngresarManual_Click_1(object sender, EventArgs e)
         {
-            abrirIngresoManual = true;
-            this.Close(); // solo cerramos, y actuamos desde FormClosed
+            // Abrimos el ingreso manual como "hijo" de este form (Owner)
+            var formIngreso = new FormIngresoCodigoManual(_formInvocador);
+            formIngreso.Owner = this;               // << CLAVE: encadenar
+            this.Hide();                            // ocultamos la pregunta mientras se ingresa
+
+            ModalHelper.MostrarModalSinAgregarNuevoFondo(formIngreso);
+
+            // cuando se cierra el manual, cerramos la pregunta
+            this.Close();
         }
 
         private void btnVolverEscanear_Click_1(object sender, EventArgs e)
@@ -218,19 +225,7 @@ namespace Eterea_Parfums_Desktop
 
         private void FormCartelCodigoNoEncontrado_FormClosed(object sender, FormClosedEventArgs e)
         {
-            if (abrirIngresoManual)
-            {
-                FormIngresoCodigoManual formIngreso = new FormIngresoCodigoManual(_formInvocador);
-                ModalHelper.MostrarModalSinAgregarNuevoFondo(formIngreso);
-                abrirIngresoManual = false;
-                volverAEscanear = false;
-            }
-            else if (volverAEscanear)
-            {
-                var metodo = _formInvocador.GetType().GetMethod("ResetAutoConsulta");
-                metodo?.Invoke(_formInvocador, null);
-            }
-         
+           
         }
 
 

@@ -12,6 +12,8 @@ namespace Eterea_Parfums_Desktop
 
         private Perfume _perfumeParaVer;
 
+        private bool _cerradoPorExito = false;
+
 
         public FormIngresoCodigoManual(Form formInvocador)
         {
@@ -65,9 +67,19 @@ namespace Eterea_Parfums_Desktop
 
                 lbl_codigo_erroneo.Visible = false; // Ocultamos error anterior si lo había
 
-                FormVerDetallePerfume detalleForm = new FormVerDetallePerfume(perfumeEncontrado);
-                ModalHelper.MostrarModalSinAgregarNuevoFondo(detalleForm);
+                _perfumeParaVer = perfumeEncontrado;
+                _cerradoPorExito = true;
+
+                // cerramos la ventana "pregunta" si existe
+                this.Owner?.Close();
+
+                using (var detalleForm = new FormVerDetallePerfume(perfumeEncontrado))
+                {
+                    ModalHelper.MostrarModalSinAgregarNuevoFondo(detalleForm);
+                }
+
                 this.Close();
+                return;
             }
             else
             {
@@ -84,16 +96,15 @@ namespace Eterea_Parfums_Desktop
 
         private void FormIngresoCodigoManual_FormClosed(object sender, FormClosedEventArgs e)
         {
-            if (_perfumeParaVer != null)
-            {
-                FormVerDetallePerfume detalle = new FormVerDetallePerfume(_perfumeParaVer);
+            if (_cerradoPorExito) return;
 
-                // Llama al método del invocador para reiniciar escaneo
-                var metodo = _formInvocador?.GetType().GetMethod("ResetAutoConsulta");
-                metodo?.Invoke(_formInvocador, null);
-               
-            }
+            var metodoReset = _formInvocador?.GetType().GetMethod("ResetAutoConsulta");
+            metodoReset?.Invoke(_formInvocador, null);
+
+            var metodoPreparar = _formInvocador?.GetType().GetMethod("PrepararParaNuevoEscaneo");
+            metodoPreparar?.Invoke(_formInvocador, null);
         }
+
 
 
         private void btn_cancelar_Click(object sender, EventArgs e)
@@ -134,9 +145,19 @@ namespace Eterea_Parfums_Desktop
 
                 lbl_codigo_erroneo.Visible = false; // Ocultamos error anterior si lo había
 
-                FormVerDetallePerfume detalleForm = new FormVerDetallePerfume(perfumeEncontrado);
-                ModalHelper.MostrarModalSinAgregarNuevoFondo(detalleForm);
+                _perfumeParaVer = perfumeEncontrado;
+                _cerradoPorExito = true;
+
+                // cerramos la ventana "pregunta" si existe
+                this.Owner?.Close();
+
+                using (var detalleForm = new FormVerDetallePerfume(perfumeEncontrado))
+                {
+                    ModalHelper.MostrarModalSinAgregarNuevoFondo(detalleForm);
+                }
+
                 this.Close();
+                return;
             }
             else
             {
